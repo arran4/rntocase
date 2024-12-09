@@ -371,7 +371,7 @@ $ ls
 
 # Download
 
-See Github releases here: https://github.com/arran4/mvcommon/releases
+See Github releases here: https://github.com/arran4/rntocase/releases
 
 ## Gentoo
 
