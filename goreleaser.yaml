@@ -1,0 +1,105 @@
+project_name: mvcommon
+builds:
+  -
+    id: "mvcommon"
+    binary: "mvcommon"
+    dir: cmd/mvcommon
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "mvcommon"
+    binary: "mvcommon"
+    dir: cmd/mvcommon
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntodarwin"
+    binary: "rntodarwin"
+    dir: cmd/rntodarwin
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntocamel"
+    binary: "rntocamel"
+    dir: cmd/rntocamel
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rnreverse"
+    binary: "rnreverse"
+    dir: cmd/rnreverse
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntodelimited"
+    binary: "rntodelimited"
+    dir: cmd/rntodelimited
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntokebab"
+    binary: "rntokebab"
+    dir: cmd/rntokebab
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntolowerleading"
+    binary: "rntolowerleading"
+    dir: cmd/rntolowerleading
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntosnake"
+    binary: "rntosnake"
+    dir: cmd/rntosnake
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntrim"
+    binary: "rntrim"
+    dir: cmd/rntrim
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntoupperleading"
+    binary: "rntoupperleading"
+    dir: cmd/rntoupperleading
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntotitle"
+    binary: "rntotitle"
+    dir: cmd/rntotitle
+    env:
+      - CGO_ENABLED=0
+archives:
+  -
+    format_overrides:
+      - goos: windows
+        format: zip
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+nfpms:
+  -
+    vendor: Ubels Software Development
+    homepage: https://github.com/arran4/
+    maintainer: Arran Ubels <arran@ubels.com.au>
+    description: NA
+    license: Private
+    formats:
+      - apk
+      - deb
+      - rpm
+      - termux.deb
+      - archlinux
+    release: 1
+    section: default
+    priority: extra
