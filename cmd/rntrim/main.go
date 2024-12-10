@@ -43,36 +43,40 @@ func main() {
 		_, _ = fmt.Fprintln(os.Stderr)
 		_, _ = fmt.Fprintln(os.Stderr, "Conversion Examples:")
 		tw := table.NewWriter()
-		vs := []string{" Hello World", " helloWorld", " HelloWorld   ", "Hello_WORLD"}
-		tw.AppendHeader(table.Row{"Algorithm", "", "", "", ""})
-		tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
-			yield("")
-			for _, value := range vs {
-				if !yield(value) {
-					return
-				}
-			}
-		}))
+		tw.AppendHeader(table.Row{"Algorithm"})
 		keys := slices.Collect(maps.Keys(algos))
 		sort.Strings(keys)
-		for _, key := range keys {
+		for _, values := range rntocase.ExampleGroups {
 			tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
-				yield(key)
-				for _, value := range vs {
-					result, err := algos[key](value)
-					if err != nil {
-						panic(err)
-					}
-					if !yield(result) {
+				yield("")
+				if !yield(values.Name) {
+					return
+				}
+				for _, value := range values.Values {
+					if !yield(value) {
 						return
 					}
 				}
 			}))
+			for _, key := range keys {
+				tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
+					yield(key)
+					yield("")
+					for _, value := range values.Values {
+						result, err := algos[key](value)
+						if err != nil {
+							panic(err)
+						}
+						if !yield(result) {
+							return
+						}
+					}
+				}))
+			}
 		}
 		tw.SetOutputMirror(os.Stderr)
 		tw.Render()
 	}
-
 	flag.Parse()
 
 	// Get file arguments
