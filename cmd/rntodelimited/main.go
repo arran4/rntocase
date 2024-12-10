@@ -6,10 +6,12 @@ import (
 	"github.com/arran4/rntocase"
 	"github.com/gobeam/stringy"
 	"github.com/iancoleman/strcase"
+	"github.com/jedib0t/go-pretty/table"
 	strings2 "github.com/searKing/golang/go/strings"
 	"maps"
 	"os"
 	"slices"
+	"sort"
 	"strings"
 )
 
@@ -74,9 +76,40 @@ func main() {
 	})
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {
-		fmt.Println("Usage: " + appName + " [options] <file1> [<file2> ...]")
-		fmt.Println("\nOptions:")
+		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
+		_, _ = fmt.Fprintln(os.Stderr, "\nOptions:")
 		flag.PrintDefaults()
+		_, _ = fmt.Fprintln(os.Stderr)
+		_, _ = fmt.Fprintln(os.Stderr, "Conversion Examples:")
+		tw := table.NewWriter()
+		vs := []string{"Hello World", "helloWorld", "HelloWorld", "Hello_WORLD"}
+		tw.AppendHeader(table.Row{"Algorithm", "", "", "", ""})
+		tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
+			yield("")
+			for _, value := range vs {
+				if !yield(value) {
+					return
+				}
+			}
+		}))
+		keys := slices.Collect(maps.Keys(algos))
+		sort.Strings(keys)
+		for _, key := range keys {
+			tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
+				yield(key)
+				for _, value := range vs {
+					result, err := algos[key](value)
+					if err != nil {
+						panic(err)
+					}
+					if !yield(result) {
+						return
+					}
+				}
+			}))
+		}
+		tw.SetOutputMirror(os.Stderr)
+		tw.Render()
 	}
 
 	flag.Parse()
