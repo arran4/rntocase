@@ -4,10 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
+	strcase2 "github.com/ettle/strcase"
+	"github.com/gobeam/stringy"
+	"github.com/golang-cz/textcase"
 	"github.com/iancoleman/strcase"
 	strings2 "github.com/searKing/golang/go/strings"
+	"github.com/tomeh/caseconv"
 	"maps"
 	"os"
+	"resenje.org/casbab"
 	"slices"
 	"strings"
 )
@@ -19,7 +24,8 @@ const (
 )
 
 var (
-	algos = map[string]func(string) (string, error){
+	wordSeparators []string
+	algos          = map[string]func(string) (string, error){
 		"iancoleman": func(s string) (string, error) {
 			return strcase.ToCamel(s), nil
 		},
@@ -31,6 +37,30 @@ var (
 		},
 		"searking": func(s string) (string, error) {
 			return strings2.UpperCamelCase(s), nil
+		},
+		"ettle": func(s string) (string, error) {
+			return strcase2.ToCamel(s), nil
+		},
+		"go-ettle": func(s string) (string, error) {
+			return strcase2.ToGoCamel(s), nil
+		},
+		"resenje": func(s string) (string, error) {
+			return casbab.Camel(s), nil
+		},
+		"resenje-kebab": func(s string) (string, error) {
+			return casbab.CamelKebab(s), nil
+		},
+		"resenje-snake": func(s string) (string, error) {
+			return casbab.CamelSnake(s), nil
+		},
+		"tomeh": func(s string) (string, error) {
+			return caseconv.ToCamel(s), nil
+		},
+		"golang-cz": func(s string) (string, error) {
+			return textcase.CamelCase(s), nil
+		},
+		"gobeam": func(s string) (string, error) {
+			return stringy.New(s).CamelCase(wordSeparators...).Get(), nil
 		},
 	}
 )
@@ -47,6 +77,10 @@ func main() {
 		return rntocase.LoadAcronymsFromFile(s)
 	})
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
+	flag.Func("word-seperators", "Word separators. (gobeam only) Default: \"_-. \"", func(s string) error {
+		wordSeparators = append(wordSeparators, s)
+		return nil
+	})
 	flag.Usage = func() {
 		fmt.Println("Usage: " + appName + " [options] <file1> [<file2> ...]")
 		fmt.Println("\nOptions:")

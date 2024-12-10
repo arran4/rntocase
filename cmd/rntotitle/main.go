@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
+	"github.com/gobeam/stringy"
 	"github.com/revett/titlecase"
 	skstrings "github.com/searKing/golang/go/strings"
 	"maps"
 	"os"
+	"resenje.org/casbab"
 	"slices"
 	"strings"
 )
@@ -30,6 +32,15 @@ func main() {
 			},
 			"searking": func(s string) (string, error) {
 				return skstrings.TitleCase(s), nil
+			},
+			"go": func(s string) (string, error) {
+				return strings.ToTitle(s), nil
+			},
+			"resenje": func(s string) (string, error) {
+				return casbab.Title(s), nil
+			},
+			"gobeam": func(s string) (string, error) {
+				return stringy.New(s).Title(), nil
 			},
 		}
 	)

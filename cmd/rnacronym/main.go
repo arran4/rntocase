@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/arran4/rntocase"
 	"github.com/gobeam/stringy"
-	strings2 "github.com/searKing/golang/go/strings"
 	"maps"
 	"os"
 	"slices"
@@ -13,9 +12,9 @@ import (
 )
 
 const (
-	defaultAlgo = "searking"
-	caseType    = "upperleading"
-	appName     = "rntoupperleading"
+	defaultAlgo = "gobeam"
+	caseType    = "acronym"
+	appName     = "rnacronym"
 )
 
 func main() {
@@ -24,11 +23,8 @@ func main() {
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	var (
 		algos = map[string]func(string) (string, error){
-			"searking": func(s string) (string, error) {
-				return strings2.ToUpperLeading(s), nil
-			},
 			"gobeam": func(s string) (string, error) {
-				return stringy.New(s).UcFirst(), nil
+				return stringy.New(s).Acronym().Get(), nil
 			},
 		}
 	)

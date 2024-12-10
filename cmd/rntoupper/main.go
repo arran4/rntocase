@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"github.com/arran4/rntocase"
 	"github.com/gobeam/stringy"
-	strings2 "github.com/searKing/golang/go/strings"
+	skstrings "github.com/searKing/golang/go/strings"
 	"maps"
 	"os"
+	"resenje.org/casbab"
 	"slices"
 	"strings"
 )
 
 const (
 	defaultAlgo = "searking"
-	caseType    = "upperleading"
-	appName     = "rntoupperleading"
+	caseType    = "uppercase"
+	appName     = "rntoupper"
 )
 
 func main() {
@@ -25,10 +26,16 @@ func main() {
 	var (
 		algos = map[string]func(string) (string, error){
 			"searking": func(s string) (string, error) {
-				return strings2.ToUpperLeading(s), nil
+				return skstrings.ToUpperLeading(s), nil
+			},
+			"go": func(s string) (string, error) {
+				return strings.ToUpper(s), nil
+			},
+			"resenje": func(s string) (string, error) {
+				return casbab.Screaming(s), nil
 			},
 			"gobeam": func(s string) (string, error) {
-				return stringy.New(s).UcFirst(), nil
+				return stringy.New(s).ToUpper(), nil
 			},
 		}
 	)

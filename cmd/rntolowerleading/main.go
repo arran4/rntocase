@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
+	"github.com/gobeam/stringy"
 	strings2 "github.com/searKing/golang/go/strings"
 	"maps"
 	"os"
@@ -25,6 +26,9 @@ func main() {
 		algos = map[string]func(string) (string, error){
 			"searking": func(s string) (string, error) {
 				return strings2.ToLowerLeading(s), nil
+			},
+			"gobeam": func(s string) (string, error) {
+				return stringy.New(s).LcFirst(), nil
 			},
 		}
 	)

@@ -3,9 +3,14 @@ module github.com/arran4/rntocase
 go 1.23
 
 require (
+	github.com/ettle/strcase v0.2.0
+	github.com/gobeam/stringy v0.0.7
+	github.com/golang-cz/textcase v1.2.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/revett/titlecase v0.4.2
 	github.com/searKing/golang/go v1.2.120
+	github.com/tomeh/caseconv v0.0.0-20190528221446-6111d3cd9094
+	resenje.org/casbab v0.1.3
 )
 
 require (

@@ -60,6 +60,30 @@ builds:
     dir: cmd/rntotitle
     env:
       - CGO_ENABLED=0
+  -
+    id: "rntopascal"
+    binary: "rntopascal"
+    dir: cmd/rntopascal
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntoupper"
+    binary: "rntoupper"
+    dir: cmd/rntoupper
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntolower"
+    binary: "rntolower"
+    dir: cmd/rntolower
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rnacronym"
+    binary: "rnacronym"
+    dir: cmd/rnacronym
+    env:
+      - CGO_ENABLED=0
 archives:
   -
     format_overrides:
