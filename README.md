@@ -108,7 +108,7 @@ Options:
   -acronym-from-file value
     	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id
   -algorithm string
-    	Choose the camel algorithm to use, supported: tomeh,golang-cz,lower-searking,searking,ettle,go-ettle,resenje,resenje-kebab,resenje-snake,gobeam,iancoleman,lower-iancoleman. (default "iancoleman")
+    	Choose the camel algorithm to use, supported: iancoleman,go-ettle,resenje-snake,tomeh,gobeam,resenje-kebab,golang-cz,lower-iancoleman,lower-searking,searking,ettle,resenje. (default "iancoleman")
   -dry-run
     	Display the intended changes without renaming.
   -interactive
@@ -267,7 +267,7 @@ Options:
   -acronym-from-file value
     	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id (iancoleman only)
   -algorithm string
-    	Choose the delimited algorithm to use, supported: gobeam,iancoleman,screaming-iancoleman,searking. (default "iancoleman")
+    	Choose the delimited algorithm to use, supported: searking,gobeam,iancoleman,screaming-iancoleman. (default "iancoleman")
   -delimiter string
     	Delimiter, default '.' but can be any single ascii character. (default ".")
   -dry-run
@@ -338,7 +338,7 @@ Options:
   -acronym-from-file value
     	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id (iancoleman only)
   -algorithm string
-    	Choose the kebab algorithm to use, supported: screaming-iancoleman,ettle,go-ettle,ETTLE,gobeam,iancoleman,searking,resenje,screaming-resenje,resenje-camel,resenje-snake,tomeh,golang-cz. (default "iancoleman")
+    	Choose the kebab algorithm to use, supported: iancoleman,screaming-iancoleman,go-ettle,resenje-camel,searking,ettle,ETTLE,resenje,screaming-resenje,resenje-snake,tomeh,golang-cz,gobeam. (default "iancoleman")
   -dry-run
     	Display the intended changes without renaming.
   -interactive
@@ -462,7 +462,7 @@ Usage: rntolower [options] <file1> [<file2> ...]
 
 Options:
   -algorithm string
-    	Choose the lowercase algorithm to use, supported: searking,go,resenje,gobeam. (default "resenje")
+    	Choose the lowercase algorithm to use, supported: resenje,gobeam,searking,go. (default "resenje")
   -dry-run
     	Display the intended changes without renaming.
   -interactive
@@ -521,7 +521,7 @@ Usage: rntolowerleading [options] <file1> [<file2> ...]
 
 Options:
   -algorithm string
-    	Choose the lowerleading algorithm to use, supported: searking,gobeam. (default "searking")
+    	Choose the lowerleading algorithm to use, supported: gobeam,searking. (default "searking")
   -dry-run
     	Display the intended changes without renaming.
   -interactive
@@ -656,7 +656,7 @@ Options:
   -acronym-from-file value
     	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id
   -algorithm string
-    	Choose the snake algorithm to use, supported: ETTLE,resenje,screaming-resenje,tomeh,iancoleman,screaming-iancoleman,lowercase-searking,go-ettle,golang-cz,searking,ettle,gobeam. (default "iancoleman")
+    	Choose the snake algorithm to use, supported: resenje,screaming-resenje,tomeh,screaming-iancoleman,lowercase-searking,ettle,go-ettle,ETTLE,golang-cz,gobeam,iancoleman,searking. (default "iancoleman")
   -dry-run
     	Display the intended changes without renaming.
   -interactive
@@ -780,24 +780,53 @@ Options:
     	Ask for confirmation before renaming each file.
 
 Conversion Examples:
-panic: runtime error: index out of range [0] with length 0
-
-goroutine 1 [running]:
-github.com/gobeam/stringy.(*input).Title(0x0?)
-	/home/arran/.go/path/pkg/mod/github.com/gobeam/stringy@v0.0.7/stringy.go:368 +0x17f
-main.main.func5({0x6a203f?, 0xc000259ce0?})
-	/home/arran/Documents/Projects/rntocase/cmd/rntotitle/main.go:45 +0x2d
-main.main.func6.2(0xc0002f8100)
-	/home/arran/Documents/Projects/rntocase/cmd/rntotitle/main.go:78 +0xd8
-slices.AppendSeq[...]({0x0, 0x0, 0x0}, 0xc002a05ae0)
-	/usr/lib/go/src/slices/iter.go:50 +0xec
-slices.Collect[...](...)
-	/usr/lib/go/src/slices/iter.go:58
-main.main.func6()
-	/home/arran/Documents/Projects/rntocase/cmd/rntotitle/main.go:74 +0x5a5
-main.main()
-	/home/arran/Documents/Projects/rntocase/cmd/rntotitle/main.go:98 +0x3b3
-exit status 2
++-----------+--------------------+-----------------------+-----------------------------+--------------------------------+-------------------------+
+| ALGORITHM |                    |                       |                             |                                |                         |
++-----------+--------------------+-----------------------+-----------------------------+--------------------------------+-------------------------+
+|           | Basic Cases        | Hello World           | helloWorld                  | HelloWorld                     | Hello_WORLD             |
+| go        |                    | HELLO WORLD           | HELLOWORLD                  | HELLOWORLD                     | HELLO_WORLD             |
+| gobeam    |                    | Hello World           | Helloworld                  | Helloworld                     | Hello_world             |
+| resenje   |                    | Hello World           | Hello World                 | Hello World                    | Hello World             |
+| revett    |                    | Hello World           | Helloworld                  | Helloworld                     | Hello_world             |
+| searking  |                    | HELLO WORLD           | HELLOWORLD                  | HELLOWORLD                     | HELLO_WORLD             |
+|           | Underscore Cases   | __camel_snake_kebab__ | _leading_snake_case_        | __trailing__underscore__       |                         |
+| go        |                    | __CAMEL_SNAKE_KEBAB__ | _LEADING_SNAKE_CASE_        | __TRAILING__UNDERSCORE__       |                         |
+| gobeam    |                    | __camel_snake_kebab__ | _leading_snake_case_        | __trailing__underscore__       |                         |
+| resenje   |                    | Camel Snake Kebab     | Leading Snake Case          | Trailing Underscore            |                         |
+| revett    |                    | __camel_snake_kebab__ | _leading_snake_case_        | __trailing__underscore__       |                         |
+| searking  |                    | __CAMEL_SNAKE_KEBAB__ | _LEADING_SNAKE_CASE_        | __TRAILING__UNDERSCORE__       |                         |
+|           | Hyphen Cases       | --camel-snake-kebab   | -leading-kebab-case-        | --trailing--hyphen--           |                         |
+| go        |                    | --CAMEL-SNAKE-KEBAB   | -LEADING-KEBAB-CASE-        | --TRAILING--HYPHEN--           |                         |
+| gobeam    |                    | --camel-snake-kebab   | -leading-kebab-case-        | --trailing--hyphen--           |                         |
+| resenje   |                    | Camel Snake Kebab     | Leading Kebab Case          | Trailing Hyphen                |                         |
+| revett    |                    | --camel-snake-kebab   | -leading-kebab-case-        | --trailing--hyphen--           |                         |
+| searking  |                    | --CAMEL-SNAKE-KEBAB   | -LEADING-KEBAB-CASE-        | --TRAILING--HYPHEN--           |                         |
+|           | Mixed Delimiters   | hello_world-and-kebab | Mixed_Snake-Kebab--Case     | UPPER_snake-KEBAB_Case         |                         |
+| go        |                    | HELLO_WORLD-AND-KEBAB | MIXED_SNAKE-KEBAB--CASE     | UPPER_SNAKE-KEBAB_CASE         |                         |
+| gobeam    |                    | Hello_world-and-kebab | Mixed_snake-kebab--case     | Upper_snake-kebab_case         |                         |
+| resenje   |                    | Hello World And Kebab | Mixed Snake Kebab Case      | Upper Snake Kebab Case         |                         |
+| revett    |                    | Hello_world-and-kebab | Mixed_snake-kebab--case     | Upper_snake-kebab_case         |                         |
+| searking  |                    | HELLO_WORLD-AND-KEBAB | MIXED_SNAKE-KEBAB--CASE     | UPPER_SNAKE-KEBAB_CASE         |                         |
+|           | Acronym Handling   | ID_NUMBER             | HTTP_Response_Code          | XML_HTTP_REQUEST               | API_Version_2           |
+| go        |                    | ID_NUMBER             | HTTP_RESPONSE_CODE          | XML_HTTP_REQUEST               | API_VERSION_2           |
+| gobeam    |                    | Id_number             | Http_response_code          | Xml_http_request               | Api_version_2           |
+| resenje   |                    | Id Number             | Http Response Code          | Xml Http Request               | Api Version 2           |
+| revett    |                    | ID_NUMBER             | Http_response_code          | XML_HTTP_REQUEST               | Api_version_2           |
+| searking  |                    | ID_NUMBER             | HTTP_RESPONSE_CODE          | XML_HTTP_REQUEST               | API_VERSION_2           |
+|           | Spaces and Words   |    leading spaces     | trailing spaces             |    both sides                  | This is a test sentence |
+| go        |                    |    LEADING SPACES     | TRAILING SPACES             |    BOTH SIDES                  | THIS IS A TEST SENTENCE |
+| gobeam    |                    | !!!Error!!!           | !!!Error!!!                 | !!!Error!!!                    | This Is A Test Sentence |
+| resenje   |                    | Leading Spaces        | Trailing Spaces             | Both Sides                     | This Is A Test Sentence |
+| revett    |                    | Leading Spaces        | Trailing Spaces             | Both Sides                     | This Is a Test Sentence |
+| searking  |                    |    LEADING SPACES     | TRAILING SPACES             |    BOTH SIDES                  | THIS IS A TEST SENTENCE |
+|           | Symbols and Random | 123_ABC-xyz--789      | !!special$$characters**     | ___!!!___weird___CASE___!!!___ |                         |
+| go        |                    | 123_ABC-XYZ--789      | !!SPECIAL$$CHARACTERS**     | ___!!!___WEIRD___CASE___!!!___ |                         |
+| gobeam    |                    | 123_abc-xyz--789      | !!special$$characters**     | ___!!!___weird___case___!!!___ |                         |
+| resenje   |                    | 123 Abc Xyz 789       | ! !special $ $characters ** | !!! Weird Case !!!             |                         |
+| revett    |                    | 123_abc-xyz--789      | !!special$$characters**     | ___!!!___weird___case___!!!___ |                         |
+| searking  |                    | 123_ABC-XYZ--789      | !!SPECIAL$$CHARACTERS**     | ___!!!___WEIRD___CASE___!!!___ |                         |
++-----------+--------------------+-----------------------+-----------------------------+--------------------------------+-------------------------+
+exit status 1
 ```
 
 
@@ -810,7 +839,7 @@ Usage: rntoupper [options] <file1> [<file2> ...]
 
 Options:
   -algorithm string
-    	Choose the uppercase algorithm to use, supported: resenje,gobeam,searking,go. (default "searking")
+    	Choose the uppercase algorithm to use, supported: searking,go,resenje,gobeam. (default "searking")
   -dry-run
     	Display the intended changes without renaming.
   -interactive
@@ -869,7 +898,7 @@ Usage: rntoupperleading [options] <file1> [<file2> ...]
 
 Options:
   -algorithm string
-    	Choose the upperleading algorithm to use, supported: gobeam,searking. (default "searking")
+    	Choose the upperleading algorithm to use, supported: searking,gobeam. (default "searking")
   -dry-run
     	Display the intended changes without renaming.
   -interactive

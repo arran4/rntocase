@@ -4,8 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/iancoleman/strcase"
+	"github.com/jedib0t/go-pretty/table"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 )
 
@@ -100,4 +104,55 @@ func LoadAcronymsFromFile(filePath string) error {
 
 	fmt.Printf("Loaded acronyms from file: %s\n", filePath)
 	return nil
+}
+
+func Run(algos map[string]func(string) (string, error), key string, value string) (result string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = e
+			} else {
+				err = fmt.Errorf("%v", r)
+			}
+		}
+	}()
+	result, err = algos[key](value)
+	return result, err
+}
+
+func RenderUsageTable(algos map[string]func(string) (string, error)) {
+	tw := table.NewWriter()
+	tw.AppendHeader(table.Row{"Algorithm"})
+	keys := slices.Collect(maps.Keys(algos))
+	sort.Strings(keys)
+	for _, values := range ExampleGroups {
+		tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
+			yield("")
+			if !yield(values.Name) {
+				return
+			}
+			for _, value := range values.Values {
+				if !yield(value) {
+					return
+				}
+			}
+		}))
+		for _, key := range keys {
+			tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
+				yield(key)
+				yield("")
+				for _, value := range values.Values {
+					result, err := Run(algos, key, value)
+					if err != nil {
+						result = "!!!Error!!!"
+					}
+					if !yield(result) {
+						return
+					}
+				}
+			}))
+		}
+	}
+	tw.SetOutputMirror(os.Stderr)
+	tw.Render()
 }

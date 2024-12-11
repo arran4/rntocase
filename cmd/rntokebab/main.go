@@ -8,14 +8,12 @@ import (
 	"github.com/gobeam/stringy"
 	"github.com/golang-cz/textcase"
 	"github.com/iancoleman/strcase"
-	"github.com/jedib0t/go-pretty/table"
 	strings2 "github.com/searKing/golang/go/strings"
 	"github.com/tomeh/caseconv"
 	"maps"
 	"os"
 	"resenje.org/casbab"
 	"slices"
-	"sort"
 	"strings"
 )
 
@@ -92,40 +90,7 @@ func main() {
 		flag.PrintDefaults()
 		_, _ = fmt.Fprintln(os.Stderr)
 		_, _ = fmt.Fprintln(os.Stderr, "Conversion Examples:")
-		tw := table.NewWriter()
-		tw.AppendHeader(table.Row{"Algorithm"})
-		keys := slices.Collect(maps.Keys(algos))
-		sort.Strings(keys)
-		for _, values := range rntocase.ExampleGroups {
-			tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
-				yield("")
-				if !yield(values.Name) {
-					return
-				}
-				for _, value := range values.Values {
-					if !yield(value) {
-						return
-					}
-				}
-			}))
-			for _, key := range keys {
-				tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
-					yield(key)
-					yield("")
-					for _, value := range values.Values {
-						result, err := algos[key](value)
-						if err != nil {
-							panic(err)
-						}
-						if !yield(result) {
-							return
-						}
-					}
-				}))
-			}
-		}
-		tw.SetOutputMirror(os.Stderr)
-		tw.Render()
+		rntocase.RenderUsageTable(algos)
 	}
 	flag.Parse()
 
