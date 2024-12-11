@@ -47,7 +47,7 @@ func main() {
 	})
 	ignore := flag.String("ignore", defaultIgnore, "Other delimiter characters to ignore when parsing")
 	delimiter := flag.String("delimiter", defaultDelimiter, "Delimiter, default '.' but can be any single ascii character.")
-	inputDelimiter := flag.String("input-delimiters", defaultDelimiter, "Input's Delimiters, default ' ' but can be multiple ascii character. (searking only)")
+	inputDelimiter := flag.String("input-delimiters", "", "Input's Delimiters, default ' ' but can be multiple ascii character. (searking only)")
 	var (
 		wordSeparators []string
 		algos          = map[string]func(string) (string, error){
