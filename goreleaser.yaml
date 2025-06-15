@@ -1,3 +1,4 @@
+version: 2
 project_name: rntocase
 builds:
   -
@@ -113,5 +114,30 @@ nfpms:
       - termux.deb
       - archlinux
     release: 1
-    section: default
-    priority: extra
+  section: default
+  priority: extra
+dockers:
+  - id: tools
+    goos: linux
+    goarch: amd64
+    ids:
+      - rntodarwin
+      - rntocamel
+      - rnreverse
+      - rntodelimited
+      - rntokebab
+      - rntolowerleading
+      - rntosnake
+      - rntrim
+      - rntoupperleading
+      - rntotitle
+      - rntopascal
+      - rntoupper
+      - rntolower
+      - rnacronym
+    image_templates:
+      - "ghcr.io/{{ .Repo }}/rntocase:{{ .Tag }}"
+      - "ghcr.io/{{ .Repo }}/rntocase:latest"
+    dockerfile: Dockerfile
+    use: buildx
+
