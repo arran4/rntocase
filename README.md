@@ -6,8 +6,10 @@ A series of files to help you /rename/ files from one type to another.
 |----------------------|-------------------------------------------------------------------------|------------------------------------------------------|------|
 | `rnreverse`          | Reverses a file's name (excluding extension)                            | `Hello World.txt` -> `dlroW olleH.txt`               |      |
 | `rntocamel`          | Renames a file to camel case                                            | `Hello World.txt` -> `HelloWorld.txt`                |      |
+| `rntoconstant`       | Renames a file to constant case                                         | `Hello World.txt` -> `HELLO_WORLD.txt`               |      |
 | `rntodarwin`         | Renames a file to darwin case                                           | `Hello World.txt` -> `Hello_ _World.txt`             |      |
 | `rntodelimited`      | Renames a file changing the delimiter (think . or some other character) | `Hello World.txt` -> `hello.world.txt`               |      |
+| `rntodot`            | Renames a file to dot case                                              | `Hello World.txt` -> `hello.world.txt`               |      |
 | `rntokebab`          | Renames a file to kebab case                                            | `Hello World.txt` -> `hello-world.txt`               |      |
 | `rntolowerleading`   | Renames a file to lower leading letter case                             | `Hello WORLD.txt` -> `hello WORLD.txt`               |      |
 | `rntosnake`          | Renames a file to snake case                                            | `Hello World.txt` -> `hello_world.txt`               |      |
@@ -216,6 +218,62 @@ exit status 1
 ```
 
 
+## `rntoconstant`
+
+```bash
+$ rntoconstant
+Error: No files provided.
+Usage: rntoconstant [options] <file1> [<file2> ...]
+
+Options:
+  -acronym value
+	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id
+  -acronym-from-file value
+	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id
+  -algorithm string
+	Choose the constant algorithm to use, supported: iancoleman,ettle,resenje. (default "iancoleman")
+  -dry-run
+	Display the intended changes without renaming.
+  -interactive
+	Ask for confirmation before renaming each file.
+
+Conversion Examples:
++------------+--------------------+-----------------------+-----------------------------+--------------------------------+-------------------------+
+| ALGORITHM  |                    |                       |                             |                                |                         |
++------------+--------------------+-----------------------+-----------------------------+--------------------------------+-------------------------+
+|            | Basic Cases        | Hello World           | helloWorld                  | HelloWorld                     | Hello_WORLD             |
+| ettle      |                    | HELLO_WORLD           | HELLO_WORLD                 | HELLO_WORLD                    | HELLO_WORLD             |
+| iancoleman |                    | HELLO_WORLD           | HELLO_WORLD                 | HELLO_WORLD                    | HELLO_WORLD             |
+| resenje    |                    | HELLO_WORLD           | HELLO_WORLD                 | HELLO_WORLD                    | HELLO_WORLD             |
+|            | Underscore Cases   | __camel_snake_kebab__ | _leading_snake_case_        | __trailing__underscore__       |                         |
+| ettle      |                    | CAMEL_SNAKE_KEBAB_    | LEADING_SNAKE_CASE_         | TRAILING_UNDERSCORE_           |                         |
+| iancoleman |                    | __CAMEL_SNAKE_KEBAB__ | _LEADING_SNAKE_CASE_        | __TRAILING__UNDERSCORE__       |                         |
+| resenje    |                    | __CAMEL_SNAKE_KEBAB__ | _LEADING_SNAKE_CASE_        | __TRAILING_UNDERSCORE__        |                         |
+|            | Hyphen Cases       | --camel-snake-kebab   | -leading-kebab-case-        | --trailing--hyphen--           |                         |
+| ettle      |                    | CAMEL_SNAKE_KEBAB     | LEADING_KEBAB_CASE_         | TRAILING_HYPHEN_               |                         |
+| iancoleman |                    | __CAMEL_SNAKE_KEBAB   | _LEADING_KEBAB_CASE_        | __TRAILING__HYPHEN__           |                         |
+| resenje    |                    | CAMEL_SNAKE_KEBAB     | LEADING_KEBAB_CASE          | TRAILING_HYPHEN                |                         |
+|            | Mixed Delimiters   | hello_world-and-kebab | Mixed_Snake-Kebab--Case     | UPPER_snake-KEBAB_Case         |                         |
+| ettle      |                    | HELLO_WORLD_AND_KEBAB | MIXED_SNAKE_KEBAB_CASE      | UPPER_SNAKE_KEBAB_CASE         |                         |
+| iancoleman |                    | HELLO_WORLD_AND_KEBAB | MIXED_SNAKE_KEBAB__CASE     | UPPER_SNAKE_KEBAB_CASE         |                         |
+| resenje    |                    | HELLO_WORLD_AND_KEBAB | MIXED_SNAKE_KEBAB_CASE      | UPPER_SNAKE_KEBAB_CASE         |                         |
+|            | Acronym Handling   | ID_NUMBER             | HTTP_Response_Code          | XML_HTTP_REQUEST               | API_Version_2           |
+| ettle      |                    | ID_NUMBER             | HTTP_RESPONSE_CODE          | XML_HTTP_REQUEST               | API_VERSION_2           |
+| iancoleman |                    | ID_NUMBER             | HTTP_RESPONSE_CODE          | XML_HTTP_REQUEST               | API_VERSION_2           |
+| resenje    |                    | ID_NUMBER             | HTTP_RESPONSE_CODE          | XML_HTTP_REQUEST               | API_VERSION_2           |
+|            | Spaces and Words   |    leading spaces     | trailing spaces             |    both sides                  | This is a test sentence |
+| ettle      |                    | LEADING_SPACES        | TRAILING_SPACES             | BOTH_SIDES                     | THIS_IS_A_TEST_SENTENCE |
+| iancoleman |                    | LEADING_SPACES        | TRAILING_SPACES             | BOTH_SIDES                     | THIS_IS_A_TEST_SENTENCE |
+| resenje    |                    | LEADING_SPACES        | TRAILING_SPACES             | BOTH_SIDES                     | THIS_IS_A_TEST_SENTENCE |
+|            | Symbols and Random | 123_ABC-xyz--789      | !!special$$characters**     | ___!!!___weird___CASE___!!!___ |                         |
+| ettle      |                    | 123_ABC_XYZ_789       | !!SPECIAL$$CHARACTERS**     | !!!_WEIRD_CASE_!!!_            |                         |
+| iancoleman |                    | 123_ABC_XYZ__789      | !!SPECIAL$$CHARACTERS**     | ___!!!___WEIRD___CASE___!!!___ |                         |
+| resenje    |                    | 123_ABC_XYZ_789       | !_!SPECIAL_$_$CHARACTERS_** | ___!!!_WEIRD_CASE_!!!___       |                         |
++------------+--------------------+-----------------------+-----------------------------+--------------------------------+-------------------------+
+exit status 1
+```
+
+
 ## `rntodarwin`
 
 ```bash
@@ -280,6 +338,75 @@ Options:
     	Ask for confirmation before renaming each file.
   -word-seperators value
     	Word separators. (gobeam only) Default: "_-. "
+
+Conversion Examples:
++----------------------+--------------------+------------------------------+--------------------------------+--------------------------------------------------------+-----------------------------+
+| ALGORITHM            |                    |                              |                                |                                                        |                             |
++----------------------+--------------------+------------------------------+--------------------------------+--------------------------------------------------------+-----------------------------+
+|                      | Basic Cases        | Hello World                  | helloWorld                     | HelloWorld                                             | Hello_WORLD                 |
+| gobeam               |                    | Hello.World                  | hello.World                    | Hello.World                                            | Hello.WORLD                 |
+| iancoleman           |                    | hello.world                  | hello.world                    | hello.world                                            | hello.world                 |
+| screaming-iancoleman |                    | HELLO.WORLD                  | HELLO.WORLD                    | HELLO.WORLD                                            | HELLO.WORLD                 |
+| searking             |                    | hello. .world                | hello.world                    | hello.world                                            | hello._.w.o.r.l.d           |
+|                      | Underscore Cases   | __camel_snake_kebab__        | _leading_snake_case_           | __trailing__underscore__                               |                             |
+| gobeam               |                    | camel.snake.kebab            | leading.snake.case             | trailing.underscore                                    |                             |
+| iancoleman           |                    | ..camel.snake.kebab..        | .leading.snake.case.           | ..trailing..underscore..                               |                             |
+| screaming-iancoleman |                    | ..CAMEL.SNAKE.KEBAB..        | .LEADING.SNAKE.CASE.           | ..TRAILING..UNDERSCORE..                               |                             |
+| searking             |                    | _._camel._snake._kebab._._   | _leading._snake._case._        | _._trailing._._underscore._._                          |                             |
+|                      | Hyphen Cases       | --camel-snake-kebab          | -leading-kebab-case-           | --trailing--hyphen--                                   |                             |
+| gobeam               |                    | camel.snake.kebab            | leading.kebab.case             | trailing.hyphen                                        |                             |
+| iancoleman           |                    | ..camel.snake.kebab          | .leading.kebab.case.           | ..trailing..hyphen..                                   |                             |
+| screaming-iancoleman |                    | ..CAMEL.SNAKE.KEBAB          | .LEADING.KEBAB.CASE.           | ..TRAILING..HYPHEN..                                   |                             |
+| searking             |                    | -.-camel.-snake.-kebab       | -leading.-kebab.-case.-        | -.-trailing.-.-hyphen.-.-                              |                             |
+|                      | Mixed Delimiters   | hello_world-and-kebab        | Mixed_Snake-Kebab--Case        | UPPER_snake-KEBAB_Case                                 |                             |
+| gobeam               |                    | hello.world.and.kebab        | Mixed.Snake.Kebab.Case         | UPPER.snake.KEBAB.Case                                 |                             |
+| iancoleman           |                    | hello.world.and.kebab        | mixed.snake.kebab..case        | upper.snake.kebab.case                                 |                             |
+| screaming-iancoleman |                    | HELLO.WORLD.AND.KEBAB        | MIXED.SNAKE.KEBAB..CASE        | UPPER.SNAKE.KEBAB.CASE                                 |                             |
+| searking             |                    | hello._world.-and.-kebab     | mixed._.snake.-.kebab.-.-.case | u.p.p.e.r._snake.-.k.e.b.a.b._.case                    |                             |
+|                      | Acronym Handling   | ID_NUMBER                    | HTTP_Response_Code             | XML_HTTP_REQUEST                                       | API_Version_2               |
+| gobeam               |                    | ID.NUMBER                    | HTTP.Response.Code             | XML.HTTP.REQUEST                                       | API.Version.2               |
+| iancoleman           |                    | id.number                    | http.response.code             | xml.http.request                                       | api.version.2               |
+| screaming-iancoleman |                    | ID.NUMBER                    | HTTP.RESPONSE.CODE             | XML.HTTP.REQUEST                                       | API.VERSION.2               |
+| searking             |                    | i.d._.n.u.m.b.e.r            | h.t.t.p._.response._.code      | x.m.l._.h.t.t.p._.r.e.q.u.e.s.t                        | a.p.i._.version._.2         |
+|                      | Spaces and Words   |    leading spaces            | trailing spaces                |    both sides                                          | This is a test sentence     |
+| gobeam               |                    | leading.spaces               | trailing.spaces                | both.sides                                             | This.is.a.test.sentence     |
+| iancoleman           |                    | leading.spaces               | trailing.spaces                | both.sides                                             | this.is.a.test.sentence     |
+| screaming-iancoleman |                    | LEADING.SPACES               | TRAILING.SPACES                | BOTH.SIDES                                             | THIS.IS.A.TEST.SENTENCE     |
+| searking             |                    |  . . leading. spaces         | trailing. spaces. . .          |  . . both. sides. . .                                  | this. is. a. test. sentence |
+|                      | Symbols and Random | 123_ABC-xyz--789             | !!special$$characters**        | ___!!!___weird___CASE___!!!___                         |                             |
+| gobeam               |                    | 123.ABC.xyz.789              | !!special$$characters**        | !!!.weird.CASE.!!!                                     |                             |
+| iancoleman           |                    | 123.abc.xyz..789             | !!special$$characters**        | ...!!!...weird...case...!!!...                         |                             |
+| screaming-iancoleman |                    | 123.ABC.XYZ..789             | !!SPECIAL$$CHARACTERS**        | ...!!!...WEIRD...CASE...!!!...                         |                             |
+| searking             |                    | 1.2.3._.a.b.c.-xyz.-.-.7.8.9 | !.!special.$.$characters.*.*   | _._._.!.!.!._._._weird._._._.c.a.s.e._._._.!.!.!._._._ |                             |
++----------------------+--------------------+------------------------------+--------------------------------+--------------------------------------------------------+-----------------------------+
+exit status 1
+```
+
+
+## `rntodot`
+
+```bash
+$ rntodot
+Error: No files provided.
+Usage: rntodot [options] <file1> [<file2> ...]
+
+Options:
+  -acronym value
+	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id (iancoleman only)
+  -acronym-from-file value
+	Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id (iancoleman only)
+  -algorithm string
+	Choose the dot algorithm to use, supported: iancoleman,screaming-iancoleman,searking,gobeam. (default "iancoleman")
+  -dry-run
+	Display the intended changes without renaming.
+  -ignore string
+	Other delimiter characters to ignore when parsing
+  -input-delimiters string
+	Input's Delimiters, default ' ' but can be multiple ascii character. (searking only)
+  -interactive
+	Ask for confirmation before renaming each file.
+  -word-seperators value
+	Word separators. (gobeam only) Default: "_-. "
 
 Conversion Examples:
 +----------------------+--------------------+------------------------------+--------------------------------+--------------------------------------------------------+-----------------------------+

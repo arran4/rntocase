@@ -85,6 +85,18 @@ builds:
     dir: cmd/rnacronym
     env:
       - CGO_ENABLED=0
+  -
+    id: "rntodot"
+    binary: "rntodot"
+    dir: cmd/rntodot
+    env:
+      - CGO_ENABLED=0
+  -
+    id: "rntoconstant"
+    binary: "rntoconstant"
+    dir: cmd/rntoconstant
+    env:
+      - CGO_ENABLED=0
 archives:
   -
     format_overrides:
@@ -135,6 +147,8 @@ dockers:
       - rntoupper
       - rntolower
       - rnacronym
+      - rntodot
+      - rntoconstant
     image_templates:
       - "ghcr.io/{{ .Repo }}/rntocase:{{ .Tag }}"
       - "ghcr.io/{{ .Repo }}/rntocase:latest"

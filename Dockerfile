@@ -14,4 +14,6 @@ COPY rntopascal /usr/local/bin/
 COPY rntoupper /usr/local/bin/
 COPY rntolower /usr/local/bin/
 COPY rnacronym /usr/local/bin/
+COPY rntodot /usr/local/bin/
+COPY rntoconstant /usr/local/bin/
 ENTRYPOINT ["/bin/sh"]
