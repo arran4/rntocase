@@ -3,6 +3,8 @@ package rntocase
 import (
 	"bufio"
 	"fmt"
+	"io"
+
 	"github.com/iancoleman/strcase"
 	"github.com/jedib0t/go-pretty/table"
 	"maps"
@@ -13,9 +15,22 @@ import (
 	"strings"
 )
 
+var (
+	inputReader *bufio.Reader
+	inputSource io.Reader
+)
+
+func getReader() *bufio.Reader {
+	if inputReader == nil || inputSource != os.Stdin {
+		inputSource = os.Stdin
+		inputReader = bufio.NewReader(inputSource)
+	}
+	return inputReader
+}
+
 // Confirm prompts the user with a yes/no question.
 func Confirm(prompt string) bool {
-	reader := bufio.NewReader(os.Stdin)
+	reader := getReader()
 	for {
 		fmt.Print(prompt + " [y/n]: ")
 		response, err := reader.ReadString('\n')
