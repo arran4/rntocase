@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
@@ -71,7 +72,9 @@ func main() {
 	}
 
 	// Use the shared RenameFiles function
-	if err := rntocase.RenameFiles(files, converter, *dryRun, *interactive); err != nil {
+	w := bufio.NewWriter(os.Stdout)
+	defer w.Flush()
+	if err := rntocase.RenameFiles(w, files, converter, *dryRun, *interactive); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}

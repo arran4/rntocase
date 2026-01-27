@@ -1,6 +1,7 @@
 package rntocase
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,7 @@ func TestRenameFiles(t *testing.T) {
 	}
 
 	// Run RenameFiles
-	if err := RenameFiles(paths, renameFunc, false, false); err != nil {
+	if err := RenameFiles(io.Discard, paths, renameFunc, false, false); err != nil {
 		t.Fatalf("RenameFiles failed: %v", err)
 	}
 

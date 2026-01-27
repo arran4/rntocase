@@ -3,6 +3,8 @@ package rntocase
 import (
 	"bufio"
 	"fmt"
+	"io"
+
 	"github.com/iancoleman/strcase"
 	"github.com/jedib0t/go-pretty/table"
 	"maps"
@@ -35,7 +37,7 @@ func Confirm(prompt string) bool {
 
 // RenameFiles applies a renaming function to a list of files.
 // Supports dry-run and interactive modes.
-func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun bool, interactive bool) error {
+func RenameFiles(w io.Writer, files []string, renameFunc func(string) (string, error), dryRun bool, interactive bool) error {
 	for _, file := range files {
 		// Extract path and filename
 		dir := filepath.Dir(file)
@@ -51,12 +53,12 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 
 		// Skip if no changes
 		if newPath == file {
-			fmt.Printf("Skipping '%s' (already matches desired format).\n", file)
+			fmt.Fprintf(w, "Skipping '%s' (already matches desired format).\n", file)
 			continue
 		}
 
 		// Display the intended change
-		fmt.Printf("Rename: '%s' -> '%s'\n", file, newPath)
+		fmt.Fprintf(w, "Rename: '%s' -> '%s'\n", file, newPath)
 
 		// Dry-run mode
 		if dryRun {
@@ -65,18 +67,21 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 
 		// Interactive mode
 		if interactive {
+			if f, ok := w.(interface{ Flush() error }); ok {
+				f.Flush()
+			}
 			if !Confirm(fmt.Sprintf("Rename '%s' to '%s'?", file, newName)) {
-				fmt.Println("Skipped.")
+				fmt.Fprintln(w, "Skipped.")
 				continue
 			}
 		}
 
 		// Perform the rename
 		if err := os.Rename(file, newPath); err != nil {
-			fmt.Printf("Error renaming '%s': %v\n", file, err)
+			fmt.Fprintf(w, "Error renaming '%s': %v\n", file, err)
 			continue
 		}
-		fmt.Println("Renamed successfully.")
+		fmt.Fprintln(w, "Renamed successfully.")
 	}
 	return nil
 }
