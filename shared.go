@@ -141,18 +141,49 @@ func RenderUsageTable(algos map[string]func(string) (string, error)) {
 			tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
 				yield(key)
 				yield("")
-				for _, value := range values.Values {
-					result, err := Run(algos, key, value)
-					if err != nil {
-						result = "!!!Error!!!"
-					}
-					if !yield(result) {
-						return
-					}
-				}
+				runSafeBatch(algos[key], values.Values, func(s string) bool {
+					return yield(s)
+				})
 			}))
 		}
 	}
 	tw.SetOutputMirror(os.Stderr)
 	tw.Render()
+}
+
+// runSafeBatch executes the algo function for each value in the slice safely.
+// It ensures that panic in one item does not stop processing of subsequent items,
+// but minimizes defer overhead by using a single defer per batch (recursively if needed).
+func runSafeBatch(algo func(string) (string, error), values []string, yield func(string) bool) {
+	processBatch(algo, values, 0, yield)
+}
+
+func processBatch(algo func(string) (string, error), values []string, start int, yield func(string) bool) {
+	var current int
+	defer func() {
+		if r := recover(); r != nil {
+			// If panic occurs, we yield error for the current item
+			if !yield("!!!Error!!!") {
+				return
+			}
+			// Resume processing subsequent items
+			if current+1 < len(values) {
+				processBatch(algo, values, current+1, yield)
+			}
+		}
+	}()
+
+	for i := start; i < len(values); i++ {
+		current = i
+		res, err := algo(values[i])
+		var val string
+		if err != nil {
+			val = "!!!Error!!!"
+		} else {
+			val = res
+		}
+		if !yield(val) {
+			return
+		}
+	}
 }
