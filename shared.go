@@ -42,11 +42,12 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		base := filepath.Base(file)
 
 		// Generate the new filename
-		baseNameRenamed, err := renameFunc(strings.TrimSuffix(base, filepath.Ext(base)))
+		ext := filepath.Ext(base)
+		baseNameRenamed, err := renameFunc(strings.TrimSuffix(base, ext))
 		if err != nil {
 			return err
 		}
-		newName := baseNameRenamed + filepath.Ext(base)
+		newName := baseNameRenamed + ext
 		newPath := filepath.Join(dir, newName)
 
 		// Skip if no changes
