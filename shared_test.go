@@ -1,6 +1,7 @@
 package rntocase
 
 import (
+	"bufio"
 	"io"
 	"os"
 	"path/filepath"
@@ -78,10 +79,7 @@ func TestConfirm(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Replace os.Stdin with the read end of the pipe
-	oldStdin := os.Stdin
-	os.Stdin = r
-	defer func() { os.Stdin = oldStdin }()
+	reader := bufio.NewReader(r)
 
 	// Write two responses to the pipe: "y\n" and "y\n"
 	go func() {
@@ -90,11 +88,11 @@ func TestConfirm(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}()
 
-	if !Confirm("Confirm 1?") {
+	if !ConfirmWithReader("Confirm 1?", reader) {
 		t.Error("Failed to confirm 1")
 	}
 
-	if !Confirm("Confirm 2?") {
+	if !ConfirmWithReader("Confirm 2?", reader) {
 		t.Error("Failed to confirm 2")
 	}
 }
