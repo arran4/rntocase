@@ -1,10 +1,13 @@
 package rntocase
 
 import (
+	"bufio"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRenameFiles(t *testing.T) {
@@ -66,5 +69,30 @@ func TestRenameFiles(t *testing.T) {
 	// Check if original "Hello World.txt" is gone
 	if _, err := os.Stat(filepath.Join(tempDir, "Hello World.txt")); err == nil {
 		t.Errorf("Original file 'Hello World.txt' should not exist")
+	}
+}
+
+func TestConfirm(t *testing.T) {
+	// Create a pipe to simulate stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reader := bufio.NewReader(r)
+
+	// Write two responses to the pipe: "y\n" and "y\n"
+	go func() {
+		defer w.Close()
+		io.WriteString(w, "y\ny\n")
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	if !ConfirmWithReader("Confirm 1?", reader) {
+		t.Error("Failed to confirm 1")
+	}
+
+	if !ConfirmWithReader("Confirm 2?", reader) {
+		t.Error("Failed to confirm 2")
 	}
 }
