@@ -1,8 +1,6 @@
 module github.com/arran4/rntocase
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.25.3
 
 require (
 	github.com/ettle/strcase v0.2.0
@@ -17,6 +15,7 @@ require (
 )
 
 require (
+	github.com/arran4/go-subcommand v0.0.17 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.4.0 // indirect
 	github.com/go-openapi/errors v0.22.6 // indirect
@@ -27,6 +26,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	go.mongodb.org/mongo-driver v1.17.7 // indirect
+	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
