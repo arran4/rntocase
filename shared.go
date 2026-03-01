@@ -141,31 +141,23 @@ func RenderUsageTable(algos map[string]func(string) (string, error)) {
 	keys := slices.Collect(maps.Keys(algos))
 	sort.Strings(keys)
 	for _, values := range ExampleGroups {
-		tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
-			yield("")
-			if !yield(values.Name) {
-				return
-			}
-			for _, value := range values.Values {
-				if !yield(value) {
-					return
-				}
-			}
-		}))
+		row := make(table.Row, 0, len(values.Values)+2)
+		row = append(row, "", values.Name)
+		for _, value := range values.Values {
+			row = append(row, value)
+		}
+		tw.AppendRow(row)
 		for _, key := range keys {
-			tw.AppendRow(slices.Collect(func(yield func(row any) bool) {
-				yield(key)
-				yield("")
-				for _, value := range values.Values {
-					result, err := Run(algos, key, value)
-					if err != nil {
-						result = "!!!Error!!!"
-					}
-					if !yield(result) {
-						return
-					}
+			row := make(table.Row, 0, len(values.Values)+2)
+			row = append(row, key, "")
+			for _, value := range values.Values {
+				result, err := Run(algos, key, value)
+				if err != nil {
+					result = "!!!Error!!!"
 				}
-			}))
+				row = append(row, result)
+			}
+			tw.AppendRow(row)
 		}
 	}
 	tw.SetOutputMirror(os.Stderr)
