@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	defaultAlgo      = "iancoleman"
-	caseType         = "dot"
-	appName          = "rntodot"
-	defaultIgnore    = ""
-	delimiter        = "."
+	defaultAlgo   = "iancoleman"
+	caseType      = "dot"
+	appName       = "rntodot"
+	defaultIgnore = ""
+	delimiter     = "."
 )
 
 func withDefault(def string, f func(s string) string) func(s string) string {
