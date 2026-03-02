@@ -84,7 +84,10 @@ func TestConfirm(t *testing.T) {
 	// Write two responses to the pipe: "y\n" and "y\n"
 	go func() {
 		defer w.Close()
-		io.WriteString(w, "y\ny\n")
+		_, err := io.WriteString(w, "y\ny\n")
+		if err != nil {
+			t.Errorf("Failed to write to pipe: %v", err)
+		}
 		time.Sleep(100 * time.Millisecond)
 	}()
 
