@@ -16,7 +16,9 @@ func TestRenameFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
 
 	// Create dummy files
 	files := []string{
@@ -83,7 +85,9 @@ func TestConfirm(t *testing.T) {
 
 	// Write two responses to the pipe: "y\n" and "y\n"
 	go func() {
-		defer w.Close()
+		defer func() {
+			_ = w.Close()
+		}()
 		_, err := io.WriteString(w, "y\ny\n")
 		if err != nil {
 			t.Errorf("Failed to write to pipe: %v", err)

@@ -38,9 +38,10 @@ func ConfirmWithReader(prompt string, reader *bufio.Reader) bool {
 			return false
 		}
 		response = strings.TrimSpace(strings.ToLower(response))
-		if response == "y" {
+		switch response {
+		case "y":
 			return true
-		} else if response == "n" {
+		case "n":
 			return false
 		}
 		fmt.Println("Please enter 'y' or 'n'.")
@@ -102,7 +103,9 @@ func LoadAcronymsFromFile(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("could not open acronym file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
