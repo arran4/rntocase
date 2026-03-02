@@ -126,8 +126,8 @@ nfpms:
       - termux.deb
       - archlinux
     release: 1
-  section: default
-  priority: extra
+    section: default
+    priority: extra
 dockers:
   - id: tools
     goos: linux
@@ -150,8 +150,8 @@ dockers:
       - rntodot
       - rntoconstant
     image_templates:
-      - "ghcr.io/{{ .Repo }}/rntocase:{{ .Tag }}"
-      - "ghcr.io/{{ .Repo }}/rntocase:latest"
+      - "ghcr.io/arran4/rntocase:{{ .Tag }}"
+      - "ghcr.io/arran4/rntocase:latest"
     dockerfile: Dockerfile
     use: buildx
 
