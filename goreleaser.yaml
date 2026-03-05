@@ -101,11 +101,11 @@ archives:
   -
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
@@ -155,3 +155,16 @@ dockers:
     dockerfile: Dockerfile
     use: buildx
 
+
+homebrew_casks:
+  - repository:
+      owner: arran4
+      name: homebrew-tap
+      branch: "{{.ProjectName}}-{{.Version}}"
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+      pull_request:
+        enabled: true
+        draft: false
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
