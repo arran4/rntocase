@@ -30,9 +30,9 @@ func main() {
 				}
 				var result strings.Builder
 				for _, w := range words {
-					str := w.String()
-					if len(str) > 0 {
-						result.WriteString(strings.ToUpper(string([]rune(str)[0:1])))
+					for _, r := range w.String() {
+						result.WriteString(strings.ToUpper(string(r)))
+						break
 					}
 				}
 				return result.String(), nil

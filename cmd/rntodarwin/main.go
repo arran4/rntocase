@@ -32,7 +32,7 @@ func main() {
 				for _, w := range words {
 					parts = append(parts, strings2.UpperCaseFirst(strings.ToLower(w.String())))
 				}
-				return strings.Join(parts, "_ "), nil
+				return strings.Join(parts, "_"), nil
 			},
 		}
 	)
