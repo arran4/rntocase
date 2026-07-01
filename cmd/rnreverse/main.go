@@ -16,21 +16,22 @@ const (
 	appName     = "rnreverse"
 )
 
+var (
+	algos = map[string]func(string) (string, error){
+		"go": func(s string) (string, error) {
+			runes := []rune(s)
+			for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+				runes[i], runes[j] = runes[j], runes[i]
+			}
+			return string(runes), nil
+		},
+	}
+)
+
 func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	var (
-		algos = map[string]func(string) (string, error){
-			"go": func(s string) (string, error) {
-				runes := []rune(s)
-				for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-					runes[i], runes[j] = runes[j], runes[i]
-				}
-				return string(runes), nil
-			},
-		}
-	)
 
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {

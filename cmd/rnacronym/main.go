@@ -17,28 +17,29 @@ const (
 	appName     = "rnacronym"
 )
 
+var (
+	algos = map[string]func(string) (string, error){
+		"strings2": func(s string) (string, error) {
+			words, err := strings2.Parse(s)
+			if err != nil {
+				return "", err
+			}
+			var result strings.Builder
+			for _, w := range words {
+				for _, r := range w.String() {
+					result.WriteString(strings.ToUpper(string(r)))
+					break
+				}
+			}
+			return result.String(), nil
+		},
+	}
+)
+
 func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	var (
-		algos = map[string]func(string) (string, error){
-			"strings2": func(s string) (string, error) {
-				words, err := strings2.Parse(s)
-				if err != nil {
-					return "", err
-				}
-				var result strings.Builder
-				for _, w := range words {
-					for _, r := range w.String() {
-						result.WriteString(strings.ToUpper(string(r)))
-						break
-					}
-				}
-				return result.String(), nil
-			},
-		}
-	)
 
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {

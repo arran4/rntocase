@@ -18,17 +18,18 @@ const (
 	appName     = "rntotitle"
 )
 
+var (
+	algos = map[string]func(string) (string, error){
+		"go": func(s string) (string, error) {
+			return cases.Title(language.English).String(s), nil
+		},
+	}
+)
+
 func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	var (
-		algos = map[string]func(string) (string, error){
-			"go": func(s string) (string, error) {
-				return cases.Title(language.English).String(s), nil
-			},
-		}
-	)
 
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {

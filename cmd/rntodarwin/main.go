@@ -17,25 +17,26 @@ const (
 	appName     = "rntodarwin"
 )
 
+var (
+	algos = map[string]func(string) (string, error){
+		"strings2": func(s string) (string, error) {
+			words, err := strings2.Parse(s)
+			if err != nil {
+				return "", err
+			}
+			var parts []string
+			for _, w := range words {
+				parts = append(parts, strings2.UpperCaseFirst(strings.ToLower(w.String())))
+			}
+			return strings.Join(parts, "_"), nil
+		},
+	}
+)
+
 func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	var (
-		algos = map[string]func(string) (string, error){
-			"strings2": func(s string) (string, error) {
-				words, err := strings2.Parse(s)
-				if err != nil {
-					return "", err
-				}
-				var parts []string
-				for _, w := range words {
-					parts = append(parts, strings2.UpperCaseFirst(strings.ToLower(w.String())))
-				}
-				return strings.Join(parts, "_"), nil
-			},
-		}
-	)
 
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {
