@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	strings2 "github.com/searKing/golang/go/strings"
 	"maps"
 	"os"
 	"slices"
@@ -12,7 +11,7 @@ import (
 )
 
 const (
-	defaultAlgo = "searking"
+	defaultAlgo = "go"
 	caseType    = "reverse"
 	appName     = "rnreverse"
 )
@@ -23,8 +22,12 @@ func main() {
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	var (
 		algos = map[string]func(string) (string, error){
-			"searking": func(s string) (string, error) {
-				return strings2.ReverseByRune(s), nil
+			"go": func(s string) (string, error) {
+				runes := []rune(s)
+				for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+					runes[i], runes[j] = runes[j], runes[i]
+				}
+				return string(runes), nil
 			},
 		}
 	)
@@ -50,7 +53,7 @@ func main() {
 
 	converter, ok := algos[*algorithm]
 	if !ok {
-		fmt.Printf("Uunsupported "+caseType+" algorithm: %s\n", *algorithm)
+		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

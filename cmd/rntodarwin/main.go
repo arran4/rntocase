@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	skstrings "github.com/searKing/golang/go/strings"
+	"github.com/arran4/strings2"
 	"maps"
 	"os"
 	"slices"
@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultAlgo = "searking"
+	defaultAlgo = "strings2"
 	caseType    = "darwincase"
 	appName     = "rntodarwin"
 )
@@ -23,8 +23,16 @@ func main() {
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	var (
 		algos = map[string]func(string) (string, error){
-			"searking": func(s string) (string, error) {
-				return skstrings.DarwinCase(s), nil
+			"strings2": func(s string) (string, error) {
+				words, err := strings2.Parse(s)
+				if err != nil {
+					return "", err
+				}
+				var parts []string
+				for _, w := range words {
+					parts = append(parts, strings2.UpperCaseFirst(strings.ToLower(w.String())))
+				}
+				return strings.Join(parts, "_ "), nil
 			},
 		}
 	)
@@ -50,7 +58,7 @@ func main() {
 
 	converter, ok := algos[*algorithm]
 	if !ok {
-		fmt.Printf("Uunsupported "+caseType+" algorithm: %s\n", *algorithm)
+		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

@@ -4,8 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	"github.com/gobeam/stringy"
-	strings2 "github.com/searKing/golang/go/strings"
+	"github.com/arran4/strings2"
 	"maps"
 	"os"
 	"slices"
@@ -13,7 +12,7 @@ import (
 )
 
 const (
-	defaultAlgo = "searking"
+	defaultAlgo = "strings2"
 	caseType    = "upperleading"
 	appName     = "rntoupperleading"
 )
@@ -24,11 +23,8 @@ func main() {
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	var (
 		algos = map[string]func(string) (string, error){
-			"searking": func(s string) (string, error) {
-				return strings2.ToUpperLeading(s), nil
-			},
-			"gobeam": func(s string) (string, error) {
-				return stringy.New(s).UcFirst(), nil
+			"strings2": func(s string) (string, error) {
+				return strings2.UpperCaseFirstWithErr(s)
 			},
 		}
 	)
@@ -54,7 +50,7 @@ func main() {
 
 	converter, ok := algos[*algorithm]
 	if !ok {
-		fmt.Printf("Uunsupported "+caseType+" algorithm: %s\n", *algorithm)
+		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

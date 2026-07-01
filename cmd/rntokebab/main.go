@@ -4,66 +4,23 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	strcase2 "github.com/ettle/strcase"
-	"github.com/gobeam/stringy"
-	"github.com/golang-cz/textcase"
-	"github.com/iancoleman/strcase"
-	strings2 "github.com/searKing/golang/go/strings"
-	"github.com/tomeh/caseconv"
+	"github.com/arran4/strings2"
 	"maps"
 	"os"
-	"resenje.org/casbab"
 	"slices"
 	"strings"
 )
 
 const (
-	defaultAlgo = "iancoleman"
+	defaultAlgo = "strings2"
 	caseType    = "kebab"
 	appName     = "rntokebab"
 )
 
 var (
-	wordSeparators []string
-	algos          = map[string]func(string) (string, error){
-		"iancoleman": func(s string) (string, error) {
-			return strcase.ToKebab(s), nil
-		},
-		"searking": func(s string) (string, error) {
-			return strings2.KebabCase(s), nil
-		},
-		"screaming-iancoleman": func(s string) (string, error) {
-			return strcase.ToScreamingKebab(s), nil
-		},
-		"ettle": func(s string) (string, error) {
-			return strcase2.ToKebab(s), nil
-		},
-		"go-ettle": func(s string) (string, error) {
-			return strcase2.ToGoKebab(s), nil
-		},
-		"ETTLE": func(s string) (string, error) {
-			return strcase2.ToKEBAB(s), nil
-		},
-		"resenje": func(s string) (string, error) {
-			return casbab.Kebab(s), nil
-		},
-		"screaming-resenje": func(s string) (string, error) {
-			return casbab.ScreamingKebab(s), nil
-		},
-		"resenje-camel": func(s string) (string, error) {
-			return casbab.CamelKebab(s), nil
-		},
-		"resenje-snake": func(s string) (string, error) {
-			return casbab.CamelSnake(s), nil
-		},
-		"tomeh": func(s string) (string, error) {
-			return caseconv.ToKebab(s), nil
-		},
-		"golang-cz": func(s string) (string, error) {
-			return textcase.KebabCase(s), nil
-		},
-		"gobeam": func(s string) (string, error) {
-			return stringy.New(s).KebabCase(wordSeparators...).Get(), nil
+	algos = map[string]func(string) (string, error){
+		"strings2": func(s string) (string, error) {
+			return strings2.ToKebab(s)
 		},
 	}
 )
@@ -72,17 +29,7 @@ func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	flag.Func("acronym", "Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id (iancoleman only)", func(s string) error {
-		strcase.ConfigureAcronym(s, s)
-		return nil
-	})
-	flag.Func("acronym-from-file", "Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id (iancoleman only)", func(s string) error {
-		return rntocase.LoadAcronymsFromFile(s)
-	})
-	flag.Func("word-seperators", "Word separators. (gobeam only) Default: \"_-. \"", func(s string) error {
-		wordSeparators = append(wordSeparators, s)
-		return nil
-	})
+
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
@@ -104,7 +51,7 @@ func main() {
 
 	converter, ok := algos[*algorithm]
 	if !ok {
-		fmt.Printf("Uunsupported "+caseType+" algorithm: %s\n", *algorithm)
+		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

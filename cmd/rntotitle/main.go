@@ -4,18 +4,16 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	"github.com/gobeam/stringy"
-	"github.com/revett/titlecase"
-	skstrings "github.com/searKing/golang/go/strings"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"maps"
 	"os"
-	"resenje.org/casbab"
 	"slices"
 	"strings"
 )
 
 const (
-	defaultAlgo = "revett"
+	defaultAlgo = "go"
 	caseType    = "titlecase"
 	appName     = "rntotitle"
 )
@@ -24,23 +22,10 @@ func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	var opArgs []titlecase.Option
 	var (
 		algos = map[string]func(string) (string, error){
-			"revett": func(s string) (string, error) {
-				return titlecase.Convert(s, opArgs...)
-			},
-			"searking": func(s string) (string, error) {
-				return skstrings.TitleCase(s), nil
-			},
 			"go": func(s string) (string, error) {
-				return strings.ToTitle(s), nil
-			},
-			"resenje": func(s string) (string, error) {
-				return casbab.Title(s), nil
-			},
-			"gobeam": func(s string) (string, error) {
-				return stringy.New(s).Title(), nil
+				return cases.Title(language.English).String(s), nil
 			},
 		}
 	)
@@ -66,7 +51,7 @@ func main() {
 
 	converter, ok := algos[*algorithm]
 	if !ok {
-		fmt.Printf("Uunsupported "+caseType+" algorithm: %s\n", *algorithm)
+		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

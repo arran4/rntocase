@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	"github.com/gobeam/stringy"
+	"github.com/arran4/strings2"
 	"maps"
 	"os"
 	"slices"
@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultAlgo = "gobeam"
+	defaultAlgo = "strings2"
 	caseType    = "acronym"
 	appName     = "rnacronym"
 )
@@ -23,8 +23,19 @@ func main() {
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	var (
 		algos = map[string]func(string) (string, error){
-			"gobeam": func(s string) (string, error) {
-				return stringy.New(s).Acronym().Get(), nil
+			"strings2": func(s string) (string, error) {
+				words, err := strings2.Parse(s)
+				if err != nil {
+					return "", err
+				}
+				var result strings.Builder
+				for _, w := range words {
+					str := w.String()
+					if len(str) > 0 {
+						result.WriteString(strings.ToUpper(string([]rune(str)[0:1])))
+					}
+				}
+				return result.String(), nil
 			},
 		}
 	)
@@ -51,7 +62,7 @@ func main() {
 
 	converter, ok := algos[*algorithm]
 	if !ok {
-		fmt.Printf("Uunsupported "+caseType+" algorithm: %s\n", *algorithm)
+		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

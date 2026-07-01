@@ -4,31 +4,27 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	strcase2 "github.com/ettle/strcase"
-	"github.com/iancoleman/strcase"
+	"github.com/arran4/strings2"
 	"maps"
 	"os"
-	"resenje.org/casbab"
 	"slices"
 	"strings"
 )
 
 const (
-	defaultAlgo = "iancoleman"
+	defaultAlgo = "strings2"
 	caseType    = "constant"
 	appName     = "rntoconstant"
 )
 
 var (
 	algos = map[string]func(string) (string, error){
-		"iancoleman": func(s string) (string, error) {
-			return strcase.ToScreamingSnake(s), nil
-		},
-		"ettle": func(s string) (string, error) {
-			return strcase2.ToSNAKE(s), nil
-		},
-		"resenje": func(s string) (string, error) {
-			return casbab.ScreamingSnake(s), nil
+		"strings2": func(s string) (string, error) {
+			val, err := strings2.ToSnake(s)
+			if err != nil {
+				return "", err
+			}
+			return strings.ToUpper(val), nil
 		},
 	}
 )
@@ -37,16 +33,8 @@ func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	flag.Func("acronym", "Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id", func(s string) error {
-		strcase.ConfigureAcronym(s, s)
-		return nil
-	})
-	flag.Func("acronym-from-file", "Words to consider acronyms and not to assume they are words, ie ID => ID rather than ID => Id", func(s string) error {
-		return rntocase.LoadAcronymsFromFile(s)
-	})
-	keys := slices.Collect(maps.Keys(algos))
-	slices.Sort(keys)
-	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(keys, ",")+".")
+
+	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
 		_, _ = fmt.Fprintln(os.Stderr, "\nOptions:")
