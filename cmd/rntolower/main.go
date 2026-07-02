@@ -4,17 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	"github.com/gobeam/stringy"
-	skstrings "github.com/searKing/golang/go/strings"
 	"maps"
 	"os"
-	"resenje.org/casbab"
 	"slices"
 	"strings"
 )
 
 const (
-	defaultAlgo = "resenje"
+	defaultAlgo = "go"
 	caseType    = "lowercase"
 	appName     = "rntolower"
 )
@@ -25,17 +22,8 @@ func main() {
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	var (
 		algos = map[string]func(string) (string, error){
-			"searking": func(s string) (string, error) {
-				return skstrings.LowerCase(s), nil
-			},
 			"go": func(s string) (string, error) {
 				return strings.ToLower(s), nil
-			},
-			"resenje": func(s string) (string, error) {
-				return casbab.Lower(s), nil
-			},
-			"gobeam": func(s string) (string, error) {
-				return stringy.New(s).ToLower(), nil
 			},
 		}
 	)
@@ -61,7 +49,7 @@ func main() {
 
 	converter, ok := algos[*algorithm]
 	if !ok {
-		fmt.Printf("Uunsupported "+caseType+" algorithm: %s\n", *algorithm)
+		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

@@ -3,8 +3,6 @@ package rntocase
 import (
 	"bufio"
 	"fmt"
-
-	"github.com/iancoleman/strcase"
 	"github.com/jedib0t/go-pretty/table"
 	"maps"
 	"os"
@@ -97,31 +95,9 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 	return nil
 }
 
-// LoadAcronymsFromFile reads acronyms from a file and configures them for strcase.
+// LoadAcronymsFromFile reads acronyms from a file and configures them.
 func LoadAcronymsFromFile(filePath string) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("could not open acronym file: %w", err)
-	}
-	defer func() {
-		_ = file.Close()
-	}()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		word := scanner.Text()
-		if word == "" {
-			continue // Skip empty lines
-		}
-		strcase.ConfigureAcronym(word, word) // Configure acronym to retain its casing
-	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading acronym file: %w", err)
-	}
-
-	fmt.Printf("Loaded acronyms from file: %s\n", filePath)
-	return nil
+	return fmt.Errorf("acronym configuration is no longer globally supported")
 }
 
 func Run(algos map[string]func(string) (string, error), key string, value string) (result string, err error) {
