@@ -17,18 +17,19 @@ const (
 	appName       = "rntodelimited"
 )
 
+var delimiter *string
+
+var algos = map[string]func(string) (string, error){
+	"strings2": func(s string) (string, error) {
+		return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionFirstLower())
+	},
+}
+
 func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-	delimiter := flag.String("delimiter", "_", "The delimiter string to separate words")
-	var (
-		algos = map[string]func(string) (string, error){
-			"strings2": func(s string) (string, error) {
-				return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionFirstLower())
-			},
-		}
-	)
+	delimiter = flag.String("delimiter", "_", "The delimiter string to separate words")
 
 	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {

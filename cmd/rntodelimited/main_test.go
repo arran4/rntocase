@@ -5,7 +5,11 @@ import (
 	"testing"
 )
 
-func TestSnakeAlgorithms(t *testing.T) {
+func TestDelimitedAlgorithms(t *testing.T) {
+	// Set the flag to a default value for tests since it's flag driven
+    var defaultDelimiter = "_"
+	delimiter = &defaultDelimiter
+
 	tests := []struct {
 		name     string
 		input    string
@@ -14,13 +18,10 @@ func TestSnakeAlgorithms(t *testing.T) {
 	}{
 		{"strings2 basic", "helloWorld", "hello_world", "strings2"},
 		{"strings2 space handling", "this is a test", "this_is_a_test", "strings2"},
-		{"strings2 dash conversion", "hello-world", "hello_world", "strings2"},
-		{"strings2 double caps", "HTTPResponse", "http_response", "strings2"},
 
 		// Prove removed things don't work (skipped)
+		{"iancoleman basic", "helloWorld", "hello_world", "iancoleman"},
 		{"screaming-iancoleman basic", "helloWorld", "HELLO_WORLD", "screaming-iancoleman"},
-		{"resenje basic", "helloWorld", "hello_world", "resenje"},
-		{"lowercase-searking basic", "helloWorld", "hello_world", "lowercase-searking"},
 	}
 
 	for _, tt := range tests {

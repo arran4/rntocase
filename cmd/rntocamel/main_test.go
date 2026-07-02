@@ -12,10 +12,17 @@ func TestCamelAlgorithms(t *testing.T) {
 		algo     string
 	}{
 		{"strings2 basic", "hello_world", "helloWorld", "strings2"},
-		{"strings2 acronym", "ID_NUMBER", "idNumber", "strings2"},
+		{"strings2 spaces", "this is a test", "thisIsATest", "strings2"},
+		{"strings2 mixed case", "MIXED_case-test", "mixedCaseTest", "strings2"},
+		{"strings2 acronym handling", "HTTP_REQUEST_ID", "httpRequestId", "strings2"},
+		{"strings2 leading underscore", "_hello_world_", "helloWorld", "strings2"},
+		{"strings2 double delimiters", "hello__world--test", "helloWorldTest", "strings2"},
+
 		// Prove removed things don't work (skipped)
 		{"iancoleman basic", "hello_world", "helloWorld", "iancoleman"},
 		{"lower-iancoleman basic", "hello_world", "helloWorld", "lower-iancoleman"},
+		{"searking basic", "hello_world", "helloWorld", "searking"},
+		{"gobeam basic", "hello_world", "helloWorld", "gobeam"},
 	}
 
 	for _, tt := range tests {

@@ -5,22 +5,21 @@ import (
 	"testing"
 )
 
-func TestSnakeAlgorithms(t *testing.T) {
+func TestKebabAlgorithms(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
 		expected string
 		algo     string
 	}{
-		{"strings2 basic", "helloWorld", "hello_world", "strings2"},
-		{"strings2 space handling", "this is a test", "this_is_a_test", "strings2"},
-		{"strings2 dash conversion", "hello-world", "hello_world", "strings2"},
-		{"strings2 double caps", "HTTPResponse", "http_response", "strings2"},
+		{"strings2 basic", "helloWorld", "hello-world", "strings2"},
+		{"strings2 space handling", "this is a test", "this-is-a-test", "strings2"},
+		{"strings2 underscore conversion", "hello_world", "hello-world", "strings2"},
+		{"strings2 double caps", "HTTPResponse", "http-response", "strings2"},
 
 		// Prove removed things don't work (skipped)
-		{"screaming-iancoleman basic", "helloWorld", "HELLO_WORLD", "screaming-iancoleman"},
-		{"resenje basic", "helloWorld", "hello_world", "resenje"},
-		{"lowercase-searking basic", "helloWorld", "hello_world", "lowercase-searking"},
+		{"screaming-iancoleman basic", "helloWorld", "HELLO-WORLD", "screaming-iancoleman"},
+		{"resenje basic", "helloWorld", "hello-world", "resenje"},
 	}
 
 	for _, tt := range tests {
