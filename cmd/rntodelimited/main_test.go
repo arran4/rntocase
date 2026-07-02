@@ -14,24 +14,14 @@ func TestDelimitedAlgorithms(t *testing.T) {
 		name     string
 		input    string
 		expected string
-		algo     string
 	}{
-		{"strings2 basic", "helloWorld", "hello_world", "strings2"},
-		{"strings2 space handling", "this is a test", "this_is_a_test", "strings2"},
-
-		// Prove removed things don't work (skipped)
-		{"iancoleman basic", "helloWorld", "hello_world", "iancoleman"},
-		{"screaming-iancoleman basic", "helloWorld", "HELLO_WORLD", "screaming-iancoleman"},
+		{"strings2 basic", "helloWorld", "hello_world"},
+		{"strings2 space handling", "this is a test", "this_is_a_test"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			algoFn, exists := algos[tt.algo]
-			if !exists {
-				t.Skipf("Algorithm %s not found (proves it was removed)", tt.algo)
-				return
-			}
-			result, err := algoFn(tt.input)
+			result, err := algos["strings2"](tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}

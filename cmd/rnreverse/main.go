@@ -4,43 +4,34 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	"maps"
 	"os"
-	"slices"
-	"strings"
 )
 
 const (
-	defaultAlgo = "go"
 	caseType    = "reverse"
 	appName     = "rnreverse"
 )
 
-var (
-	algos = map[string]func(string) (string, error){
-		"go": func(s string) (string, error) {
-			runes := []rune(s)
-			for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-				runes[i], runes[j] = runes[j], runes[i]
-			}
-			return string(runes), nil
-		},
+func converter(s string) (string, error) {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
 	}
-)
+	return string(runes), nil
+}
 
 func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 
-	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
 		_, _ = fmt.Fprintln(os.Stderr, "\nOptions:")
 		flag.PrintDefaults()
 		_, _ = fmt.Fprintln(os.Stderr)
 		_, _ = fmt.Fprintln(os.Stderr, "Conversion Examples:")
-		rntocase.RenderUsageTable(algos)
+		rntocase.RenderUsageTable(map[string]func(string) (string, error){"go": converter})
 	}
 	flag.Parse()
 
@@ -49,12 +40,6 @@ func main() {
 	if len(files) == 0 {
 		fmt.Println("Error: No files provided.")
 		flag.Usage()
-		os.Exit(1)
-	}
-
-	converter, ok := algos[*algorithm]
-	if !ok {
-		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 

@@ -9,21 +9,13 @@ func TestTitleAlgorithms(t *testing.T) {
 		name     string
 		input    string
 		expected string
-		algo     string
 	}{
-		{"go basic", "hello world", "Hello World", "go"},
-		// Prove removed things don't work (skipped)
-		{"revett basic", "hello world", "Hello World", "revett"},
+		{"go basic", "hello world", "Hello World"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			algoFn, exists := algos[tt.algo]
-			if !exists {
-				t.Skipf("Algorithm %s not found (proves it was removed)", tt.algo)
-				return
-			}
-			result, err := algoFn(tt.input)
+			result, err := converter(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}

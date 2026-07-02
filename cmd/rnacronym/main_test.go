@@ -9,21 +9,13 @@ func TestAcronymAlgorithms(t *testing.T) {
 		name     string
 		input    string
 		expected string
-		algo     string
 	}{
-		{"strings2 basic", "hello world", "HW", "strings2"},
-		// Prove removed things don't work (skipped)
-		{"gobeam basic", "hello world", "HW", "gobeam"},
+		{"strings2 basic", "hello world", "HW"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			algoFn, exists := algos[tt.algo]
-			if !exists {
-				t.Skipf("Algorithm %s not found (proves it was removed)", tt.algo)
-				return
-			}
-			result, err := algoFn(tt.input)
+			result, err := converter(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
