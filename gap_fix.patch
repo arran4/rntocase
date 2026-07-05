@@ -1,0 +1,25 @@
+--- gap.md
++++ gap.md
+@@ -1,19 +1,4 @@
+ # Gap Analysis for Migration to `github.com/arran4/strings2`
+
+ The repository `rntocase` contains many individual executables that transform casing. Currently, they rely on various third-party casing libraries (like `strcase`, `stringy`, `caseconv`, `casbab`, etc.).
+ The goal is to replace these libraries with `github.com/arran4/strings2` where possible, while maintaining full support for existing case mutations, and to simplify the dependency tree.
+
+-## Migrated / Supported Conversions
+-
+-The following commands and cases are natively supported by `github.com/arran4/strings2` and standard library and will be migrated to `strings2`:
+-- `rntocamel` (using `strings2.ToPascal` to match default outputs of old library)
+-- `rntoconstant` (using `strings2.ToSnake` + `strings.ToUpper` for screaming snake case)
+-- `rntodelimited` (using `strings2.ToFormattedString(s, strings2.OptionDelimiter(...))`)
+-- `rntodot` (using `strings2.ToFormattedString(s, strings2.OptionDelimiter("."))`)
+-- `rntokebab` (using `strings2.ToKebab`)
+-- `rntopascal` (using `strings2.ToPascal`)
+-- `rntosnake` (using `strings2.ToSnake`)
+-- `rntolowerleading` (using `strings2.LowerCaseFirst`)
+-- `rntoupperleading` (using `strings2.UpperCaseFirst`)
+-- `rntolower`, `rntoupper`, `rntrim` (using standard library `strings` package)
+-
+ ## Gaps (Not Supported by `strings2`)
+
+ The following formats, features, flags or specific algorithm variations are dropped or require workarounds because they are not explicitly provided natively by `github.com/arran4/strings2`:
