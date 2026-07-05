@@ -12,8 +12,8 @@ The following formats, features, flags or specific algorithm variations are drop
    - **Feature Request:** While `strings2` could technically add an `AcronymCase` mode or a specific `OptionAcronymExtraction`, it's not highly advisable as it strays from standard delimited casing semantics. Our current explicit loop is sufficient and clear.
 
 2. **String Reversal (`rnreverse`)**: Reversing characters/runes in a string. `strings2` does not provide utility functions for reversing runes.
-   - **Local Implementation:** We implement a custom rune-reversal function manually.
-   - **Feature Request:** It is not advisable for `strings2` to include this, as reversing strings is not a "case" translation but a geometric translation best suited for standalone utilities.
+   - **Local Implementation:** We implement a custom rune-reversal function manually. We also implemented a `-words` word-reversal mode using `strings2.Parse()` coupled with `strings2.WordsToFormattedCase` using `strings2.CMVerbatim`.
+   - **Feature Request:** It is not advisable for `strings2` to include this, as reversing strings is not a "case" translation but a geometric translation best suited for standalone utilities. The tooling exposes enough standard parts to achieve it locally when needed.
 
 3. **Darwin Case (`rntodarwin`)**: Capitalizes the first letter of each word and separates words with `_` (e.g. `Some_String_Test`). `strings2` does not have an explicit Darwin case preset.
    - **Local Implementation:** This is natively approximated in `rntodarwin` with `strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))`.
@@ -34,11 +34,3 @@ The following formats, features, flags or specific algorithm variations are drop
    - **Local Implementation:** This is readily achievable natively in `strings2` by using `strings2.ToCamel()` or via custom `OptionFirstLower()` / `OptionFirstUpper()` flags.
 
 8. **Screaming Kebab / Screaming Delimited / Lowercase Snake (`rntokebab`, `rntodelimited`, `rntosnake`)**: Specific case variations provided by dropped libraries (e.g. `screaming-kebab`) were removed to simplify the codebase to the primary case type for each tool.
-
-## Behavioral Mismatches & Resolutions
-
-With `strings2@v0.0.6`, many behavioral differences relative to `strcase` were mitigated by exposing `CMWhispering` and other configuration modes. The tools have been configured to match `strcase` where possible, eliminating the prior known output mismatch skips except where the underlying parser intrinsically defines acronyms or punctuation slightly differently from `strcase` (which are noted as skipped tests in `cmd/*_test.go` suites where applicable).
-
-**Summary of Differences:**
-- **Word Boundaries:** `strcase` and `strings2` differ slightly on how they parse complex, non-standard punctuation strings or concurrent acronyms.
-- **Resolution:** By leveraging the newly exposed `OptionLoose()` and `OptionCaseMode()` configuration flags inside `strings2@v0.0.6`, the new parsing cleanly mirrors the vast majority of `strcase` outputs. Where minor mismatches occur, they reflect a difference in lexical intent (e.g., how an acronym followed immediately by another word is split). These are accepted constraints of shifting to the `strings2` standard parse tree.

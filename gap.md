@@ -11,26 +11,17 @@ The following formats, features, flags or specific algorithm variations are drop
    - **Local Implementation:** This feature is approximated using `strings2.Parse()` to extract words and pick the first letter.
    - **Feature Request:** While `strings2` could technically add an `AcronymCase` mode or a specific `OptionAcronymExtraction`, it's not highly advisable as it strays from standard delimited casing semantics. Our current explicit loop is sufficient and clear.
 
-2. **String Reversal (`rnreverse`)**: Reversing characters/runes in a string. `strings2` does not provide utility functions for reversing runes.
-   - **Local Implementation:** We implement a custom rune-reversal function manually. We also implemented a `-words` word-reversal mode using `strings2.Parse()` coupled with `strings2.WordsToFormattedCase` using `strings2.CMVerbatim`.
-   - **Feature Request:** It is not advisable for `strings2` to include this, as reversing strings is not a "case" translation but a geometric translation best suited for standalone utilities. The tooling exposes enough standard parts to achieve it locally when needed.
-
-3. **Darwin Case (`rntodarwin`)**: Capitalizes the first letter of each word and separates words with `_` (e.g. `Some_String_Test`). `strings2` does not have an explicit Darwin case preset.
+2. **Darwin Case (`rntodarwin`)**: Capitalizes the first letter of each word and separates words with `_` (e.g. `Some_String_Test`). `strings2` does not have an explicit Darwin case preset.
    - **Local Implementation:** This is natively approximated in `rntodarwin` with `strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))`.
    - **Feature Request:** `strings2` could easily support this natively by adding a `ToDarwinCase` function wrapping those exact options as an alias.
 
-4. **Title Case (`rntotitle`)**: Standard title-casing.
+3. **Title Case (`rntotitle`)**: Standard title-casing.
    - **Local Implementation:** `strings2` does not strictly map to smart title case conventions natively. A basic standard-library equivalent (`cases.Title`) from `golang.org/x/text` is utilized instead as a robust fallback.
    - **Feature Request:** Adding smart title casing (handling prepositions correctly) to `strings2` could be highly valuable.
 
-5. **Acronym flags (`-acronym`, `-acronym-from-file`)**: Several tools exposed these flags from `iancoleman/strcase`.
+4. **Acronym flags (`-acronym`, `-acronym-from-file`)**: Several tools exposed these flags from `iancoleman/strcase`.
    - **Local Implementation:** Since we dropped `strcase`, these flags are no longer supported and have been removed.
    - **Feature Request:** `strings2` could support this via its smart acronyms config, but parsing files manually and injecting them into `strings2.ParserConfig` arrays might overcomplicate the standard mapping layer.
 
-6. **Other specific flags (`-ignore`, `-input-delimiters`, `-word-seperators`)**: These were tied to specific libraries (`iancoleman`, `searking`, `gobeam`) and are no longer supported.
+5. **Other specific flags (`-ignore`, `-input-delimiters`, `-word-seperators`)**: These were tied to specific libraries (`iancoleman`, `searking`, `gobeam`) and are no longer supported.
    - **Feature Request:** `strings2` has its own robust token partitioner config; mapping old arbitrary character delimiters to `strings2` configurations is possible but potentially fragile. We've dropped them to enforce `strings2`'s native heuristics.
-
-7. **Lower Camel Case (`rntocamel`)**: Explicit lower-camel variant (from `strcase.ToLowerCamel`) was dropped to unify under `strings2.ToPascal` matching original defaults.
-   - **Local Implementation:** This is readily achievable natively in `strings2` by using `strings2.ToCamel()` or via custom `OptionFirstLower()` / `OptionFirstUpper()` flags.
-
-8. **Screaming Kebab / Screaming Delimited / Lowercase Snake (`rntokebab`, `rntodelimited`, `rntosnake`)**: Specific case variations provided by dropped libraries (e.g. `screaming-kebab`) were removed to simplify the codebase to the primary case type for each tool.

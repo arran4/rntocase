@@ -1,13 +1,15 @@
 --- gap.md
 +++ gap.md
-@@ -11,9 +11,7 @@
+@@ -8,11 +8,7 @@
+ The following formats, features, flags or specific algorithm variations are dropped or require workarounds because they are not explicitly provided natively by `github.com/arran4/strings2`. Where `strings2` isn't a good fit, local implementations or the standard Go library are utilized.
+
+ 1. **Acronym Extraction (`rnacronym`)**: Converting "some nice string" to "sns". `strings2` focuses on case conversions rather than extracting initial letters.
     - **Local Implementation:** This feature is approximated using `strings2.Parse()` to extract words and pick the first letter.
     - **Feature Request:** While `strings2` could technically add an `AcronymCase` mode or a specific `OptionAcronymExtraction`, it's not highly advisable as it strays from standard delimited casing semantics. Our current explicit loop is sufficient and clear.
-
+-
 -2. **String Reversal (`rnreverse`)**: Reversing characters/runes in a string. `strings2` does not provide utility functions for reversing runes.
--   - **Local Implementation:** We implement a custom rune-reversal function manually.
--   - **Feature Request:** It is not advisable for `strings2` to include this, as reversing strings is not a "case" translation but a geometric translation best suited for standalone utilities.
-+*(Note: String Reversal in `rnreverse` is handled locally via rune-flipping. A new mode `-words` was added utilizing `strings2.Parse()` and `strings2.WordsToFormattedCase` to reverse word tokens securely. Since strings2 provides the tokenization components natively, it does not strictly need an explicit `Reverse` entrypoint.)*
+-   - **Local Implementation:** We implement a custom rune-reversal function manually. We also implemented a `-words` word-reversal mode using `strings2.Parse()` coupled with `strings2.WordsToFormattedCase` using `strings2.CMVerbatim`.
+-   - **Feature Request:** It is not advisable for `strings2` to include this, as reversing strings is not a "case" translation but a geometric translation best suited for standalone utilities. The tooling exposes enough standard parts to achieve it locally when needed.
 
- 3. **Darwin Case (`rntodarwin`)**: Capitalizes the first letter of each word and separates words with `_` (e.g. `Some_String_Test`). `strings2` does not have an explicit Darwin case preset.
-    - **Local Implementation:** This is natively approximated in `rntodarwin` with `strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))`.
+-3. **Darwin Case (`rntodarwin`)**: Capitalizes the first letter of each word and separates words with `_` (e.g. `Some_String_Test`). `strings2` does not have an explicit Darwin case preset.
++2. **Darwin Case (`rntodarwin`)**: Capitalizes the first letter of each word and separates words with `_` (e.g. `Some_String_Test`). `strings2` does not have an explicit Darwin case preset.
