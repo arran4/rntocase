@@ -1,0 +1,81 @@
+--- gap.md
++++ gap.md
+@@ -9,16 +9,85 @@
+
+ ### `strings2` Should Implement (Feature Requests)
+
+-1. **Darwin Case (`rntodarwin`)**: Capitalizes the first letter of each word and separates words with `_` (e.g. `Some_String_Test`). `strings2` does not have an explicit Darwin case preset.
+-   - **Local Implementation:** This is natively approximated in `rntodarwin` with `strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))`.
+-   - **Recommendation:** `strings2` could easily support this natively by adding a `ToDarwinCase` function wrapping those exact options as a clean alias.
+-
+-2. **Title Case (`rntotitle`)**: Standard title-casing.
+-   - **Local Implementation:** `strings2` does not strictly map to smart title case conventions natively. A basic standard-library equivalent (`cases.Title`) from `golang.org/x/text` is utilized instead as a robust fallback.
+-   - **Recommendation:** Adding smart title casing (handling prepositions correctly like "in", "the", etc.) to `strings2` could be highly valuable for users building templating generators.
+-
+-3. **Global Acronym Configuration (`-acronym-from-file`)**:
+-   - **Local Implementation:** Since we dropped `strcase`, dynamic CLI acronym file parsing flags are no longer supported and have been removed.
+-   - **Recommendation:** `strings2` could implement a cleaner global acronym ingestion API or CLI tooling parser to make managing `strings2.ParserConfig`'s smart acronyms less complex for implementers.
++#### Feature Request #1: Native Darwin Case (`ToDarwinCase`)
++
++**The Gap:** Darwin case capitalizes the first letter of every word and separates them with an underscore. E.g. `Some_String_Test`.
++
++**Local Implementation:** We achieve this cleanly by composing options:
++```go
++strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))
++```
++
++**Implementation Suggestions for `strings2`:**
++*Note: These are only suggestions. The implementation should align with `strings2`'s internal style, provided the core need is addressed.*
++- **Option A:** Add a direct alias function like `ToSnakeCase` and `ToCamelCase` do.
++  ```go
++  func ToDarwinCase(input string, opts ...any) (string, error) {
++      opts = append(opts, OptionDelimiter("_"), OptionCaseMode(CMAllTitle))
++      return ToFormattedString(input, opts...)
++  }
++  ```
++- **Test Cases:**
++  - `hello world` -> `Hello_World`
++  - `camelCaseInput` -> `Camel_Case_Input`
++  - `mixed-UP-Kebab` -> `Mixed_Up_Kebab`
++
++---
++
++#### Feature Request #2: Smart Title Case (`ToTitleCase`)
++
++**The Gap:** `strings2` lacks a smart title-casing mode. True title-casing capitalizes the first letter of words but typically leaves prepositions and minor conjunctions lowercase (e.g. "a", "an", "the", "in", "of").
++
++**Local Implementation:** We utilize the standard Go library (`golang.org/x/text/cases`) to handle title-casing strings as a fallback, completely bypassing `strings2`.
++
++**Implementation Suggestions for `strings2`:**
++*Note: These are only suggestions. The implementation should align with `strings2`'s internal style, provided the core need is addressed.*
++- **Option A:** Introduce `CMTitle` or `CMSmartTitle` to `CaseMode` which evaluates word context during formatting.
++  ```go
++  // Internal formatter checks if word matches a skip-list dictionary
++  func ToTitleCase(input string, opts ...any) (string, error) {
++      // ...
++  }
++  ```
++- **Option B:** Supply an `OptionSkipTitleWords([]string{"in", "the"})` configuration to allow consumers to define what words stay lowercase during an `OptionCaseMode(CMAllTitle)` conversion.
++- **Test Cases:**
++  - `the lord of the rings` -> `The Lord of the Rings`
++  - `A_NEW_HOPE` -> `A New Hope`
++
++---
++
++#### Feature Request #3: Simple Global/File Acronym Configuration
++
++**The Gap:** Legacy tooling relied on `strcase` to define acronyms (e.g. `ID`, `HTTP`) from a file or CLI flags. While `strings2` supports acronyms inside `ParserConfig`, reading and injecting them easily from an external file via the API requires manual loop implementation and type wrapping on the caller's side.
++
++**Local Implementation:** We dropped CLI flag support for defining acronym files entirely to avoid writing dense boilerplate to inject it into `strings2.ParserConfig`.
++
++**Implementation Suggestions for `strings2`:**
++*Note: These are only suggestions. The implementation should align with `strings2`'s internal style, provided the core need is addressed.*
++- **Option A:** Provide an options helper that converts a slice of strings into `strings2` recognized acronym configurations directly.
++  ```go
++  strings2.OptionAcronymList([]string{"HTTP", "JSON"})
++  ```
++- **Option B:** Provide a utility function `LoadAcronymsFromFile(filepath)` inside the `strings2` module that populates a global singleton config (if `strings2` wants to support globals).
++- **Test Cases:**
++  - Given acronyms `["HTTP", "JSON"]` -> `Http Json Config` -> `HTTP_JSON_Config`
+
+ ### `strings2` Should NOT Implement (Out of Scope / Anti-Patterns)
