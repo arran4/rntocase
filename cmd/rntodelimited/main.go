@@ -30,7 +30,7 @@ func main() {
 		flag.PrintDefaults()
 		_, _ = fmt.Fprintln(os.Stderr)
 		_, _ = fmt.Fprintln(os.Stderr, "Conversion Examples:")
-		rntocase.RenderUsageTable(map[string]func(string) (string, error){"strings2": converter})
+		rntocase.RenderUsageTable(converter)
 	}
 	flag.Parse()
 

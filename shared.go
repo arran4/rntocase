@@ -4,11 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/jedib0t/go-pretty/table"
-	"maps"
 	"os"
 	"path/filepath"
-	"slices"
-	"sort"
 	"strings"
 )
 
@@ -100,7 +97,7 @@ func LoadAcronymsFromFile(filePath string) error {
 	return fmt.Errorf("acronym configuration is no longer globally supported")
 }
 
-func Run(algos map[string]func(string) (string, error), key string, value string) (result string, err error) {
+func Run(converter func(string) (string, error), value string) (result string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -110,33 +107,21 @@ func Run(algos map[string]func(string) (string, error), key string, value string
 			}
 		}
 	}()
-	result, err = algos[key](value)
+	result, err = converter(value)
 	return result, err
 }
 
-func RenderUsageTable(algos map[string]func(string) (string, error)) {
+func RenderUsageTable(converter func(string) (string, error)) {
 	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"Algorithm"})
-	keys := slices.Collect(maps.Keys(algos))
-	sort.Strings(keys)
+	tw.AppendHeader(table.Row{"Input", "Output"})
 	for _, values := range ExampleGroups {
-		row := make(table.Row, 0, len(values.Values)+2)
-		row = append(row, "", values.Name)
+		tw.AppendRow(table.Row{"", values.Name})
 		for _, value := range values.Values {
-			row = append(row, value)
-		}
-		tw.AppendRow(row)
-		for _, key := range keys {
-			row := make(table.Row, 0, len(values.Values)+2)
-			row = append(row, key, "")
-			for _, value := range values.Values {
-				result, err := Run(algos, key, value)
-				if err != nil {
-					result = "!!!Error!!!"
-				}
-				row = append(row, result)
+			result, err := Run(converter, value)
+			if err != nil {
+				result = "!!!Error!!!"
 			}
-			tw.AppendRow(row)
+			tw.AppendRow(table.Row{value, result})
 		}
 	}
 	tw.SetOutputMirror(os.Stderr)

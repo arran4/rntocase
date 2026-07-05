@@ -43,10 +43,7 @@ func main() {
 		flag.PrintDefaults()
 		_, _ = fmt.Fprintln(os.Stderr)
 		_, _ = fmt.Fprintln(os.Stderr, "Conversion Examples:")
-		rntocase.RenderUsageTable(map[string]func(string) (string, error){
-            "reverse_runes": converter,
-            "reverse_words": wordReverseConverter,
-        })
+		rntocase.RenderUsageTable(converter)
 	}
 	flag.Parse()
 
