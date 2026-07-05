@@ -14,7 +14,8 @@ const (
 )
 
 func converter(s string) (string, error) {
-	return strings2.ToCamel(s)
+	// Let's stick with ToPascal as that passed more naturally to strcase.ToCamel output earlier.
+	return strings2.ToPascal(s)
 }
 
 func main() {

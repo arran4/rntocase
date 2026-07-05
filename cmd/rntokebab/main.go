@@ -14,7 +14,7 @@ const (
 )
 
 func converter(s string) (string, error) {
-	return strings2.ToKebab(s)
+	return strings2.ToKebab(s, strings2.OptionLoose(), strings2.OptionCaseMode(strings2.CMWhispering))
 }
 
 func main() {

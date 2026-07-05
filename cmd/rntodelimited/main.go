@@ -5,24 +5,18 @@ import (
 	"fmt"
 	"github.com/arran4/rntocase"
 	"github.com/arran4/strings2"
-	"maps"
 	"os"
-	"slices"
-	"strings"
 )
 
 const (
-	defaultAlgo   = "strings2"
-	caseType      = "delimited"
-	appName       = "rntodelimited"
+	caseType    = "delimited"
+	appName     = "rntodelimited"
 )
 
 var delimiter *string
 
-var algos = map[string]func(string) (string, error){
-	"strings2": func(s string) (string, error) {
-		return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionFirstLower())
-	},
+func converter(s string) (string, error) {
+	return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionCaseMode(strings2.CMWhispering))
 }
 
 func main() {
@@ -31,14 +25,13 @@ func main() {
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	delimiter = flag.String("delimiter", "_", "The delimiter string to separate words")
 
-	algorithm := flag.String("algorithm", defaultAlgo, "Choose the "+caseType+" algorithm to use, supported: "+strings.Join(slices.Collect(maps.Keys(algos)), ",")+".")
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
 		_, _ = fmt.Fprintln(os.Stderr, "\nOptions:")
 		flag.PrintDefaults()
 		_, _ = fmt.Fprintln(os.Stderr)
 		_, _ = fmt.Fprintln(os.Stderr, "Conversion Examples:")
-		rntocase.RenderUsageTable(algos)
+		rntocase.RenderUsageTable(map[string]func(string) (string, error){"strings2": converter})
 	}
 	flag.Parse()
 
@@ -47,12 +40,6 @@ func main() {
 	if len(files) == 0 {
 		fmt.Println("Error: No files provided.")
 		flag.Usage()
-		os.Exit(1)
-	}
-
-	converter, ok := algos[*algorithm]
-	if !ok {
-		fmt.Printf("Unsupported "+caseType+" algorithm: %s\n", *algorithm)
 		os.Exit(1)
 	}
 
