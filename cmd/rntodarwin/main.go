@@ -6,7 +6,6 @@ import (
 	"github.com/arran4/rntocase"
 	"github.com/arran4/strings2"
 	"os"
-	"strings"
 )
 
 const (
@@ -15,15 +14,8 @@ const (
 )
 
 func converter(s string) (string, error) {
-	words, err := strings2.Parse(s)
-	if err != nil {
-		return "", err
-	}
-	var parts []string
-	for _, w := range words {
-		parts = append(parts, strings2.UpperCaseFirst(strings.ToLower(w.String())))
-	}
-	return strings.Join(parts, "_"), nil
+    // Implement Darwin Case using strings2 options cleanly rather than string building
+	return strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))
 }
 
 func main() {
