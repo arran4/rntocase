@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	caseType    = "trim"
 	appName     = "rntrim"
 )
 

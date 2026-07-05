@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	caseType    = "camel"
 	appName     = "rntocamel"
 )
 

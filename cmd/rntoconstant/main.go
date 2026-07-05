@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	caseType    = "constant"
 	appName     = "rntoconstant"
 )
 

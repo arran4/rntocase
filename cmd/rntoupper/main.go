@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	caseType    = "uppercase"
 	appName     = "rntoupper"
 )
 

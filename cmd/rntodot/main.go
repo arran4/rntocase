@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	caseType      = "dot"
 	appName       = "rntodot"
 	delimiter     = "."
 )

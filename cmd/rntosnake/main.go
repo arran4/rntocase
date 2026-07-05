@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	caseType    = "snake"
 	appName     = "rntosnake"
 )
 
