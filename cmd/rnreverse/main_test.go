@@ -9,13 +9,20 @@ func TestReverseAlgorithms(t *testing.T) {
 		name     string
 		input    string
 		expected string
+        mode     string
 	}{
-		{"go basic", "hello", "olleh"},
+		{"go basic", "hello", "olleh", "reverse_runes"},
+        {"word reverse", "hello world test", "test world hello", "reverse_words"},
 	}
+
+    algs := map[string]func(string) (string, error){
+        "reverse_runes": converter,
+        "reverse_words": wordReverseConverter,
+    }
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter(tt.input)
+			result, err := algs[tt.mode](tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
