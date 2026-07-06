@@ -52,48 +52,35 @@ strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCase
   - `the lord of the rings` -> `The Lord of the Rings`
   - `A_NEW_HOPE` -> `A New Hope`
 
-#### Feature Request #3: Simple Global/File Acronym Configuration
+#### Feature Request #3: Simple Global Acronym Configuration
 
 **The Gap:** Legacy tooling relied on `strcase` to define acronyms (e.g. `ID`, `HTTP`) from a file or CLI flags via a global configuration. While `strings2` supports acronyms inside `ParserConfig`, reading and injecting them easily from an external source dynamically via the API requires more manual implementation on the caller's side.
 
 **Local Implementation:** We dropped CLI flag support for defining acronym files entirely to avoid writing boilerplate to map text inputs into `strings2.ParserConfig`.
 
 **Implementation Suggestions for `strings2`:**
-*Note: These are only suggestions. The implementation should align with `strings2`'s internal style, provided the core need is addressed.*
-- **Option A:** Provide an options helper that converts a slice of strings into `strings2` recognized acronym configurations directly.
+*Note: strings2 should manage its own configuration surface cleanly.*
+- **Option A:** Provide an options factory `strings2.OptionAcronymList([]string{"HTTP", "JSON"})` that converts a slice of strings into `strings2` recognized acronym configurations internally mapping to the parser.
   ```go
   strings2.OptionAcronymList([]string{"HTTP", "JSON"})
   ```
-- **Option B:** Provide a utility function `LoadAcronymsFromFile(filepath)` inside the module that handles file io mapping to tokens seamlessly.
 - **Test Cases:**
   - Given loaded acronyms `["HTTP", "JSON"]`, input `Http Json Config` -> `HTTP_JSON_Config`
 
+#### Feature Request #4: "Do Not Break" / Custom Ignore Patterns for Delimiters
+
+**The Gap:** Users occasionally need explicit control over what `strings2` considers a word boundary or a delimiter to ignore. The removed `strcase` flags like `-ignore` mapped characters that should *not* cause a split (e.g. ignoring `.` so `foo.bar` stays `foo.bar` instead of becoming `foo_bar`).
+
+**Implementation Suggestions for `strings2`:**
+*Note: Providing an interface to define ignored boundaries is highly requested, but it must map cleanly to `strings2`'s parser without overriding its core AST logic.*
+- **Option A:** Introduce `strings2.OptionIgnoreTokens(tokens ...string)` which tells the `strings2` partitioner to skip breaking on specific substrings or runes.
+- **Option B:** Introduce a regex-based bypass `strings2.OptionRetainPattern(regexp.MustCompile(...))` which shields specific patterns from tokenization.
+- **Test Cases:**
+  - Given ignore token `.`: `my.namespace.config` -> `my.namespace.config` (instead of `my_namespace_config` in ToSnake)
+  - Given ignore token `@`: `user@email` -> `user@email`
 
 ### `strings2` Should NOT Implement (Out of Scope / Anti-Patterns)
 
 1. **String Reversal (`rnreverse`)**: Reversing characters or words in a string.
    - **Local Implementation:** We implement custom rune-reversal functions manually and token reversal via `strings2.Parse()`.
    - **Recommendation:** Reversing strings is a geometric string translation rather than a formatting translation. Expanding `strings2` API surface area with reverse utilities falls outside typical casing package scope.
-
-2. **Arbitrary Character Delimiter Overrides (`-ignore`, `-input-delimiters`, `-word-seperators`)**: These were tied to specific libraries (`iancoleman`, `searking`, `gobeam`) and are no longer supported.
-   - **Local Implementation:** We've dropped these specific CLI overrides to embrace the unified formatting model.
-   - **Recommendation:** While mapping old arbitrary character delimiters to `strings2` configurations via custom partitioners is possible, it is brittle. `strings2` relies on robust token partitioner heuristics (camel boundaries, etc.). Forcing user-defined byte-level boundary arrays dilutes the strength of `strings2`'s AST tokenizer.
-
-### Internal Restructuring Suggestions (Project Level overrides)
-
-To support global CLI overrides like `-acronym-from-file` or robust default options returning to functionality across *all* utilities natively via our `shared.go` infrastructure rather than relying on `strings2` API expansions, we would need to construct a robust abstraction mapping parsed flags to generic `strings2.Option` arrays.
-
-**Suggestion A: A Shared CLI Flags Option Factory**
-- **Implementation:** Implement a parser inside `shared.go` that defines global flags (`flag.String("acronym-from-file", ...)`) inside an `init()` or helper. We build a helper like `func GetStrings2Options() []any` which reads that acronym file, transforms the words into `strings2.ParserConfig` smart acronym nodes, and returns them as functional options. Callers append these to their own converters.
-- **Justification:** This strictly scopes the "configuration" parsing out of the specific tools and out of `strings2`, allowing us to retain our current thin wrappers while providing massive configuration via standard flags.
-- **Sample:**
-  ```go
-  func converter(s string) (string, error) {
-      opts := append(rntocase.GetStrings2Options(), strings2.OptionCaseMode(strings2.CMLowerCase))
-      return strings2.ToSnake(s, opts...)
-  }
-  ```
-
-**Suggestion B: Injecting `strings2` Option overrides directly into `RenameFiles`**
-- **Implementation:** Modify the `RenameFiles` and `RenderUsageTable` signature from `func(string) (string, error)` to strictly ingest a functional pipeline or struct. `shared.go` manages global option sets via standard flags and applies them at the shared routing level.
-- **Justification:** Centralizes options parsing entirely but potentially couples our generic `RenameFiles` explicitly to `strings2` paradigms, isolating standard-library based tools (`rntolower`). Option A is strongly preferred.
