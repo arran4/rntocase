@@ -78,3 +78,22 @@ strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCase
 2. **Arbitrary Character Delimiter Overrides (`-ignore`, `-input-delimiters`, `-word-seperators`)**: These were tied to specific libraries (`iancoleman`, `searking`, `gobeam`) and are no longer supported.
    - **Local Implementation:** We've dropped these specific CLI overrides to embrace the unified formatting model.
    - **Recommendation:** While mapping old arbitrary character delimiters to `strings2` configurations via custom partitioners is possible, it is brittle. `strings2` relies on robust token partitioner heuristics (camel boundaries, etc.). Forcing user-defined byte-level boundary arrays dilutes the strength of `strings2`'s AST tokenizer.
+
+### Internal Restructuring Suggestions (Project Level overrides)
+
+To support global CLI overrides like `-acronym-from-file` or robust default options returning to functionality across *all* utilities natively via our `shared.go` infrastructure rather than relying on `strings2` API expansions, we would need to construct a robust abstraction mapping parsed flags to generic `strings2.Option` arrays.
+
+**Suggestion A: A Shared CLI Flags Option Factory**
+- **Implementation:** Implement a parser inside `shared.go` that defines global flags (`flag.String("acronym-from-file", ...)`) inside an `init()` or helper. We build a helper like `func GetStrings2Options() []any` which reads that acronym file, transforms the words into `strings2.ParserConfig` smart acronym nodes, and returns them as functional options. Callers append these to their own converters.
+- **Justification:** This strictly scopes the "configuration" parsing out of the specific tools and out of `strings2`, allowing us to retain our current thin wrappers while providing massive configuration via standard flags.
+- **Sample:**
+  ```go
+  func converter(s string) (string, error) {
+      opts := append(rntocase.GetStrings2Options(), strings2.OptionCaseMode(strings2.CMLowerCase))
+      return strings2.ToSnake(s, opts...)
+  }
+  ```
+
+**Suggestion B: Injecting `strings2` Option overrides directly into `RenameFiles`**
+- **Implementation:** Modify the `RenameFiles` and `RenderUsageTable` signature from `func(string) (string, error)` to strictly ingest a functional pipeline or struct. `shared.go` manages global option sets via standard flags and applies them at the shared routing level.
+- **Justification:** Centralizes options parsing entirely but potentially couples our generic `RenameFiles` explicitly to `strings2` paradigms, isolating standard-library based tools (`rntolower`). Option A is strongly preferred.
