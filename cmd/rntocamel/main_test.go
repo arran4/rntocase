@@ -26,7 +26,7 @@ func TestCamelAlgorithms(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 			if result != expected {
-				t.Skipf("TODO: strings2 mismatch. Expected %s, got %s", expected, result)
+				t.Errorf("TODO: strings2 mismatch. Expected %s, got %s", expected, result)
 			}
 		})
 	}
