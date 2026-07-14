@@ -9,30 +9,7 @@ The following formats, features, flags or specific algorithm variations are drop
 
 ### `strings2` Should Implement (Feature Requests)
 
-#### Feature Request #1: Native Darwin Case (`ToDarwinCase`)
-
-**The Gap:** Darwin case capitalizes the first letter of every word and separates them with an underscore. E.g. `Some_String_Test`.
-
-**Local Implementation:** We achieve this cleanly by composing options natively:
-```go
-strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))
-```
-
-**Implementation Suggestions for `strings2`:**
-*Note: These are only suggestions. The implementation should align with `strings2`'s internal style, provided the core need is addressed.*
-- **Option A:** Add a direct alias function like `ToSnake` and `ToCamel` do.
-  ```go
-  func ToDarwinCase(input string, opts ...any) (string, error) {
-      opts = append(opts, OptionDelimiter("_"), OptionCaseMode(CMAllTitle))
-      return ToFormattedString(input, opts...)
-  }
-  ```
-- **Test Cases:**
-  - `hello world` -> `Hello_World`
-  - `camelCaseInput` -> `Camel_Case_Input`
-  - `mixed-UP-Kebab` -> `Mixed_Up_Kebab`
-
-#### Feature Request #2: Smart Title Case (`ToTitleCase`)
+#### Feature Request #1: Smart Title Case (`ToTitleCase`)
 
 **The Gap:** `strings2` lacks a smart title-casing mode. True title-casing capitalizes the first letter of words but typically leaves minor conjunctions and prepositions lowercase (e.g. "a", "an", "the", "in", "of").
 
@@ -52,7 +29,7 @@ strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCase
   - `the lord of the rings` -> `The Lord of the Rings`
   - `A_NEW_HOPE` -> `A New Hope`
 
-#### Feature Request #3: Simple Global Acronym Configuration
+#### Feature Request #2: Simple Global Acronym Configuration
 
 **The Gap:** Legacy tooling relied on `strcase` to define acronyms (e.g. `ID`, `HTTP`) from a file or CLI flags via a global configuration. While `strings2` supports acronyms inside `ParserConfig`, reading and injecting them easily from an external source dynamically via the API requires more manual implementation on the caller's side.
 
@@ -67,7 +44,7 @@ strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCase
 - **Test Cases:**
   - Given loaded acronyms `["HTTP", "JSON"]`, input `Http Json Config` -> `HTTP_JSON_Config`
 
-#### Feature Request #4: "Do Not Break" / Custom Ignore Patterns for Delimiters
+#### Feature Request #3: "Do Not Break" / Custom Ignore Patterns for Delimiters
 
 **The Gap:** Users occasionally need explicit control over what `strings2` considers a word boundary or a delimiter to ignore. The removed `strcase` flags like `-ignore` mapped characters that should *not* cause a split (e.g. ignoring `.` so `foo.bar` stays `foo.bar` instead of becoming `foo_bar`).
 

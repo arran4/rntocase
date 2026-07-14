@@ -13,8 +13,7 @@ const (
 )
 
 func converter(s string) (string, error) {
-    // Implement Darwin Case using strings2 options cleanly rather than string building
-	return strings2.ToFormattedString(s, strings2.OptionDelimiter("_"), strings2.OptionCaseMode(strings2.CMAllTitle))
+	return strings2.ToDarwin(s)
 }
 
 func main() {
