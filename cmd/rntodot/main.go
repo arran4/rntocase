@@ -14,7 +14,7 @@ const (
 )
 
 func converter(s string) (string, error) {
-	return strings2.ToFormattedString(s, strings2.OptionDelimiter(delimiter), strings2.OptionFirstLower())
+	return strings2.ToFormattedString(s, strings2.OptionDelimiter(delimiter), strings2.OptionFirstLower(), strings2.ParserEmitEmpty(true))
 }
 
 func main() {

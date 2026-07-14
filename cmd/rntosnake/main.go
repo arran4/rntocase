@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	appName     = "rntosnake"
+	appName = "rntosnake"
 )
 
 func converter(s string) (string, error) {
-	return strings2.ToSnake(s, strings2.OptionLoose(), strings2.OptionCaseMode(strings2.CMWhispering))
+	return strings2.ToSnake(s, strings2.OptionLoose(), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
 }
 
 func main() {

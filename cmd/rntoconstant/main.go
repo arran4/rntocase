@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	appName     = "rntoconstant"
+	appName = "rntoconstant"
 )
 
 func converter(s string) (string, error) {
-	val, err := strings2.ToSnake(s)
+	val, err := strings2.ToSnake(s, strings2.ParserEmitEmpty(true))
 	if err != nil {
 		return "", err
 	}

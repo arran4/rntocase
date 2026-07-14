@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	appName     = "rntodelimited"
+	appName       = "rntodelimited"
 )
 
 var delimiter *string
 
 func converter(s string) (string, error) {
-	return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionCaseMode(strings2.CMWhispering))
+	return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
 }
 
 func main() {

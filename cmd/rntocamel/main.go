@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	appName     = "rntocamel"
+	appName = "rntocamel"
 )
 
 func converter(s string) (string, error) {
 	// Let's stick with ToPascal as that passed more naturally to strcase.ToCamel output earlier.
-	return strings2.ToPascal(s)
+	return strings2.ToPascal(s, strings2.ParserEmitEmpty(true))
 }
 
 func main() {
