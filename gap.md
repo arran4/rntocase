@@ -9,27 +9,7 @@ The following formats, features, flags or specific algorithm variations are drop
 
 ### `strings2` Should Implement (Feature Requests)
 
-#### Feature Request #1: Smart Title Case (`ToTitleCase`)
-
-**The Gap:** `strings2` lacks a smart title-casing mode. True title-casing capitalizes the first letter of words but typically leaves minor conjunctions and prepositions lowercase (e.g. "a", "an", "the", "in", "of").
-
-**Local Implementation:** We utilize the standard Go library (`golang.org/x/text/cases`) to handle title-casing strings as a fallback, completely bypassing `strings2`.
-
-**Implementation Suggestions for `strings2`:**
-*Note: These are only suggestions. The implementation should align with `strings2`'s internal style, provided the core need is addressed.*
-- **Option A:** Introduce `CMTitle` or `CMSmartTitle` to `CaseMode` which evaluates word context during formatting.
-  ```go
-  // Internal formatter checks if word matches a skip-list dictionary
-  func ToTitleCase(input string, opts ...any) (string, error) {
-      // ...
-  }
-  ```
-- **Option B:** Supply an `OptionSkipTitleWords([]string{"in", "the"})` configuration to allow consumers to define what words stay lowercase during an `OptionCaseMode(CMAllTitle)` conversion.
-- **Test Cases:**
-  - `the lord of the rings` -> `The Lord of the Rings`
-  - `A_NEW_HOPE` -> `A New Hope`
-
-#### Feature Request #2: Simple Global Acronym Configuration
+#### Feature Request #1: Simple Global Acronym Configuration
 
 **The Gap:** Legacy tooling relied on `strcase` to define acronyms (e.g. `ID`, `HTTP`) from a file or CLI flags via a global configuration. While `strings2` supports acronyms inside `ParserConfig`, reading and injecting them easily from an external source dynamically via the API requires more manual implementation on the caller's side.
 
@@ -44,7 +24,7 @@ The following formats, features, flags or specific algorithm variations are drop
 - **Test Cases:**
   - Given loaded acronyms `["HTTP", "JSON"]`, input `Http Json Config` -> `HTTP_JSON_Config`
 
-#### Feature Request #3: "Do Not Break" / Custom Ignore Patterns for Delimiters
+#### Feature Request #2: "Do Not Break" / Custom Ignore Patterns for Delimiters
 
 **The Gap:** Users occasionally need explicit control over what `strings2` considers a word boundary or a delimiter to ignore. The removed `strcase` flags like `-ignore` mapped characters that should *not* cause a split (e.g. ignoring `.` so `foo.bar` stays `foo.bar` instead of becoming `foo_bar`).
 

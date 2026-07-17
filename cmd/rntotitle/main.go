@@ -4,8 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arran4/rntocase"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"github.com/arran4/strings2"
 	"os"
 )
 
@@ -14,7 +13,7 @@ const (
 )
 
 func converter(s string) (string, error) {
-	return cases.Title(language.English).String(s), nil
+	return strings2.ToTitle(s)
 }
 
 func main() {

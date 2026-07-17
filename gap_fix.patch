@@ -1,0 +1,27 @@
+--- gap.md
++++ gap.md
+@@ -9,22 +9,6 @@
+
+ ### `strings2` Should Implement (Feature Requests)
+
+-#### Feature Request #1: Smart Title Case (`ToTitleCase`)
+-
+-**The Gap:** `strings2` lacks a smart title-casing mode. True title-casing capitalizes the first letter of words but typically leaves minor conjunctions and prepositions lowercase (e.g. "a", "an", "the", "in", "of").
+-
+-**Local Implementation:** We utilize the standard Go library (`golang.org/x/text/cases`) to handle title-casing strings as a fallback, completely bypassing `strings2`.
+-
+-**Implementation Suggestions for `strings2`:**
+-*Note: These are only suggestions. The implementation should align with `strings2`'s internal style, provided the core need is addressed.*
+-- **Option A:** Introduce `CMTitle` or `CMSmartTitle` to `CaseMode` which evaluates word context during formatting.
+-  ```go
+-  // Internal formatter checks if word matches a skip-list dictionary
+-  func ToTitleCase(input string, opts ...any) (string, error) {
+-      // ...
+-  }
+-  ```
+-- **Option B:** Supply an `OptionSkipTitleWords([]string{"in", "the"})` configuration to allow consumers to define what words stay lowercase during an `OptionCaseMode(CMAllTitle)` conversion.
+-- **Test Cases:**
+-  - `the lord of the rings` -> `The Lord of the Rings`
+-  - `A_NEW_HOPE` -> `A New Hope`
+-
+ #### Feature Request #3: Simple Global Acronym Configuration
