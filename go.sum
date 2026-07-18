@@ -10,6 +10,8 @@ github.com/arran4/strings2 v0.0.9 h1:GJgT15TpVjS3/XmHY+KHBmM+YLU/s1s4XFxEW3EpoBQ
 github.com/arran4/strings2 v0.0.9/go.mod h1:QS/Pha/uvk0ppqysoLHsr9wCky5ZMQPr1VglCBrTSGw=
 github.com/arran4/strings2 v0.0.10 h1:Q900p3CLgfIpv2QJyxrtanaNdbbtDrkrj8CaFHEyIjQ=
 github.com/arran4/strings2 v0.0.10/go.mod h1:QS/Pha/uvk0ppqysoLHsr9wCky5ZMQPr1VglCBrTSGw=
+github.com/arran4/strings2 v0.0.11 h1:fnsCJKhYK9FTdKvrSIrFrtpNjQkXleBTJyD1fdo8Er0=
+github.com/arran4/strings2 v0.0.11/go.mod h1:QS/Pha/uvk0ppqysoLHsr9wCky5ZMQPr1VglCBrTSGw=
 github.com/clipperhouse/stringish v0.1.1 h1:+NSqMOr3GR6k1FdRhhnXrLfztGzuG+VuFDfatpWHKCs=
 github.com/clipperhouse/stringish v0.1.1/go.mod h1:v/WhFtE1q0ovMta2+m+UbpZ+2/HEXNWYXQgCt4hdOzA=
 github.com/clipperhouse/uax29/v2 v2.4.0 h1:RXqE/l5EiAbA4u97giimKNlmpvkmz+GrBVTelsoXy9g=

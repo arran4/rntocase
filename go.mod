@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.3
 
 require (
-	github.com/arran4/strings2 v0.0.10
+	github.com/arran4/strings2 v0.0.11
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	golang.org/x/text v0.33.0
