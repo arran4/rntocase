@@ -13,9 +13,10 @@ const (
 )
 
 var delimiter *string
+var ignore *string
 
 func converter(s string) (string, error) {
-	return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
+	return strings2.ToFormattedString(s, strings2.OptionDelimiter(*delimiter), strings2.OptionIgnore(*ignore), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
 }
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	delimiter = flag.String("delimiter", "_", "The delimiter string to separate words")
+    ignore = flag.String("ignore", "", "Characters to ignore when breaking boundaries")
 
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
