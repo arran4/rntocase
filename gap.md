@@ -7,23 +7,6 @@ The goal is to replace these libraries with `github.com/arran4/strings2` where p
 
 The following formats, features, flags or specific algorithm variations are dropped or require workarounds because they are not explicitly provided natively by `github.com/arran4/strings2`. Where `strings2` isn't a good fit, local implementations or the standard Go library are utilized.
 
-### `strings2` Should Implement (Feature Requests)
-
-#### Feature Request: Simple Global Acronym Configuration
-
-**The Gap:** Legacy tooling relied on `strcase` to define acronyms (e.g. `ID`, `HTTP`) from a file or CLI flags via a global configuration. While `strings2` supports acronyms inside `ParserConfig`, reading and injecting them easily from an external source dynamically via the API requires more manual implementation on the caller's side.
-
-**Local Implementation:** We dropped CLI flag support for defining acronym files entirely to avoid writing boilerplate to map text inputs into `strings2.ParserConfig`.
-
-**Implementation Suggestions for `strings2`:**
-*Note: strings2 should manage its own configuration surface cleanly.*
-- **Option A:** Provide an options factory `strings2.OptionAcronymList([]string{"HTTP", "JSON"})` that converts a slice of strings into `strings2` recognized acronym configurations internally mapping to the parser.
-  ```go
-  strings2.OptionAcronymList([]string{"HTTP", "JSON"})
-  ```
-- **Test Cases:**
-  - Given loaded acronyms `["HTTP", "JSON"]`, input `Http Json Config` -> `HTTP_JSON_Config`
-
 ### `strings2` Should NOT Implement (Out of Scope / Anti-Patterns)
 
 1. **String Reversal (`rnreverse`)**: Reversing characters or words in a string.
