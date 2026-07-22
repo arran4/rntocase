@@ -9,7 +9,7 @@ The following formats, features, flags or specific algorithm variations are drop
 
 ### `strings2` Should Implement (Feature Requests)
 
-#### Feature Request: Simple Global Acronym Configuration
+#### Feature Request #1: Simple Global Acronym Configuration
 
 **The Gap:** Legacy tooling relied on `strcase` to define acronyms (e.g. `ID`, `HTTP`) from a file or CLI flags via a global configuration. While `strings2` supports acronyms inside `ParserConfig`, reading and injecting them easily from an external source dynamically via the API requires more manual implementation on the caller's side.
 
