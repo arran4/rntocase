@@ -1,8 +1,6 @@
 module github.com/arran4/rntocase
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.25.0
 
 require (
 	github.com/arran4/strings2 v0.0.15
@@ -22,6 +20,9 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.mongodb.org/mongo-driver v1.17.7 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	gonum.org/v1/gonum v0.17.0 // indirect
+	gopkg.in/neurosnap/sentences.v1 v1.0.7 // indirect
 )
