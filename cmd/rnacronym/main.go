@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	appName     = "rnacronym"
+	appName = "rnacronym"
 )
 
 func converter(s string) (string, error) {
-    // Rely completely on string2.Parse output to extract acronym chars.
+	// Rely completely on string2.Parse output to extract acronym chars.
 	words, err := strings2.Parse(s)
 	if err != nil {
 		return "", err

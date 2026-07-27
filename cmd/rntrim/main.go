@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	appName     = "rntrim"
+	appName = "rntrim"
 )
 
 var trimChars *string
@@ -39,25 +39,25 @@ func main() {
 		tw.AppendHeader(table.Row{"Algorithm"})
 
 		for _, values := range rntocase.ExampleGroups {
-            // Replicating original table rendering logic without algos map
-            row := make(table.Row, 0)
+			// Replicating original table rendering logic without algos map
+			row := make(table.Row, 0)
 			row = append(row, "")
 			row = append(row, values.Name)
-            for _, value := range values.Values {
-                row = append(row, value)
-            }
+			for _, value := range values.Values {
+				row = append(row, value)
+			}
 			tw.AppendRow(row)
 
-            resRow := make(table.Row, 0)
-            resRow = append(resRow, "go")
-            resRow = append(resRow, "")
-            for _, value := range values.Values {
-                result, err := converter(value)
-                if err != nil {
-                    panic(err)
-                }
-                resRow = append(resRow, result)
-            }
+			resRow := make(table.Row, 0)
+			resRow = append(resRow, "go")
+			resRow = append(resRow, "")
+			for _, value := range values.Values {
+				result, err := converter(value)
+				if err != nil {
+					panic(err)
+				}
+				resRow = append(resRow, result)
+			}
 			tw.AppendRow(resRow)
 		}
 		tw.SetOutputMirror(os.Stderr)

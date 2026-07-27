@@ -9,8 +9,8 @@ func TestDelimitedAlgorithms(t *testing.T) {
 	// Set the flag to a default value for tests since it's flag driven
 	var defaultDelimiter = "_"
 	delimiter = &defaultDelimiter
-    var defaultIgnore = ""
-    ignore = &defaultIgnore
+	var defaultIgnore = ""
+	ignore = &defaultIgnore
 
 	tests := []struct {
 		name     string

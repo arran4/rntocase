@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	appName     = "rntotitle"
+	appName = "rntotitle"
 )
 
 func converter(s string) (string, error) {

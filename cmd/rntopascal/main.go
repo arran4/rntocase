@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	appName     = "rntopascal"
+	appName = "rntopascal"
 )
 
 func converter(s string) (string, error) {

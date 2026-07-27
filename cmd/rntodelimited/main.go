@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	appName       = "rntodelimited"
+	appName = "rntodelimited"
 )
 
 var delimiter *string
@@ -24,7 +24,7 @@ func main() {
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
 	delimiter = flag.String("delimiter", "_", "The delimiter string to separate words")
-    ignore = flag.String("ignore", "", "Characters to ignore when breaking boundaries")
+	ignore = flag.String("ignore", "", "Characters to ignore when breaking boundaries")
 
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
