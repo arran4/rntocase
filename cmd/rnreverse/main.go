@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	appName     = "rnreverse"
+	appName = "rnreverse"
 )
 
 func converter(s string) (string, error) {
@@ -21,21 +21,21 @@ func converter(s string) (string, error) {
 }
 
 func wordReverseConverter(s string) (string, error) {
-    words, err := strings2.Parse(s)
-    if err != nil {
-        return "", err
-    }
-    for i, j := 0, len(words)-1; i < j; i, j = i+1, j-1 {
-        words[i], words[j] = words[j], words[i]
-    }
-    return strings2.WordsToFormattedCase(words, strings2.OptionCaseMode(strings2.CMVerbatim), strings2.OptionDelimiter(" "))
+	words, err := strings2.Parse(s)
+	if err != nil {
+		return "", err
+	}
+	for i, j := 0, len(words)-1; i < j; i, j = i+1, j-1 {
+		words[i], words[j] = words[j], words[i]
+	}
+	return strings2.WordsToFormattedCase(words, strings2.OptionCaseMode(strings2.CMVerbatim), strings2.OptionDelimiter(" "))
 }
 
 func main() {
 	// Define flags
 	dryRun := flag.Bool("dry-run", false, "Display the intended changes without renaming.")
 	interactive := flag.Bool("interactive", false, "Ask for confirmation before renaming each file.")
-    wordMode := flag.Bool("words", false, "Reverse the order of words instead of the characters.")
+	wordMode := flag.Bool("words", false, "Reverse the order of words instead of the characters.")
 
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(os.Stderr, "Usage: "+appName+" [options] <file1> [<file2> ...]")
@@ -55,10 +55,10 @@ func main() {
 		os.Exit(1)
 	}
 
-    activeConverter := converter
-    if *wordMode {
-        activeConverter = wordReverseConverter
-    }
+	activeConverter := converter
+	if *wordMode {
+		activeConverter = wordReverseConverter
+	}
 
 	// Use the shared RenameFiles function
 	if err := rntocase.RenameFiles(files, activeConverter, *dryRun, *interactive); err != nil {

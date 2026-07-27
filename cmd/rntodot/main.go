@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	appName       = "rntodot"
-	delimiter     = "."
+	appName   = "rntodot"
+	delimiter = "."
 )
 
 func converter(s string) (string, error) {
