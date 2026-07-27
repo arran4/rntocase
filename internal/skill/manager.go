@@ -111,7 +111,7 @@ func CheckUpdate(meta *Metadata) (bool, string, error) {
 	if err != nil {
 		return false, "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return false, "", fmt.Errorf("failed to fetch upstream status: HTTP %d", resp.StatusCode)

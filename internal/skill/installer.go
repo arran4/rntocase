@@ -38,7 +38,7 @@ func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to fetch repository metadata: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("failed to get repository metadata: HTTP %d", resp.StatusCode)
@@ -63,7 +63,7 @@ func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to download tarball: %w", err)
 	}
-	defer respTar.Body.Close()
+	defer func() { _ = respTar.Body.Close() }()
 
 	if respTar.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("failed to download tarball: HTTP %d", respTar.StatusCode)
@@ -73,10 +73,10 @@ func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer tmpFile.Close()
+	defer func() { _ = tmpFile.Close() }()
 
 	if _, err := io.Copy(tmpFile, respTar.Body); err != nil {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 		return "", "", fmt.Errorf("failed to write tarball: %w", err)
 	}
 
@@ -89,13 +89,13 @@ func ExtractTarGz(tarballPath, destDir, pathWithin string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open tarball: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	gzr, err := gzip.NewReader(file)
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer gzr.Close()
+	defer func() { _ = gzr.Close() }()
 
 	tr := tar.NewReader(gzr)
 
@@ -168,7 +168,7 @@ func extractAndProtect(tr *tar.Reader, header *tar.Header, destDir string, relat
 		if err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
-		defer outFile.Close()
+		defer func() { _ = outFile.Close() }()
 
 		if _, err := io.Copy(outFile, tr); err != nil {
 			return fmt.Errorf("failed to write file: %w", err)
@@ -240,13 +240,13 @@ func CopyLocalDirectory(src, dest string) error {
 		if err != nil {
 			return err
 		}
-		defer srcFile.Close()
+		defer func() { _ = srcFile.Close() }()
 
 		destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, info.Mode())
 		if err != nil {
 			return err
 		}
-		defer destFile.Close()
+		defer func() { _ = destFile.Close() }()
 
 		if _, err := io.Copy(destFile, srcFile); err != nil {
 			return err

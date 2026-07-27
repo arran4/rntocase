@@ -49,10 +49,10 @@ func ComputeDirectoryDigest(dir string) (string, error) {
 			return "", err
 		}
 		if _, err := io.Copy(h, f); err != nil {
-			f.Close()
+			_ = f.Close()
 			return "", err
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	return hex.EncodeToString(h.Sum(nil)), nil

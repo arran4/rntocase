@@ -1,3 +1,5 @@
-1. **Fix atomic updates:** Update `updateSingleSkill` in `cmd/rntocase/skill.go` to download the tarball before removing the local directory.
-2. **Fix nested skill listing:** Update `ListInstalledSkills` in `internal/skill/manager.go` to use `filepath.Walk` (or `fs.WalkDir`) to find `.rntocase-skill.json` files recursively rather than just depth=1.
-3. **Complete pre commit steps.**
+1. **Fix `errcheck` violations**: Add explicit error ignores (`_ = ...`) to defer statements and close operations in `hash.go`, `installer.go`, `installer_test.go`, `manager.go`, `manifest_test.go`.
+2. **Fix `staticcheck` violations**:
+   - `SA4006`: In `cmd/rntocase/skill.go:248`, `sha` is unused because `updateSingleSkill` ignores it initially.
+   - `QF1003`: Refactor `internal/skill/target.go` to use a tagged `switch scope { ... }` block instead of an `if-else` chain.
+3. **Submit the fixes and reply to the PR comment**.

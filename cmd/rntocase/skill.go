@@ -245,7 +245,7 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 	}
 
 	fmt.Printf("Checking for updates for '%s'...\n", name)
-	hasUpdate, sha, err := skill.CheckUpdate(meta)
+	hasUpdate, shaUpdate, err := skill.CheckUpdate(meta)
 	if err != nil {
 		return fmt.Errorf("failed to check for updates: %w", err)
 	}
@@ -265,20 +265,20 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 	fmt.Println("Updating skill...")
 
 	// Re-download first to be more atomic
-	tarPath, sha, err := skill.DownloadGitHubRepository(meta.OwnerRepo)
+	tarPath, shaDownload, err := skill.DownloadGitHubRepository(meta.OwnerRepo)
 	if err != nil {
 		return fmt.Errorf("failed to download update: %w", err)
 	}
-	defer os.Remove(tarPath)
+	defer func() { _ = os.Remove(tarPath) }()
 
 	// Remove old
-	os.RemoveAll(destDir)
+	_ = os.RemoveAll(destDir)
 
 	if err := skill.ExtractTarGz(tarPath, destDir, meta.PathWithin); err != nil {
 		return fmt.Errorf("failed to extract updated skill: %w", err)
 	}
 
-	meta.SourceRevision = sha
+	meta.SourceRevision = shaDownload
 	meta.InstallTime = time.Now()
 
 	digest, err := skill.ComputeDirectoryDigest(destDir)
@@ -290,7 +290,12 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 		return fmt.Errorf("failed to save metadata: %w", err)
 	}
 
-	fmt.Printf("Skill updated successfully to revision %s.\n", sha[:7])
+	shortSha := shaUpdate
+	if len(shortSha) > 7 {
+		shortSha = shortSha[:7]
+	}
+
+	fmt.Printf("Skill updated successfully to revision %s.\n", shortSha)
 	return nil
 }
 

@@ -12,7 +12,7 @@ import (
 func TestSaveAndLoadMetadata(t *testing.T) {
 	dir, err := os.MkdirTemp("", "skill-meta-*")
 	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	now := time.Now().Truncate(time.Second) // JSON serialization truncates to some precision
 
@@ -44,7 +44,7 @@ func TestSaveAndLoadMetadata(t *testing.T) {
 func TestLoadMetadata_NotFound(t *testing.T) {
 	dir, err := os.MkdirTemp("", "skill-meta-*")
 	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	_, err = LoadMetadata(dir)
 	assert.Error(t, err)

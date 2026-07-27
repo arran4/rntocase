@@ -34,7 +34,8 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 	}
 
 	var basePath string
-	if scope == "user" {
+	switch scope {
+	case "user":
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get user home directory: %w", err)
@@ -56,7 +57,7 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		default:
 			return nil, fmt.Errorf("unsupported agent for user scope: %s", agent)
 		}
-	} else if scope == "project" {
+	case "project":
 		// Find project root by looking for .git or fallback to current directory
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -79,7 +80,7 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		default:
 			return nil, fmt.Errorf("unsupported agent for project scope: %s", agent)
 		}
-	} else {
+	default:
 		return nil, fmt.Errorf("invalid scope: %s. Must be 'user' or 'project'", scope)
 	}
 

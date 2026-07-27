@@ -42,7 +42,7 @@ func createTestTarball(t *testing.T, files map[string]string) string {
 func TestExtractTarGz_PathTraversal(t *testing.T) {
 	destDir, err := os.MkdirTemp("", "dest-dir-*")
 	assert.NoError(t, err)
-	defer os.RemoveAll(destDir)
+	defer func() { _ = os.RemoveAll(destDir) }()
 
 	files := map[string]string{
 		"repo-sha/valid.txt":               "valid content",
@@ -50,7 +50,7 @@ func TestExtractTarGz_PathTraversal(t *testing.T) {
 	}
 
 	tarPath := createTestTarball(t, files)
-	defer os.Remove(tarPath)
+	defer func() { _ = os.Remove(tarPath) }()
 
 	err = ExtractTarGz(tarPath, destDir, "")
 	assert.Error(t, err)
@@ -60,7 +60,7 @@ func TestExtractTarGz_PathTraversal(t *testing.T) {
 func TestExtractTarGz_Success(t *testing.T) {
 	destDir, err := os.MkdirTemp("", "dest-dir-*")
 	assert.NoError(t, err)
-	defer os.RemoveAll(destDir)
+	defer func() { _ = os.RemoveAll(destDir) }()
 
 	files := map[string]string{
 		"repo-sha/SKILL.md": "# My Skill\n",
@@ -68,7 +68,7 @@ func TestExtractTarGz_Success(t *testing.T) {
 	}
 
 	tarPath := createTestTarball(t, files)
-	defer os.Remove(tarPath)
+	defer func() { _ = os.Remove(tarPath) }()
 
 	err = ExtractTarGz(tarPath, destDir, "")
 	assert.NoError(t, err)
