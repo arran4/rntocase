@@ -35,6 +35,7 @@ func main() {
 		{"upper", "Rename files to upper case", runUpper},
 		{"upperleading", "Rename files with an upper leading character", runUpperLeading},
 		{"trim", "Trim whitespace or specific characters from file names", runTrim},
+		{"skill", "Manage AI agent skills for this CLI", runSkill},
 	}
 
 	flag.Usage = func() {

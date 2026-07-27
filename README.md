@@ -1263,3 +1263,42 @@ See: https://github.com/arran4/rntocase
 $ eselect repository enable arrans-overlay
 $ emerge -va app-misc/rntocase-bin 
 ```
+
+# Agent Skills
+
+`rntocase` supports AI agent skills to help automated coding agents understand how to use this tool safely and correctly.
+
+## Installing Skills
+
+You can install a skill into your user profile or the current project directory using the `skill install` command.
+
+```bash
+# Install from a remote GitHub repository
+$ rntocase skill install arran4/rntocase --scope user
+
+# Install from a local path
+$ rntocase skill install ./skills/rntocase --scope project
+```
+
+## Managing Skills
+
+To view installed skills, inspect a skill, or remove one:
+
+```bash
+# List installed skills
+$ rntocase skill list
+
+# Inspect metadata and installation path
+$ rntocase skill inspect rntocase
+
+# Remove an installed skill
+$ rntocase skill remove rntocase
+```
+
+## Updating Skills
+
+Remote skills can be updated to fetch the latest changes:
+
+```bash
+$ rntocase skill update rntocase
+```
