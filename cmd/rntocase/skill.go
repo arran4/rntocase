@@ -118,7 +118,7 @@ func runSkillInstall(args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to download skill: %w", err)
 		}
-		defer os.Remove(tarPath)
+		defer func() { _ = os.Remove(tarPath) }()
 
 		meta.OwnerRepo = ownerRepo
 		meta.SourceRevision = sha
@@ -132,7 +132,7 @@ func runSkillInstall(args []string) error {
 	// Validate SKILL.md
 	if _, err := os.Stat(filepath.Join(destDir, "SKILL.md")); os.IsNotExist(err) {
 		// Cleanup if invalid
-		os.RemoveAll(destDir)
+		_ = os.RemoveAll(destDir)
 		return fmt.Errorf("installation failed: skill must contain a SKILL.md file")
 	}
 
@@ -224,7 +224,7 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 			return nil
 		}
 
-		os.RemoveAll(destDir)
+		_ = os.RemoveAll(destDir)
 		if err := skill.ExtractEmbeddedSkill("rntocase", destDir); err != nil {
 			return err
 		}
