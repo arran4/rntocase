@@ -7,16 +7,17 @@ import (
 	"testing"
 )
 
-func TestSkill_Execute(t *testing.T) {
+func TestSkillList_Execute(t *testing.T) {
 
-	parent := &RootCmd{
+	parent := &Skill{}
+	parent.RootCmd = &RootCmd{
 		FlagSet:  flag.NewFlagSet("root", flag.ContinueOnError),
 		Commands: make(map[string]func() Cmd),
 	}
-	cmd := parent.NewSkill()
+	cmd := parent.NewSkillList()
 
 	called := false
-	cmd.CommandAction = func(c *Skill) error {
+	cmd.CommandAction = func(c *SkillList) error {
 		called = true
 		return nil
 	}
@@ -36,13 +37,14 @@ func TestSkill_Execute(t *testing.T) {
 
 }
 
-func TestSkill_ExecuteHelpAndUnknownFlags(t *testing.T) {
+func TestSkillList_ExecuteHelpAndUnknownFlags(t *testing.T) {
 
-	parent := &RootCmd{
+	parent := &Skill{}
+	parent.RootCmd = &RootCmd{
 		FlagSet:  flag.NewFlagSet("root", flag.ContinueOnError),
 		Commands: make(map[string]func() Cmd),
 	}
-	cmd := parent.NewSkill()
+	cmd := parent.NewSkillList()
 
 	if err := cmd.Execute([]string{"--help"}); err != nil {
 		t.Errorf("--help returned an error: %v", err)

@@ -14,36 +14,36 @@ import (
 	"github.com/arran4/rntocase/internal/cli"
 )
 
-var _ Cmd = (*Skill)(nil)
+var _ Cmd = (*SkillUpdate)(nil)
 
-type Skill struct {
-	*RootCmd
+type SkillUpdate struct {
+	*Skill
 	Flags         *flag.FlagSet
 	args          []string
 	SubCommands   map[string]func() Cmd
-	CommandAction func(c *Skill) error
+	CommandAction func(c *SkillUpdate) error
 }
 
-type UsageDataSkill struct {
-	*Skill
+type UsageDataSkillUpdate struct {
+	*SkillUpdate
 	Recursive bool
 }
 
-func (c *Skill) Usage() {
-	err := executeUsage(os.Stderr, "skill_usage.txt", UsageDataSkill{c, false})
+func (c *SkillUpdate) Usage() {
+	err := executeUsage(os.Stderr, "update_usage.txt", UsageDataSkillUpdate{c, false})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating usage: %s\n", err)
 	}
 }
 
-func (c *Skill) UsageRecursive() {
-	err := executeUsage(os.Stderr, "skill_usage.txt", UsageDataSkill{c, true})
+func (c *SkillUpdate) UsageRecursive() {
+	err := executeUsage(os.Stderr, "update_usage.txt", UsageDataSkillUpdate{c, true})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating usage: %s\n", err)
 	}
 }
 
-func (c *Skill) Execute(args []string) error {
+func (c *SkillUpdate) Execute(args []string) error {
 	var remainingArgs []string
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -111,7 +111,7 @@ func (c *Skill) Execute(args []string) error {
 
 	if c.CommandAction != nil {
 		if err := c.CommandAction(c); err != nil {
-			return fmt.Errorf("skill failed: %w", err)
+			return fmt.Errorf("update failed: %w", err)
 		}
 	} else {
 		c.Usage()
@@ -120,10 +120,10 @@ func (c *Skill) Execute(args []string) error {
 	return nil
 }
 
-func (c *RootCmd) NewSkill() *Skill {
-	set := flag.NewFlagSet("skill", flag.ContinueOnError)
-	v := &Skill{
-		RootCmd:     c,
+func (c *Skill) NewSkillUpdate() *SkillUpdate {
+	set := flag.NewFlagSet("update", flag.ContinueOnError)
+	v := &SkillUpdate{
+		Skill:       c,
 		Flags:       set,
 		SubCommands: make(map[string]func() Cmd),
 	}
@@ -131,9 +131,9 @@ func (c *RootCmd) NewSkill() *Skill {
 	set.Var((*StringSlice)(&v.args), "args", "TODO: Add usage text")
 	set.Usage = v.Usage
 
-	v.CommandAction = func(c *Skill) error {
+	v.CommandAction = func(c *SkillUpdate) error {
 
-		err := cli.RunSkill(c.args)
+		err := cli.RunSkillUpdate(c.args)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()
@@ -146,39 +146,9 @@ func (c *RootCmd) NewSkill() *Skill {
 			if e, ok := err.(*cmd.ErrExitCode); ok {
 				return e
 			}
-			return fmt.Errorf("skill failed: %w", err)
+			return fmt.Errorf("update failed: %w", err)
 		}
 		return nil
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillInspect() })
-		v.SubCommands["inspect"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillInstall() })
-		v.SubCommands["install"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillList() })
-		v.SubCommands["list"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillRemove() })
-		v.SubCommands["remove"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillUpdate() })
-		v.SubCommands["update"] = subCmd
-
 	}
 
 	v.SubCommands["help"] = func() Cmd {

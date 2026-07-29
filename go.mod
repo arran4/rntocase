@@ -1,6 +1,6 @@
 module github.com/arran4/rntocase
 
-go 1.25.0
+go 1.25.3
 
 require (
 	github.com/arran4/strings2 v0.0.18
@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/arran4/go-subcommand v0.0.21 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-openapi/errors v0.22.8 // indirect
@@ -19,6 +20,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
