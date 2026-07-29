@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-const appName = "rntocase"
 
 
 
