@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	"errors"
@@ -14,36 +15,38 @@ import (
 	"github.com/arran4/rntocase/internal/cli"
 )
 
-var _ Cmd = (*Skill)(nil)
+var _ Cmd = (*Lowerleading)(nil)
 
-type Skill struct {
+type Lowerleading struct {
 	*RootCmd
 	Flags         *flag.FlagSet
-	args          []string
+	dryRun        bool
+	interactive   bool
+	files         []string
 	SubCommands   map[string]func() Cmd
-	CommandAction func(c *Skill) error
+	CommandAction func(c *Lowerleading) error
 }
 
-type UsageDataSkill struct {
-	*Skill
+type UsageDataLowerleading struct {
+	*Lowerleading
 	Recursive bool
 }
 
-func (c *Skill) Usage() {
-	err := executeUsage(os.Stderr, "skill_usage.txt", UsageDataSkill{c, false})
+func (c *Lowerleading) Usage() {
+	err := executeUsage(os.Stderr, "lowerleading_usage.txt", UsageDataLowerleading{c, false})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating usage: %s\n", err)
 	}
 }
 
-func (c *Skill) UsageRecursive() {
-	err := executeUsage(os.Stderr, "skill_usage.txt", UsageDataSkill{c, true})
+func (c *Lowerleading) UsageRecursive() {
+	err := executeUsage(os.Stderr, "lowerleading_usage.txt", UsageDataLowerleading{c, true})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating usage: %s\n", err)
 	}
 }
 
-func (c *Skill) Execute(args []string) error {
+func (c *Lowerleading) Execute(args []string) error {
 	var remainingArgs []string
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -69,16 +72,27 @@ func (c *Skill) Execute(args []string) error {
 			_ = hasValue
 			switch name {
 
-			case "args":
-				if !hasValue {
-					if i+1 < len(args) {
-						value = args[i+1]
-						i++
-					} else {
-						return fmt.Errorf("flag %s requires a value", name)
+			case "dryRun", "dry-run":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
 					}
+					c.dryRun = b
+				} else {
+					c.dryRun = true
 				}
-				c.args = append(c.args, value)
+
+			case "interactive":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.interactive = b
+				} else {
+					c.interactive = true
+				}
 			default:
 				return fmt.Errorf("unknown flag: --%s", name)
 			}
@@ -108,10 +122,19 @@ func (c *Skill) Execute(args []string) error {
 			return cmd().Execute(remainingArgs[1:])
 		}
 	}
+	// Handle vararg files
+	{
+		varArgStart := 0
+		if varArgStart > len(remainingArgs) {
+			varArgStart = len(remainingArgs)
+		}
+		varArgs := remainingArgs[varArgStart:]
+		c.files = varArgs
+	}
 
 	if c.CommandAction != nil {
 		if err := c.CommandAction(c); err != nil {
-			return fmt.Errorf("skill failed: %w", err)
+			return fmt.Errorf("lowerleading failed: %w", err)
 		}
 	} else {
 		c.Usage()
@@ -120,20 +143,22 @@ func (c *Skill) Execute(args []string) error {
 	return nil
 }
 
-func (c *RootCmd) NewSkill() *Skill {
-	set := flag.NewFlagSet("skill", flag.ContinueOnError)
-	v := &Skill{
+func (c *RootCmd) NewLowerleading() *Lowerleading {
+	set := flag.NewFlagSet("lowerleading", flag.ContinueOnError)
+	v := &Lowerleading{
 		RootCmd:     c,
 		Flags:       set,
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.Var((*StringSlice)(&v.args), "args", "TODO: Add usage text")
+	set.BoolVar(&v.dryRun, "dry-run", false, "TODO: Add usage text")
+
+	set.BoolVar(&v.interactive, "interactive", false, "TODO: Add usage text")
 	set.Usage = v.Usage
 
-	v.CommandAction = func(c *Skill) error {
+	v.CommandAction = func(c *Lowerleading) error {
 
-		err := cli.RunSkill(c.args)
+		err := cli.RunLowerLeading(c.dryRun, c.interactive, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()
@@ -146,39 +171,9 @@ func (c *RootCmd) NewSkill() *Skill {
 			if e, ok := err.(*cmd.ErrExitCode); ok {
 				return e
 			}
-			return fmt.Errorf("skill failed: %w", err)
+			return fmt.Errorf("lowerleading failed: %w", err)
 		}
 		return nil
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillInspect() })
-		v.SubCommands["inspect"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillInstall() })
-		v.SubCommands["install"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillList() })
-		v.SubCommands["list"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillRemove() })
-		v.SubCommands["remove"] = subCmd
-
-	}
-
-	{
-		subCmd := NewLazyCommand(func() Cmd { return v.NewSkillUpdate() })
-		v.SubCommands["update"] = subCmd
-
 	}
 
 	v.SubCommands["help"] = func() Cmd {

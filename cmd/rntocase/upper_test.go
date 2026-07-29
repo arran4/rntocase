@@ -7,23 +7,23 @@ import (
 	"testing"
 )
 
-func TestSkill_Execute(t *testing.T) {
+func TestUpper_Execute(t *testing.T) {
 
 	parent := &RootCmd{
 		FlagSet:  flag.NewFlagSet("root", flag.ContinueOnError),
 		Commands: make(map[string]func() Cmd),
 	}
-	cmd := parent.NewSkill()
+	cmd := parent.NewUpper()
 
 	called := false
-	cmd.CommandAction = func(c *Skill) error {
+	cmd.CommandAction = func(c *Upper) error {
 		called = true
 		return nil
 	}
 
 	args := []string{}
-	args = append(args, "--args")
-	args = append(args, "test")
+	args = append(args, "--dry-run")
+	args = append(args, "--interactive")
 
 	err := cmd.Execute(args)
 	if err != nil {
@@ -34,15 +34,21 @@ func TestSkill_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
+	if cmd.dryRun != true {
+		t.Errorf("Expected dryRun to be true, got '%v'", cmd.dryRun)
+	}
+	if cmd.interactive != true {
+		t.Errorf("Expected interactive to be true, got '%v'", cmd.interactive)
+	}
 }
 
-func TestSkill_ExecuteHelpAndUnknownFlags(t *testing.T) {
+func TestUpper_ExecuteHelpAndUnknownFlags(t *testing.T) {
 
 	parent := &RootCmd{
 		FlagSet:  flag.NewFlagSet("root", flag.ContinueOnError),
 		Commands: make(map[string]func() Cmd),
 	}
-	cmd := parent.NewSkill()
+	cmd := parent.NewUpper()
 
 	if err := cmd.Execute([]string{"--help"}); err != nil {
 		t.Errorf("--help returned an error: %v", err)
