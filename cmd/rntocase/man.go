@@ -128,7 +128,7 @@ func (c *RootCmd) NewMan() *Man {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.StringVar(&v.dir, "dir", "", "TODO: Add usage text")
+	set.StringVar(&v.dir, "dir", "", "Directory to write man pages to")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *Man) error {

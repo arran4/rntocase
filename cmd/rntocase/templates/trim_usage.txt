@@ -3,16 +3,20 @@ Usage: rntocase trim [flags...] [files...]
 
 Trim whitespace or specific characters from file names
 
+Examples:
+rntocase trim --trim-chars "_" --dry-run "_hello_world_"
+rntocase trim -interactive *
+
 Subcommands:
     help         Print this help message
     usage        Print this usage message
 
 
 Flags:
-    --algorithm string
-    --trim-chars string
-    --dry-run
-    --interactive
+    --algorithm string     The trim algorithm to use
+    --trim-chars string    The characters to trim
+    --dry-run              Print the rename operations to be performed without executing them
+    --interactive          Prompt for confirmation before executing each rename operation
 
 Positional Arguments:
-    files
+    files      (min: 1) The files to rename

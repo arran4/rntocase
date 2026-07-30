@@ -3,14 +3,18 @@ Usage: rntocase acronym [flags...] [files...]
 
 Rename files by acronym
 
+Examples:
+rntocase acronym --dry-run "Internal Revenue Service"
+rntocase acronym -interactive *
+
 Subcommands:
     help         Print this help message
     usage        Print this usage message
 
 
 Flags:
-    --dry-run
-    --interactive
+    --dry-run         Print the rename operations to be performed without executing them
+    --interactive     Prompt for confirmation before executing each rename operation
 
 Positional Arguments:
-    files
+    files      (min: 1) The files to rename
