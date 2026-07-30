@@ -8,7 +8,6 @@ Subcommands:
     usage        Print this usage message
 
 
-
 Flags:
     --delimiter string
     --ignore string

@@ -1,5 +1,9 @@
 version: 2
 project_name: rntocase
+before:
+  hooks:
+    - go mod tidy
+    - go run ./cmd/rntocase man --dir manpages
 builds:
   -
     id: "rntocase"
@@ -9,6 +13,9 @@ builds:
       - CGO_ENABLED=0
 archives:
   -
+    files:
+      - src: manpages/*
+        dst: man/
     format_overrides:
       - goos: windows
         formats: [zip]
@@ -38,6 +45,9 @@ nfpms:
     release: 1
     section: default
     priority: extra
+    contents:
+      - src: manpages/*
+        dst: /usr/share/man/man1/
 dockers:
   - id: tools
     goos: linux

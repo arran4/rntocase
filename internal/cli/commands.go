@@ -1,13 +1,19 @@
 package cli
 
 import (
+	"embed"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/arran4/rntocase"
 	"github.com/arran4/strings2"
-	"strings"
 )
 
-
-
+//go:embed man/*.1
+var manPages embed.FS
 
 // RunAcronym is a subcommand `rntocase acronym` -- Rename files by acronym
 //
@@ -201,4 +207,37 @@ func RunTrim(algorithm string, trimChars string, dryRun bool, interactive bool, 
 	}
 
 	return rntocase.RenameFiles(files, converter, dryRun, interactive)
+}
+
+// RunMan is a subcommand `rntocase man` -- Generate man pages
+//
+//gosubc:flag dir --dir "Directory to write man pages to"
+func RunMan(dir string) error {
+	if dir == "" {
+		return fmt.Errorf("directory must be specified")
+	}
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create man directory: %w", err)
+	}
+
+	entries, err := fs.ReadDir(manPages, "man")
+	if err != nil {
+		return fmt.Errorf("failed to read embedded man pages: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		data, err := manPages.ReadFile(filepath.Join("man", entry.Name()))
+		if err != nil {
+			return fmt.Errorf("failed to read embedded man page %s: %w", entry.Name(), err)
+		}
+		dest := filepath.Join(dir, entry.Name())
+		if err := os.WriteFile(dest, data, 0644); err != nil {
+			return fmt.Errorf("failed to write man page %s: %w", dest, err)
+		}
+	}
+	return nil
 }
