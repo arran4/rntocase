@@ -8,7 +8,6 @@ Subcommands:
     usage        Print this usage message
 
 
-
 Flags:
     --word-mode
     --dry-run

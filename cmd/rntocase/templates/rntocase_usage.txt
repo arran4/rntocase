@@ -12,6 +12,7 @@ Subcommands:
     kebab                                    Rename files to kebab case
     lower                                    Rename files to lower case
     lowerleading                             Rename files with a lower leading character
+    man                                      Generate man pages
     pascal                                   Rename files to pascal case
     reverse                                  Reverse characters or words in file names
     skill                                    Manage AI agent skills for this CLI
@@ -35,6 +36,7 @@ Subcommands:
     kebab      Rename files to kebab case
     lower      Rename files to lower case
     lowerleading Rename files with a lower leading character
+    man        Generate man pages
     pascal     Rename files to pascal case
     reverse    Reverse characters or words in file names
     skill      Manage AI agent skills for this CLI
