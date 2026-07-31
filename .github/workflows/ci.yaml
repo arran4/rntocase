@@ -54,7 +54,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/tags/') }}
 
 permissions:
   contents: write
@@ -240,7 +240,7 @@ jobs:
     if: ${{ needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -295,11 +295,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-
-
-
-
-
       - name: Run autofix formatters
         shell: bash
         run: |
@@ -308,8 +303,6 @@ jobs:
             go fix ./... || true
             go fmt ./... || true
           fi
-
-
 
       - name: Create PR if changes exist
         env:
@@ -340,12 +333,30 @@ jobs:
             --head "$BRANCH" \
             --label "ci-autofix"
 
+  cleanup-autofix-prs:
+    name: Cleanup autofix PRs on parent close
+    needs: [route]
+    if: ${{ needs.route.outputs.run_cleanup == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PARENT_PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr list --state open --search "label:ci-autofix in:title" --json number,headRefName,body | \
+            jq -r '.[] | select(.body | contains("Parent-PR: '"$PARENT_PR"'")) | [.number, .headRefName] | @tsv' | \
+            while IFS=$'\t' read -r pr branch; do
+              gh pr close "$pr" --comment "Closing auto-fix PR because parent PR #$PARENT_PR was closed."
+              git push origin --delete "$branch" || true
+            done
 
   goreleaser:
     name: GoReleaser
     # In practice, include all quality gates here (for example: go-test, go-vet, go-lint, format).
     needs: [route, golangci, go-test, go-vet, autofix, prepare-release-tag]
-    if: ${{ (((github.event_name == 'push') && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && startsWith(inputs.mode, 'release-'))) }}
+    if: ${{ !failure() && !cancelled() && needs.route.outputs.run_release == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
