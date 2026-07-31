@@ -3,10 +3,13 @@ Usage: rntocase man [flags...]
 
 Generate man pages
 
+Examples:
+rntocase man --dir ./manpages
+
 Subcommands:
     help         Print this help message
     usage        Print this usage message
 
 
 Flags:
-    --dir string
+    --dir string    Directory to write man pages to

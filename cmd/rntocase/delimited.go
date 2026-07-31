@@ -175,13 +175,13 @@ func (c *RootCmd) NewDelimited() *Delimited {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.StringVar(&v.delimiter, "delimiter", "", "TODO: Add usage text")
+	set.StringVar(&v.delimiter, "delimiter", "", "The delimiter to use")
 
-	set.StringVar(&v.ignore, "ignore", "", "TODO: Add usage text")
+	set.StringVar(&v.ignore, "ignore", "", "The characters to ignore")
 
-	set.BoolVar(&v.dryRun, "dry-run", false, "TODO: Add usage text")
+	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
-	set.BoolVar(&v.interactive, "interactive", false, "TODO: Add usage text")
+	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *Delimited) error {

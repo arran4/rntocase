@@ -163,11 +163,11 @@ func (c *RootCmd) NewReverse() *Reverse {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.BoolVar(&v.wordMode, "word-mode", false, "TODO: Add usage text")
+	set.BoolVar(&v.wordMode, "word-mode", false, "Reverse words instead of characters")
 
-	set.BoolVar(&v.dryRun, "dry-run", false, "TODO: Add usage text")
+	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
-	set.BoolVar(&v.interactive, "interactive", false, "TODO: Add usage text")
+	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *Reverse) error {

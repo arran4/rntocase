@@ -3,16 +3,20 @@ Usage: rntocase delimited [flags...] [files...]
 
 Rename files with a custom delimiter
 
+Examples:
+rntocase delimited --delimiter "_" --dry-run "hello world"
+rntocase delimited --delimiter "-" -interactive *
+
 Subcommands:
     help         Print this help message
     usage        Print this usage message
 
 
 Flags:
-    --delimiter string
-    --ignore string
-    --dry-run
-    --interactive
+    --delimiter string    The delimiter to use
+    --ignore string       The characters to ignore
+    --dry-run             Print the rename operations to be performed without executing them
+    --interactive         Prompt for confirmation before executing each rename operation
 
 Positional Arguments:
-    files
+    files      (min: 1) The files to rename

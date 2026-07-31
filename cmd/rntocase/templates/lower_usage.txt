@@ -3,14 +3,18 @@ Usage: rntocase lower [flags...] [files...]
 
 Rename files to lower case
 
+Examples:
+rntocase lower --dry-run "HELLO WORLD"
+rntocase lower -interactive *
+
 Subcommands:
     help         Print this help message
     usage        Print this usage message
 
 
 Flags:
-    --dry-run
-    --interactive
+    --dry-run         Print the rename operations to be performed without executing them
+    --interactive     Prompt for confirmation before executing each rename operation
 
 Positional Arguments:
-    files
+    files      (min: 1) The files to rename

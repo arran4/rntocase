@@ -175,13 +175,13 @@ func (c *RootCmd) NewTrim() *Trim {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.StringVar(&v.algorithm, "algorithm", "", "TODO: Add usage text")
+	set.StringVar(&v.algorithm, "algorithm", "", "The trim algorithm to use")
 
-	set.StringVar(&v.trimChars, "trim-chars", "", "TODO: Add usage text")
+	set.StringVar(&v.trimChars, "trim-chars", "", "The characters to trim")
 
-	set.BoolVar(&v.dryRun, "dry-run", false, "TODO: Add usage text")
+	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
-	set.BoolVar(&v.interactive, "interactive", false, "TODO: Add usage text")
+	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *Trim) error {

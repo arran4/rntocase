@@ -3,14 +3,18 @@ Usage: rntocase title [flags...] [files...]
 
 Rename files to title case
 
+Examples:
+rntocase title --dry-run "hello world"
+rntocase title -interactive *
+
 Subcommands:
     help         Print this help message
     usage        Print this usage message
 
 
 Flags:
-    --dry-run
-    --interactive
+    --dry-run         Print the rename operations to be performed without executing them
+    --interactive     Prompt for confirmation before executing each rename operation
 
 Positional Arguments:
-    files
+    files      (min: 1) The files to rename
