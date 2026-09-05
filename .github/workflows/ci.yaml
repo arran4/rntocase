@@ -3,16 +3,6 @@
 # Release safety details:
 # https://arran4.github.io/blog/post/2026/041-release-safe-single-owner-github-ci/
 # Built using these posts as reference/guidance.
-# Agent rules for generation:
-# https://arran4.github.io/blog/post/2026/042-simplified-github-ci-release-safe/
-# Release safety details:
-# https://arran4.github.io/blog/post/2026/041-release-safe-single-owner-github-ci/
-# Built using these posts as reference/guidance.
-# Agent rules for generation:
-# https://arran4.github.io/blog/post/2026/042-simplified-github-ci-release-safe/
-# Release safety details:
-# https://arran4.github.io/blog/post/2026/041-release-safe-single-owner-github-ci/
-# Built using these posts as reference/guidance.
 name: CI/CD
 
 on:
@@ -431,7 +421,7 @@ jobs:
     - go-test
     - go-vet
     - build-release-artifacts
-    if: (!failure( && (needs.build-release-artifacts.result == 'success' || needs.build-release-artifacts.result == 'skipped')) && !cancelled( && (needs.build-release-artifacts.result == 'success' || needs.build-release-artifacts.result == 'skipped')) && needs.route.outputs.run_release == 'true' && needs.discover.result == 'success' && needs.golangci.result == 'success' && needs.go-test.result == 'success' && needs.go-vet.result == 'success' && (needs.build-release-artifacts.result == 'success' || needs.build-release-artifacts.result == 'skipped'))
+    if: ${{ !failure() && !cancelled() && needs.route.outputs.run_release == 'true' && needs.discover.result == 'success' && needs.golangci.result == 'success' && needs.go-test.result == 'success' && needs.go-vet.result == 'success' && needs.build-release-artifacts.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
     - run: echo "All required checks passed."
