@@ -91,27 +91,24 @@ func TestRenameFiles(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tempDir, "A.txt"), []byte("content"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(tempDir, "a.txt"), []byte("content"), 0644); err != nil {
-			// If we are on a case-insensitive FS, A.txt and a.txt might be the same.
-			// Let's use totally different names to be safe.
-		}
+		_ = os.WriteFile(filepath.Join(tempDir, "a.txt"), []byte("content"), 0644)
+		// If we are on a case-insensitive FS, A.txt and a.txt might be the same.
+		// Let's use totally different names to be safe.
 
 		// Safer approach for cross-platform collision test
 		if err := os.WriteFile(filepath.Join(tempDir, "SourceFile.txt"), []byte("content"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(tempDir, "sourcefile.txt"), []byte("different"), 0644); err != nil {
-			// For case-insensitive FS, it will just overwrite content, let's use different base names.
-		}
+		_ = os.WriteFile(filepath.Join(tempDir, "sourcefile.txt"), []byte("different"), 0644)
+		// For case-insensitive FS, it will just overwrite content, let's use different base names.
 
 		// Unrelated collision test:
 		if err := os.WriteFile(filepath.Join(tempDir, "Foo.txt"), []byte("foo"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("existing foo"), 0644); err != nil {
-			// On Case-Insensitive FS (macOS/Windows) this might just modify Foo.txt.
-			// We can test collision by mapping 'Bar.txt' to 'foo.txt' by just a dumb replace func.
-		}
+		_ = os.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("existing foo"), 0644)
+		// On Case-Insensitive FS (macOS/Windows) this might just modify Foo.txt.
+		// We can test collision by mapping 'Bar.txt' to 'foo.txt' by just a dumb replace func.
 
 		if err := os.WriteFile(filepath.Join(tempDir, "Bar.txt"), []byte("bar"), 0644); err != nil {
 			t.Fatal(err)
@@ -205,7 +202,7 @@ func TestRenameFiles(t *testing.T) {
 		}
 
 		// Remove it so the syscall fails
-		os.Remove(filepath.Join(tempDir, "Bad1.txt"))
+		_ = os.Remove(filepath.Join(tempDir, "Bad1.txt"))
 
 		err := RenameFiles(paths, renameFuncLower, false, false)
 		if err == nil {
