@@ -4,6 +4,7 @@ Usage: rntocase camel [flags...] [files...]
 Rename files to camel case
 
 Examples:
+
 rntocase camel --dry-run "hello world"
 rntocase camel -interactive *
 

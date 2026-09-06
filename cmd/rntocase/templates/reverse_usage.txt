@@ -4,6 +4,7 @@ Usage: rntocase reverse [flags...] [files...]
 Reverse characters or words in file names
 
 Examples:
+
 rntocase reverse --dry-run "hello world"
 rntocase reverse --word-mode -interactive *
 

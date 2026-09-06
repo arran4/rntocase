@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestRunSkill_RequiresSubcommand(t *testing.T) {

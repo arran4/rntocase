@@ -6,8 +6,8 @@ Welcome to the `rntocase` skill for AI coding agents! `rntocase` is a CLI applic
 
 *   **Subcommands:** `rntocase` is a single binary (`rntocase`) with a subcommand architecture. Commands like `rntocase camel`, `rntocase snake`, and `rntocase acronym` perform the actual renaming operations.
 *   **Batch Operations:** The tool is designed to take multiple files as arguments: `rntocase snake file1.txt file2.txt file3.txt` or `rntocase snake *`.
-*   **Extensions Preserved:** The renaming logic applies to the filename *before* the extension. Extensions are preserved automatically.
-*   **Safety First:** By default, `rntocase` renames files immediately.
+*   **Extensions Preserved:** The renaming logic applies to the filename *before* the extension. Extensions are preserved automatically. This includes standard extensions, dotfiles (e.g., `.env`), and common compound extensions (e.g., `.tar.gz`, `.tar.bz2`).
+*   **Safety First:** By default, `rntocase` renames files immediately but uses a preflight planning phase to check for destination collisions (e.g., multiple source files mapping to the same name, or a destination that already exists). If any collision is detected, the entire batch will abort safely before making changes.
 
 ## Operational Guidance for Agents
 

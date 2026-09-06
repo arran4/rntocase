@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/iancoleman/strcase"
 	"github.com/arran4/strings2"
+	"github.com/iancoleman/strcase"
 	"testing"
 )
 

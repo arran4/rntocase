@@ -4,6 +4,7 @@ Usage: rntocase acronym [flags...] [files...]
 Rename files by acronym
 
 Examples:
+
 rntocase acronym --dry-run "Internal Revenue Service"
 rntocase acronym -interactive *
 

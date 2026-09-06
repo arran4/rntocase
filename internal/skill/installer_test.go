@@ -45,8 +45,8 @@ func TestExtractTarGz_PathTraversal(t *testing.T) {
 	defer func() { _ = os.RemoveAll(destDir) }()
 
 	files := map[string]string{
-		"repo-sha/valid.txt":               "valid content",
-		"repo-sha/../../evil.txt":          "evil content",
+		"repo-sha/valid.txt":      "valid content",
+		"repo-sha/../../evil.txt": "evil content",
 	}
 
 	tarPath := createTestTarball(t, files)
@@ -63,7 +63,7 @@ func TestExtractTarGz_Success(t *testing.T) {
 	defer func() { _ = os.RemoveAll(destDir) }()
 
 	files := map[string]string{
-		"repo-sha/SKILL.md": "# My Skill\n",
+		"repo-sha/SKILL.md":      "# My Skill\n",
 		"repo-sha/lib/helper.py": "print('hello')",
 	}
 
