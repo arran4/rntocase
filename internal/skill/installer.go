@@ -292,16 +292,18 @@ func ReplaceSafely(destDir string, populateFunc func(stagingDir string) error) e
 		// os.Rename requires the destination to be empty or not exist on most platforms.
 		_ = os.Remove(backupDir)
 
-		if err := os.Rename(destDir, backupDir); err != nil {
+		if err := osRename(destDir, backupDir); err != nil {
 			return fmt.Errorf("failed to backup existing installation: %w", err)
 		}
 	}
 
 	// Move staging to destination
-	if err := os.Rename(stagingDir, destDir); err != nil {
+	if err := osRename(stagingDir, destDir); err != nil {
 		// Rollback on failure
 		if backupDir != "" {
-			_ = os.Rename(backupDir, destDir)
+			if restoreErr := osRename(backupDir, destDir); restoreErr != nil {
+				return fmt.Errorf("failed to commit new installation (%v) and rollback failed: %v", err, restoreErr)
+			}
 		}
 		return fmt.Errorf("failed to commit new installation: %w", err)
 	}

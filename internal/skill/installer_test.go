@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"strings"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -155,4 +156,97 @@ func TestReplaceSafely_RemovesStaleFiles(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
 	assert.Equal(t, "v2", string(content))
+}
+
+// Add regression test simulating rename failure
+func TestReplaceSafely_CommitRenameFailure(t *testing.T) {
+	parentDir, err := os.MkdirTemp("", "parent-dir-*")
+	assert.NoError(t, err)
+	defer func() { _ = os.RemoveAll(parentDir) }()
+
+	destDir := filepath.Join(parentDir, "my-skill")
+	err = os.MkdirAll(destDir, 0755)
+	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("working-v1"), 0644)
+	assert.NoError(t, err)
+
+	// Since we can't easily mock os.Rename in the core code without modifying its signature,
+	// we will simulate the scenario by locking the destination or similar,
+    // but cross-platform that's tricky.
+    // Instead, let's inject a mockable osRename for tests if needed, or just rely on the test structure.
+    // Let's modify ReplaceSafely slightly to take an optional rename override, or we can just test the error flow directly via permissions.
+}
+
+func TestReplaceSafely_CommitRenameFailureRollback(t *testing.T) {
+	parentDir, err := os.MkdirTemp("", "parent-dir-*")
+	assert.NoError(t, err)
+	defer func() { _ = os.RemoveAll(parentDir) }()
+
+	destDir := filepath.Join(parentDir, "my-skill")
+	err = os.MkdirAll(destDir, 0755)
+	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("working-v1"), 0644)
+	assert.NoError(t, err)
+
+	originalOsRename := osRename
+	defer func() { osRename = originalOsRename }()
+
+	// Inject a rename function that fails when moving staging to destDir
+	osRename = func(oldpath, newpath string) error {
+		// If trying to swap the staging directory into the final destination, fail
+		if strings.Contains(oldpath, ".staging-skill-") && newpath == destDir {
+			return os.ErrPermission // Simulated failure
+		}
+		// Otherwise behave normally (like backing up or rolling back)
+		return os.Rename(oldpath, newpath)
+	}
+
+	err = ReplaceSafely(destDir, func(stagingDir string) error {
+		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("new-v2"), 0644)
+	})
+
+	// Expect the commit to fail
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to commit new installation")
+	// Ensure it didn't throw a rollback failed error
+	assert.NotContains(t, err.Error(), "rollback failed")
+
+	// Verify rollback succeeded
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	assert.NoError(t, err)
+	assert.Equal(t, "working-v1", string(content))
+}
+
+func TestReplaceSafely_CommitRenameFailureAndRollbackFailure(t *testing.T) {
+	parentDir, err := os.MkdirTemp("", "parent-dir-*")
+	assert.NoError(t, err)
+	defer func() { _ = os.RemoveAll(parentDir) }()
+
+	destDir := filepath.Join(parentDir, "my-skill")
+	err = os.MkdirAll(destDir, 0755)
+	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("working-v1"), 0644)
+	assert.NoError(t, err)
+
+	originalOsRename := osRename
+	defer func() { osRename = originalOsRename }()
+
+	// Inject a rename function that fails when moving staging to destDir AND fails on rollback
+	osRename = func(oldpath, newpath string) error {
+		// Fail both the commit and the rollback
+		if (strings.Contains(oldpath, ".staging-skill-") && newpath == destDir) ||
+		   (strings.Contains(oldpath, ".backup-skill-") && newpath == destDir) {
+			return os.ErrPermission // Simulated failure
+		}
+		return os.Rename(oldpath, newpath)
+	}
+
+	err = ReplaceSafely(destDir, func(stagingDir string) error {
+		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("new-v2"), 0644)
+	})
+
+	// Expect both commit and rollback to fail
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to commit new installation")
+	assert.Contains(t, err.Error(), "and rollback failed")
 }

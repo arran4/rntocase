@@ -246,8 +246,17 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 		}
 
 		err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
-			if err := skill.ExtractEmbeddedSkill("rntocase", stagingDir); err != nil {
+			embeddedName := "rntocase"
+			if skill.OverrideEmbeddedSkillForTest != "" {
+				embeddedName = skill.OverrideEmbeddedSkillForTest
+			}
+			if err := skill.ExtractEmbeddedSkill(embeddedName, stagingDir); err != nil {
 				return err
+			}
+
+			// Validate SKILL.md for official/embedded update too
+			if _, err := os.Stat(filepath.Join(stagingDir, "SKILL.md")); os.IsNotExist(err) {
+				return fmt.Errorf("update failed: new skill version must contain a SKILL.md file")
 			}
 
 			digest, _ := skill.ComputeDirectoryDigest(stagingDir)
