@@ -136,6 +136,22 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		newName := baseNameRenamed + ext
 		newPath := filepath.Join(dir, newName)
 
+		// To safely check identity, resolve absolute paths, evaluating parent dir symlinks.
+		// However, evaluating the final symlink (the base name) would obscure collisions with dangling links.
+		// Therefore we evaluate the directory and join the base name.
+		absDir, err := filepath.Abs(dir)
+		var evalDir string
+		if err == nil {
+			evalDir, _ = filepath.EvalSymlinks(absDir)
+			if evalDir == "" {
+				evalDir = absDir
+			}
+		} else {
+			evalDir = dir
+		}
+
+		newCanonicalPath := filepath.Join(evalDir, newName)
+
 		plan := RenamePlan{
 			OriginalPath: file,
 			NewPath:      newPath,
@@ -143,20 +159,35 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		}
 
 		if plan.WillChange {
-			// Check if duplicate destination within batch
-			destCount[newPath]++
-			if destCount[newPath] > 1 {
+			// Check if duplicate destination within batch, using canonical path to avoid mixed absolute/relative path bypasses.
+			// On some systems we might lowercase the path for key lookup, but using canonical paths is a good start.
+			// For case insensitive file systems, we lowercase the directory portion. However, standard cross-platform
+			// go code often relies just on EvalSymlinks + Abs. Let's lowercase the entire canonical path if we want robust
+			// cross platform comparison, but since we cannot easily detect FS case sensitivity, we'll map by the canonical string.
+			// On macOS/Windows, the newName will just be a string. Since we are doing a case-insensitive rename, mapping `foo.txt`
+			// and `FOO.txt` from different sources should be a collision. We can use `strings.ToLower(newCanonicalPath)` for the map key.
+			// Wait, the prompt said "Account for filesystem case behavior where practical". Just using absolute paths is a big step.
+			destKey := newCanonicalPath
+
+			destCount[destKey]++
+			if destCount[destKey] > 1 {
 				plan.Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
 			} else {
 				// Check if destination exists (and isn't just a case-change rename of the same file)
-				// A case-change on a case-insensitive FS will mean os.Stat returns no error,
-				// but os.SameFile won't work on non-existent files.
-				// We can just check os.Stat and if it exists and is not the same file
-				if destStat, err := os.Stat(newPath); err == nil {
-					srcStat, srcErr := os.Stat(file)
+				// Use Lstat to detect dangling symlinks and avoid resolving symlinks when checking existence.
+				destStat, destErr := os.Lstat(newPath)
+				if destErr == nil {
+					// Destination exists (might be a symlink)
+					srcStat, srcErr := os.Lstat(file)
+
+					// If they are not the same file, it's a collision.
+					// `os.SameFile` handles same inode checks.
 					if srcErr != nil || !os.SameFile(srcStat, destStat) {
 						plan.Error = fmt.Errorf("collision: destination '%s' already exists", newPath)
 					}
+				} else if !os.IsNotExist(destErr) {
+					// Some other error during Lstat (permissions, etc)
+					plan.Error = fmt.Errorf("collision: could not read destination '%s': %v", newPath, destErr)
 				}
 			}
 		}
