@@ -4,6 +4,7 @@ Usage: rntocase upperleading [flags...] [files...]
 Rename files with an upper leading character
 
 Examples:
+
 rntocase upperleading --dry-run "hello world"
 rntocase upperleading -interactive *
 

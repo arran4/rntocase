@@ -19,6 +19,20 @@ A series of files to help you /rename/ files from one type to another.
 
 * Note: this is a work in progress. I will happily change how things work so please do not use in a script (or without verification) unless you're fixing it to a particular version.
 
+# Behavior
+
+## Rename Safety & Preflight
+By default, this tool protects you from data loss. Before modifying the filesystem, it plans the entire operation and verifies that:
+- No two files in the batch map to the same destination.
+- The destination does not already exist (unless it is a case-only rename of the same file on a case-insensitive filesystem).
+
+If any planned operation is unsafe, the tool will abort the batch before making *any* changes.
+
+If an operation fails during execution (e.g., due to permission errors), the tool will continue renaming the rest of the batch to provide a complete error report, but it will exit with a non-zero status code.
+
+## Extension Policy
+The renaming algorithm preserves standard file extensions, including common compound extensions like `.tar.gz`, `.tar.bz2`, and `.tar.xz`. It will correctly identify and exclude these extensions from the casing transformation. It also correctly handles extensionless files and dotfiles (e.g., `.env`).
+
 # Usage
 
 ## `rnacronym`

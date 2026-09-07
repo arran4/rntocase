@@ -4,6 +4,7 @@ Usage: rntocase lower [flags...] [files...]
 Rename files to lower case
 
 Examples:
+
 rntocase lower --dry-run "HELLO WORLD"
 rntocase lower -interactive *
 

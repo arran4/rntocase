@@ -4,6 +4,7 @@ Usage: rntocase lowerleading [flags...] [files...]
 Rename files with a lower leading character
 
 Examples:
+
 rntocase lowerleading --dry-run "Hello World"
 rntocase lowerleading -interactive *
 

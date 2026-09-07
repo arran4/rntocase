@@ -4,6 +4,7 @@ Usage: rntocase man [flags...]
 Generate man pages
 
 Examples:
+
 rntocase man --dir ./manpages
 
 Subcommands:

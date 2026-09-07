@@ -4,6 +4,7 @@ Usage: rntocase snake [flags...] [files...]
 Rename files to snake case
 
 Examples:
+
 rntocase snake --dry-run "hello world"
 rntocase snake -interactive *
 

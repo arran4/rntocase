@@ -4,6 +4,7 @@ Usage: rntocase upper [flags...] [files...]
 Rename files to upper case
 
 Examples:
+
 rntocase upper --dry-run "hello world"
 rntocase upper -interactive *
 

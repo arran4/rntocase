@@ -17,14 +17,15 @@ var manPages embed.FS
 
 // RunAcronym is a subcommand `rntocase acronym` -- Rename files by acronym
 // Examples:
-//   rntocase acronym --dry-run "Internal Revenue Service"
-//   rntocase acronym -interactive *
+//
+//	rntocase acronym --dry-run "Internal Revenue Service"
+//	rntocase acronym -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunAcronym(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		words, err := strings2.Parse(s)
@@ -45,14 +46,15 @@ func RunAcronym(dryRun bool, interactive bool, files ...string) error {
 
 // RunCamel is a subcommand `rntocase camel` -- Rename files to camel case
 // Examples:
-//   rntocase camel --dry-run "hello world"
-//   rntocase camel -interactive *
+//
+//	rntocase camel --dry-run "hello world"
+//	rntocase camel -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunCamel(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToPascal(s, strings2.ParserEmitEmpty(true))
@@ -62,14 +64,15 @@ func RunCamel(dryRun bool, interactive bool, files ...string) error {
 
 // RunConstant is a subcommand `rntocase constant` -- Rename files to constant case
 // Examples:
-//   rntocase constant --dry-run "hello world"
-//   rntocase constant -interactive *
+//
+//	rntocase constant --dry-run "hello world"
+//	rntocase constant -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunConstant(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		val, err := strings2.ToSnake(s, strings2.ParserEmitEmpty(true))
@@ -83,14 +86,15 @@ func RunConstant(dryRun bool, interactive bool, files ...string) error {
 
 // RunDarwin is a subcommand `rntocase darwin` -- Rename files to darwin case
 // Examples:
-//   rntocase darwin --dry-run "hello world"
-//   rntocase darwin -interactive *
+//
+//	rntocase darwin --dry-run "hello world"
+//	rntocase darwin -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunDarwin(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToDarwin(s)
@@ -100,16 +104,17 @@ func RunDarwin(dryRun bool, interactive bool, files ...string) error {
 
 // RunDelimited is a subcommand `rntocase delimited` -- Rename files with a custom delimiter
 // Examples:
-//   rntocase delimited --delimiter "_" --dry-run "hello world"
-//   rntocase delimited --delimiter "-" -interactive *
+//
+//	rntocase delimited --delimiter "_" --dry-run "hello world"
+//	rntocase delimited --delimiter "-" -interactive *
 //
 // Flags:
-// 	delimiter: --delimiter (default: "") The delimiter to use
-// 	ignore: --ignore (default: "") The characters to ignore
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	delimiter: --delimiter (default: "") The delimiter to use
+//	ignore: --ignore (default: "") The characters to ignore
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunDelimited(delimiter string, ignore string, dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToFormattedString(s, strings2.OptionDelimiter(delimiter), strings2.OptionIgnore(ignore), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
@@ -123,15 +128,16 @@ func RunDelimited(delimiter string, ignore string, dryRun bool, interactive bool
 
 // RunDot is a subcommand `rntocase dot` -- Rename files to dot case
 // Examples:
-//   rntocase dot --delimiter "." --dry-run "hello world"
-//   rntocase dot -interactive *
+//
+//	rntocase dot --delimiter "." --dry-run "hello world"
+//	rntocase dot -interactive *
 //
 // Flags:
-// 	delimiter: --delimiter (default: "") The delimiter to use
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	delimiter: --delimiter (default: "") The delimiter to use
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunDot(delimiter string, dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToFormattedString(s, strings2.OptionDelimiter(delimiter), strings2.OptionFirstLower(), strings2.ParserEmitEmpty(true))
@@ -142,14 +148,15 @@ func RunDot(delimiter string, dryRun bool, interactive bool, files ...string) er
 
 // RunKebab is a subcommand `rntocase kebab` -- Rename files to kebab case
 // Examples:
-//   rntocase kebab --dry-run "hello world"
-//   rntocase kebab -interactive *
+//
+//	rntocase kebab --dry-run "hello world"
+//	rntocase kebab -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunKebab(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToKebab(s, strings2.OptionLoose(), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
@@ -159,14 +166,15 @@ func RunKebab(dryRun bool, interactive bool, files ...string) error {
 
 // RunLower is a subcommand `rntocase lower` -- Rename files to lower case
 // Examples:
-//   rntocase lower --dry-run "HELLO WORLD"
-//   rntocase lower -interactive *
+//
+//	rntocase lower --dry-run "HELLO WORLD"
+//	rntocase lower -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunLower(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings.ToLower(s), nil
@@ -176,14 +184,15 @@ func RunLower(dryRun bool, interactive bool, files ...string) error {
 
 // RunLowerLeading is a subcommand `rntocase lowerleading` -- Rename files with a lower leading character
 // Examples:
-//   rntocase lowerleading --dry-run "Hello World"
-//   rntocase lowerleading -interactive *
+//
+//	rntocase lowerleading --dry-run "Hello World"
+//	rntocase lowerleading -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunLowerLeading(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.LowerCaseFirstWithErr(s)
@@ -193,14 +202,15 @@ func RunLowerLeading(dryRun bool, interactive bool, files ...string) error {
 
 // RunPascal is a subcommand `rntocase pascal` -- Rename files to pascal case
 // Examples:
-//   rntocase pascal --dry-run "hello world"
-//   rntocase pascal -interactive *
+//
+//	rntocase pascal --dry-run "hello world"
+//	rntocase pascal -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunPascal(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToPascal(s)
@@ -210,15 +220,16 @@ func RunPascal(dryRun bool, interactive bool, files ...string) error {
 
 // RunReverse is a subcommand `rntocase reverse` -- Reverse characters or words in file names
 // Examples:
-//   rntocase reverse --dry-run "hello world"
-//   rntocase reverse --word-mode -interactive *
+//
+//	rntocase reverse --dry-run "hello world"
+//	rntocase reverse --word-mode -interactive *
 //
 // Flags:
-// 	wordMode: --word-mode Reverse words instead of characters
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	wordMode: --word-mode Reverse words instead of characters
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunReverse(wordMode bool, dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		runes := []rune(s)
@@ -227,8 +238,6 @@ func RunReverse(wordMode bool, dryRun bool, interactive bool, files ...string) e
 		}
 		return string(runes), nil
 	}
-
-
 
 	wordReverseConverter := func(s string) (string, error) {
 		words, err := strings2.Parse(s)
@@ -251,14 +260,15 @@ func RunReverse(wordMode bool, dryRun bool, interactive bool, files ...string) e
 
 // RunSnake is a subcommand `rntocase snake` -- Rename files to snake case
 // Examples:
-//   rntocase snake --dry-run "hello world"
-//   rntocase snake -interactive *
+//
+//	rntocase snake --dry-run "hello world"
+//	rntocase snake -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunSnake(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToSnake(s, strings2.OptionLoose(), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
@@ -268,14 +278,15 @@ func RunSnake(dryRun bool, interactive bool, files ...string) error {
 
 // RunTitle is a subcommand `rntocase title` -- Rename files to title case
 // Examples:
-//   rntocase title --dry-run "hello world"
-//   rntocase title -interactive *
+//
+//	rntocase title --dry-run "hello world"
+//	rntocase title -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunTitle(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.ToTitle(s)
@@ -285,14 +296,15 @@ func RunTitle(dryRun bool, interactive bool, files ...string) error {
 
 // RunUpper is a subcommand `rntocase upper` -- Rename files to upper case
 // Examples:
-//   rntocase upper --dry-run "hello world"
-//   rntocase upper -interactive *
+//
+//	rntocase upper --dry-run "hello world"
+//	rntocase upper -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunUpper(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings.ToUpper(s), nil
@@ -302,14 +314,15 @@ func RunUpper(dryRun bool, interactive bool, files ...string) error {
 
 // RunUpperLeading is a subcommand `rntocase upperleading` -- Rename files with an upper leading character
 // Examples:
-//   rntocase upperleading --dry-run "hello world"
-//   rntocase upperleading -interactive *
+//
+//	rntocase upperleading --dry-run "hello world"
+//	rntocase upperleading -interactive *
 //
 // Flags:
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunUpperLeading(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
 		return strings2.UpperCaseFirstWithErr(s)
@@ -319,18 +332,18 @@ func RunUpperLeading(dryRun bool, interactive bool, files ...string) error {
 
 // RunTrim is a subcommand `rntocase trim` -- Trim whitespace or specific characters from file names
 // Examples:
-//   rntocase trim --trim-chars "_" --dry-run "_hello_world_"
-//   rntocase trim -interactive *
+//
+//	rntocase trim --trim-chars "_" --dry-run "_hello_world_"
+//	rntocase trim -interactive *
 //
 // Flags:
-// 	algorithm: --algorithm (default: "") The trim algorithm to use
-// 	trimChars: --trim-chars (default: "") The characters to trim
-// 	dryRun: --dry-run Print the rename operations to be performed without executing them
-// 	interactive: --interactive Prompt for confirmation before executing each rename operation
-// 	files: @1... (min: 1) The files to rename
 //
+//	algorithm: --algorithm (default: "") The trim algorithm to use
+//	trimChars: --trim-chars (default: "") The characters to trim
+//	dryRun: --dry-run Print the rename operations to be performed without executing them
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	files: @1... (min: 1) The files to rename
 func RunTrim(algorithm string, trimChars string, dryRun bool, interactive bool, files ...string) error {
-
 
 	converter := func(s string) (string, error) {
 		if trimChars == "" {
@@ -346,11 +359,12 @@ func RunTrim(algorithm string, trimChars string, dryRun bool, interactive bool, 
 // RunMan is a subcommand `rntocase man` -- Generate man pages
 //
 // Examples:
-//   rntocase man --dir ./manpages
+//
+//	rntocase man --dir ./manpages
 //
 // Flags:
-// 	dir: --dir Directory to write man pages to
 //
+//	dir: --dir Directory to write man pages to
 func RunMan(dir string) error {
 	if dir == "" {
 		return fmt.Errorf("directory must be specified")

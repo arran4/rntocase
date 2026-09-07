@@ -4,6 +4,7 @@ Usage: rntocase trim [flags...] [files...]
 Trim whitespace or specific characters from file names
 
 Examples:
+
 rntocase trim --trim-chars "_" --dry-run "_hello_world_"
 rntocase trim -interactive *
 

@@ -4,6 +4,7 @@ Usage: rntocase dot [flags...] [files...]
 Rename files to dot case
 
 Examples:
+
 rntocase dot --delimiter "." --dry-run "hello world"
 rntocase dot -interactive *
 

@@ -4,6 +4,7 @@ Usage: rntocase constant [flags...] [files...]
 Rename files to constant case
 
 Examples:
+
 rntocase constant --dry-run "hello world"
 rntocase constant -interactive *
 

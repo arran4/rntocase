@@ -23,6 +23,75 @@ func Confirm(prompt string) bool {
 	return ConfirmWithReader(prompt, getReader())
 }
 
+// SplitExtension splits a filename into its base name and extension.
+// It supports compound extensions like .tar.gz and handles dotfiles cleanly.
+func SplitExtension(filename string) (name, ext string) {
+	if filename == "" || filename == "." || filename == ".." {
+		return filename, ""
+	}
+
+	compoundExts := []string{".tar.gz", ".tar.bz2", ".tar.xz"}
+	lower := strings.ToLower(filename)
+	for _, ce := range compoundExts {
+		if strings.HasSuffix(lower, ce) {
+			name = filename[:len(filename)-len(ce)]
+			ext = filename[len(filename)-len(ce):]
+			if name == "" {
+				return filename, ""
+			}
+			return name, ext
+		}
+	}
+
+	ext = filepath.Ext(filename)
+	name = filename[:len(filename)-len(ext)]
+
+	if name == "" && ext != "" {
+		return ext, ""
+	}
+
+	return name, ext
+}
+
+// RenamePlan represents a planned rename operation
+type RenamePlan struct {
+	OriginalPath string
+	NewPath      string
+	WillChange   bool
+	Error        error
+}
+
+// RenameError represents an error that occurred during the rename process
+type RenameError struct {
+	Path    string
+	NewPath string
+	Err     error
+}
+
+func (e *RenameError) Unwrap() error {
+	return e.Err
+}
+
+func (e *RenameError) Error() string {
+	return fmt.Sprintf("error processing '%s': %v", e.Path, e.Err)
+}
+
+// RenameBatchError is an aggregation of multiple RenameErrors
+type RenameBatchError struct {
+	Errors []*RenameError
+}
+
+func (e *RenameBatchError) Error() string {
+	if len(e.Errors) == 1 {
+		return e.Errors[0].Error()
+	}
+	var msgs []string
+	for _, err := range e.Errors {
+		msgs = append(msgs, err.Error())
+	}
+	return fmt.Sprintf("%d rename operations failed:\n  %s", len(e.Errors), strings.Join(msgs, "\n  "))
+}
+
 // ConfirmWithReader prompts the user with a yes/no question using the provided reader.
 func ConfirmWithReader(prompt string, reader *bufio.Reader) bool {
 	for {
@@ -46,49 +115,139 @@ func ConfirmWithReader(prompt string, reader *bufio.Reader) bool {
 // RenameFiles applies a renaming function to a list of files.
 // Supports dry-run and interactive modes.
 func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun bool, interactive bool) error {
+	var plans []RenamePlan
+	destCount := make(map[string]int)
+
+	// Phase 1: Planning (Preflight)
 	for _, file := range files {
-		// Extract path and filename
 		dir := filepath.Dir(file)
 		base := filepath.Base(file)
 
-		// Generate the new filename
-		ext := filepath.Ext(base)
-		baseNameRenamed, err := renameFunc(strings.TrimSuffix(base, ext))
+		name, ext := SplitExtension(base)
+		baseNameRenamed, err := renameFunc(name)
 		if err != nil {
-			return err
-		}
-		newName := baseNameRenamed + ext
-		newPath := filepath.Join(dir, newName)
-
-		// Skip if no changes
-		if newPath == file {
-			fmt.Printf("Skipping '%s' (already matches desired format).\n", file)
+			plans = append(plans, RenamePlan{
+				OriginalPath: file,
+				Error:        fmt.Errorf("failed to generate new name: %w", err),
+			})
 			continue
 		}
 
-		// Display the intended change
-		fmt.Printf("Rename: '%s' -> '%s'\n", file, newPath)
+		newName := baseNameRenamed + ext
+		newPath := filepath.Join(dir, newName)
 
-		// Dry-run mode
+		// To safely check identity, resolve absolute paths, evaluating parent dir symlinks.
+		// However, evaluating the final symlink (the base name) would obscure collisions with dangling links.
+		// Therefore we evaluate the directory and join the base name.
+		absDir, err := filepath.Abs(dir)
+		var evalDir string
+		if err == nil {
+			evalDir, _ = filepath.EvalSymlinks(absDir)
+			if evalDir == "" {
+				evalDir = absDir
+			}
+		} else {
+			evalDir = dir
+		}
+
+		newCanonicalPath := filepath.Join(evalDir, newName)
+
+		plan := RenamePlan{
+			OriginalPath: file,
+			NewPath:      newPath,
+			WillChange:   newPath != file,
+		}
+
+		if plan.WillChange {
+			// Check if duplicate destination within batch using a canonical path to prevent mixed absolute/relative bypasses.
+			// To conservatively account for case-insensitive filesystems (like macOS/Windows), we lowercase the entire
+			// canonical path for collision checking. This ensures that a batch planning to create both `foo.txt` and `FOO.txt`
+			// (from e.g. ` foo.TXT` and `foo .txt` trimming) will correctly trigger a collision on such systems rather than
+			// bypassing the check and letting execution arbitrarily overwrite files.
+			destKey := strings.ToLower(newCanonicalPath)
+
+			destCount[destKey]++
+			if destCount[destKey] > 1 {
+				plan.Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
+			} else {
+				// Check if destination exists (and isn't just a case-change rename of the same file)
+				// Use Lstat to detect dangling symlinks and avoid resolving symlinks when checking existence.
+				destStat, destErr := os.Lstat(newPath)
+				if destErr == nil {
+					// Destination exists (might be a symlink)
+					srcStat, srcErr := os.Lstat(file)
+
+					// If they are not the same file, it's a collision.
+					// `os.SameFile` handles same inode checks.
+					if srcErr != nil || !os.SameFile(srcStat, destStat) {
+						plan.Error = fmt.Errorf("collision: destination '%s' already exists", newPath)
+					}
+				} else if !os.IsNotExist(destErr) {
+					// Some other error during Lstat (permissions, etc)
+					plan.Error = fmt.Errorf("collision: could not read destination '%s': %v", newPath, destErr)
+				}
+			}
+		}
+
+		plans = append(plans, plan)
+	}
+
+	var batchErrors []*RenameError
+
+	// Phase 1b: Batch Safety Validation
+	// If any planning error occurred (e.g. collision), abort the entire batch
+	// to ensure we don't leave the filesystem in a partially mutated state.
+	for _, plan := range plans {
+		if plan.Error != nil {
+			fmt.Printf("Error planning '%s': %v\n", plan.OriginalPath, plan.Error)
+			batchErrors = append(batchErrors, &RenameError{
+				Path:    plan.OriginalPath,
+				NewPath: plan.NewPath,
+				Err:     plan.Error,
+			})
+		}
+	}
+
+	if len(batchErrors) > 0 {
+		return &RenameBatchError{Errors: batchErrors}
+	}
+
+	// Phase 2: Execution & Reporting
+	for _, plan := range plans {
+		if !plan.WillChange {
+			fmt.Printf("Skipping '%s' (already matches desired format).\n", plan.OriginalPath)
+			continue
+		}
+
+		fmt.Printf("Rename: '%s' -> '%s'\n", plan.OriginalPath, plan.NewPath)
+
 		if dryRun {
 			continue
 		}
 
-		// Interactive mode
 		if interactive {
-			if !Confirm(fmt.Sprintf("Rename '%s' to '%s'?", file, newName)) {
+			if !Confirm(fmt.Sprintf("Rename '%s' to '%s'?", plan.OriginalPath, filepath.Base(plan.NewPath))) {
 				fmt.Println("Skipped.")
 				continue
 			}
 		}
 
-		// Perform the rename
-		if err := os.Rename(file, newPath); err != nil {
-			fmt.Printf("Error renaming '%s': %v\n", file, err)
+		if err := os.Rename(plan.OriginalPath, plan.NewPath); err != nil {
+			fmt.Printf("Error renaming '%s': %v\n", plan.OriginalPath, err)
+			batchErrors = append(batchErrors, &RenameError{
+				Path:    plan.OriginalPath,
+				NewPath: plan.NewPath,
+				Err:     err,
+			})
 			continue
 		}
 		fmt.Println("Renamed successfully.")
 	}
+
+	if len(batchErrors) > 0 {
+		return &RenameBatchError{Errors: batchErrors}
+	}
+
 	return nil
 }
 
