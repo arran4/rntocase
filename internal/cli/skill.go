@@ -42,11 +42,12 @@ func RunSkillInstall(args []string) error {
 	fs := flag.NewFlagSet("skill install", flag.ExitOnError)
 	scope := fs.String("scope", "project", "Installation scope: user or project")
 	agent := fs.String("agent", "common", "Target agent: common, copilot, cursor, codex, claude")
+	replace := fs.Bool("replace", false, "Replace existing skill if it already exists")
 	_ = fs.Parse(args)
 
 	positionalArgs := fs.Args()
 	if len(positionalArgs) < 1 {
-		return fmt.Errorf("usage: skill install <source> [skill-name-or-path]")
+		return fmt.Errorf("usage: skill install [--replace] <source> [skill-name-or-path]")
 	}
 
 	source := positionalArgs[0]
@@ -82,9 +83,14 @@ func RunSkillInstall(args []string) error {
 
 	destDir := filepath.Join(target.Path, skillName)
 
-	// Ensure agent skills directory exists
-	if err := os.MkdirAll(target.Path, 0755); err != nil {
-		return fmt.Errorf("failed to create agent directory %s: %w", target.Path, err)
+	// Check if destination exists before proceeding
+	if _, err := os.Stat(destDir); err == nil {
+		if !*replace {
+			if _, metaErr := skill.LoadMetadata(destDir); metaErr == nil {
+				return fmt.Errorf("skill '%s' is already installed at %s. Use 'skill update' to update it, or use --replace to force reinstall", skillName, destDir)
+			}
+			return fmt.Errorf("destination %s already exists. Use --replace to overwrite", destDir)
+		}
 	}
 
 	fmt.Printf("Installing skill '%s' to %s...\n", skillName, destDir)
@@ -96,27 +102,23 @@ func RunSkillInstall(args []string) error {
 		InstallerApp:   "rntocase",
 	}
 
-	if isLocal {
-		if err := skill.CopyLocalDirectory(source, destDir); err != nil {
-			return fmt.Errorf("failed to copy local skill: %w", err)
-		}
-	} else if isOfficial {
-		if err := skill.ExtractEmbeddedSkill("rntocase", destDir); err != nil {
-			return fmt.Errorf("failed to install official skill: %w", err)
-		}
-	} else {
-		// Remote Github
+	var tarPath string
+	var pathWithin string
+
+	if !isLocal && !isOfficial {
+		// Remote Github Download outside ReplaceSafely to minimize staging time
 		ownerRepo := source
 		if !strings.Contains(ownerRepo, "/") {
 			return fmt.Errorf("remote source must be in owner/repo format (e.g. arran4/rntocase) or 'official'")
 		}
 
-		pathWithin := ""
 		if nameOrPath != "" && strings.Contains(nameOrPath, "/") {
 			pathWithin = nameOrPath
 		}
 
-		tarPath, sha, err := skill.DownloadGitHubRepository(ownerRepo)
+		var sha string
+		var err error
+		tarPath, sha, err = skill.DownloadGitHubRepository(ownerRepo)
 		if err != nil {
 			return fmt.Errorf("failed to download skill: %w", err)
 		}
@@ -125,26 +127,42 @@ func RunSkillInstall(args []string) error {
 		meta.OwnerRepo = ownerRepo
 		meta.SourceRevision = sha
 		meta.PathWithin = pathWithin
+	}
 
-		if err := skill.ExtractTarGz(tarPath, destDir, pathWithin); err != nil {
-			return fmt.Errorf("failed to extract skill: %w", err)
+	err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
+		if isLocal {
+			if err := skill.CopyLocalDirectory(source, stagingDir); err != nil {
+				return fmt.Errorf("failed to copy local skill: %w", err)
+			}
+		} else if isOfficial {
+			if err := skill.ExtractEmbeddedSkill("rntocase", stagingDir); err != nil {
+				return fmt.Errorf("failed to install official skill: %w", err)
+			}
+		} else {
+			if err := skill.ExtractTarGz(tarPath, stagingDir, pathWithin); err != nil {
+				return fmt.Errorf("failed to extract skill: %w", err)
+			}
 		}
-	}
 
-	// Validate SKILL.md
-	if _, err := os.Stat(filepath.Join(destDir, "SKILL.md")); os.IsNotExist(err) {
-		// Cleanup if invalid
-		_ = os.RemoveAll(destDir)
-		return fmt.Errorf("installation failed: skill must contain a SKILL.md file")
-	}
+		// Validate SKILL.md
+		if _, err := os.Stat(filepath.Join(stagingDir, "SKILL.md")); os.IsNotExist(err) {
+			return fmt.Errorf("installation failed: skill must contain a SKILL.md file")
+		}
 
-	digest, err := skill.ComputeDirectoryDigest(destDir)
-	if err == nil {
-		meta.ContentDigest = digest
-	}
+		digest, err := skill.ComputeDirectoryDigest(stagingDir)
+		if err == nil {
+			meta.ContentDigest = digest
+		}
 
-	if err := skill.SaveMetadata(destDir, meta); err != nil {
-		return fmt.Errorf("failed to save metadata: %w", err)
+		if err := skill.SaveMetadata(stagingDir, meta); err != nil {
+			return fmt.Errorf("failed to save metadata: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
 	fmt.Println("Skill installed successfully.")
@@ -227,15 +245,21 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 			return nil
 		}
 
-		_ = os.RemoveAll(destDir)
-		if err := skill.ExtractEmbeddedSkill("rntocase", destDir); err != nil {
-			return err
-		}
+		err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
+			if err := skill.ExtractEmbeddedSkill("rntocase", stagingDir); err != nil {
+				return err
+			}
 
-		digest, _ := skill.ComputeDirectoryDigest(destDir)
-		meta.ContentDigest = digest
-		meta.InstallTime = time.Now()
-		if err := skill.SaveMetadata(destDir, meta); err != nil {
+			digest, _ := skill.ComputeDirectoryDigest(stagingDir)
+			meta.ContentDigest = digest
+			meta.InstallTime = time.Now()
+			if err := skill.SaveMetadata(stagingDir, meta); err != nil {
+				return err
+			}
+			return nil
+		})
+
+		if err != nil {
 			return err
 		}
 
@@ -267,30 +291,40 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 
 	fmt.Println("Updating skill...")
 
-	// Re-download first to be more atomic
+	// Re-download first to minimize staging time
 	tarPath, shaDownload, err := skill.DownloadGitHubRepository(meta.OwnerRepo)
 	if err != nil {
 		return fmt.Errorf("failed to download update: %w", err)
 	}
 	defer func() { _ = os.Remove(tarPath) }()
 
-	// Remove old
-	_ = os.RemoveAll(destDir)
+	err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
+		if err := skill.ExtractTarGz(tarPath, stagingDir, meta.PathWithin); err != nil {
+			return fmt.Errorf("failed to extract updated skill: %w", err)
+		}
 
-	if err := skill.ExtractTarGz(tarPath, destDir, meta.PathWithin); err != nil {
-		return fmt.Errorf("failed to extract updated skill: %w", err)
-	}
+		// Validate SKILL.md for update too
+		if _, err := os.Stat(filepath.Join(stagingDir, "SKILL.md")); os.IsNotExist(err) {
+			return fmt.Errorf("update failed: new skill version must contain a SKILL.md file")
+		}
 
-	meta.SourceRevision = shaDownload
-	meta.InstallTime = time.Now()
+		meta.SourceRevision = shaDownload
+		meta.InstallTime = time.Now()
 
-	digest, err := skill.ComputeDirectoryDigest(destDir)
-	if err == nil {
-		meta.ContentDigest = digest
-	}
+		digest, err := skill.ComputeDirectoryDigest(stagingDir)
+		if err == nil {
+			meta.ContentDigest = digest
+		}
 
-	if err := skill.SaveMetadata(destDir, meta); err != nil {
-		return fmt.Errorf("failed to save metadata: %w", err)
+		if err := skill.SaveMetadata(stagingDir, meta); err != nil {
+			return fmt.Errorf("failed to save metadata: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
 	shortSha := shaUpdate
