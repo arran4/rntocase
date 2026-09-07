@@ -160,29 +160,37 @@ func TestRenameFiles(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tempDir, "FOO.txt"), []byte("FIRST"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		// Write the second file, we will name it Foo.txt.
-		// On case-insensitive FS, it will just overwrite FOO.txt, but for testing we write to BAR.txt
-		// so that they are definitely distinct files to start with.
 		if err := os.WriteFile(filepath.Join(tempDir, "BAR.txt"), []byte("SECOND"), 0644); err != nil {
 			t.Fatal(err)
 		}
 
 		renameToLower := func(s string) (string, error) {
-			// for BAR we pretend we are renaming it to foo
 			if s == "BAR" {
 				return "foo", nil
 			}
 			return strings.ToLower(s), nil
 		}
 
-		// Use a relative path and an absolute path that resolve to the same dir
-		absPath, _ := filepath.Abs(tempDir)
+		// Change directory to tempDir to test true relative paths against absolute ones
+		cwd, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chdir(tempDir); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			_ = os.Chdir(cwd)
+		}()
+
+		// Use a true relative path ("FOO.txt") and an absolute path
+		absPath, _ := filepath.Abs(".")
 		paths := []string{
-			filepath.Join(tempDir, "FOO.txt"), // could be relative if we used Chdir, but let's test absolute and evaluated
+			"FOO.txt",
 			filepath.Join(absPath, "BAR.txt"),
 		}
 
-		err := RenameFiles(paths, renameToLower, false, false)
+		err = RenameFiles(paths, renameToLower, false, false)
 		if err == nil {
 			t.Fatal("Expected error due to multiple files mapping to same destination across rel/abs paths")
 		}
@@ -192,9 +200,60 @@ func TestRenameFiles(t *testing.T) {
 		}
 
 		// Ensure filesystem unchanged
-		b1, _ := os.ReadFile(filepath.Join(tempDir, "FOO.txt"))
+		b1, _ := os.ReadFile("FOO.txt")
 		if string(b1) != "FIRST" {
 			t.Errorf("Source contents changed, expected FIRST, got %s", string(b1))
+		}
+		b2, _ := os.ReadFile(filepath.Join(absPath, "BAR.txt"))
+		if string(b2) != "SECOND" {
+			t.Errorf("Source contents changed, expected SECOND, got %s", string(b2))
+		}
+	})
+
+	t.Run("case insensitive destination collision", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Write two files that will be trimmed to destinations that differ only in case.
+		if err := os.WriteFile(filepath.Join(tempDir, " foo.TXT"), []byte("FIRST"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		// Write to "bar .txt" which we'll trim to "bar.txt" and rename to "foo.txt" to avoid
+		// initial creation overwriting on case-insensitive filesystems.
+		if err := os.WriteFile(filepath.Join(tempDir, " bar.txt"), []byte("SECOND"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// A trim function that mimics trimming space and returning the name
+		trimFunc := func(s string) (string, error) {
+			trimmed := strings.TrimSpace(s)
+			if trimmed == "bar" {
+				return "foo", nil // simulate mapping to same base name but with .txt instead of .TXT
+			}
+			return trimmed, nil
+		}
+
+		paths := []string{
+			filepath.Join(tempDir, " foo.TXT"),
+			filepath.Join(tempDir, " bar.txt"),
+		}
+
+		err := RenameFiles(paths, trimFunc, false, false)
+		if err == nil {
+			t.Fatal("Expected error due to case-insensitive multiple files mapping to same destination")
+		}
+
+		if !strings.Contains(err.Error(), "multiple source files map to destination") {
+			t.Errorf("Expected collision error message, got: %v", err)
+		}
+
+		// Ensure filesystem unchanged
+		b1, _ := os.ReadFile(filepath.Join(tempDir, " foo.TXT"))
+		if string(b1) != "FIRST" {
+			t.Errorf("Source contents changed, expected FIRST, got %s", string(b1))
+		}
+		b2, _ := os.ReadFile(filepath.Join(tempDir, " bar.txt"))
+		if string(b2) != "SECOND" {
+			t.Errorf("Source contents changed, expected SECOND, got %s", string(b2))
 		}
 	})
 
@@ -233,6 +292,53 @@ func TestRenameFiles(t *testing.T) {
 			t.Errorf("Expected dangling symlink to remain, got err: %v", destErr)
 		} else if destStat.Mode()&os.ModeSymlink == 0 {
 			t.Errorf("Expected dangling path to still be a symlink")
+		}
+	})
+
+	t.Run("inspect directory entries symlink pointing to source", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		if err := os.WriteFile(filepath.Join(tempDir, "Foo.txt"), []byte("FIRST"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a symlink `foo.txt -> Foo.txt`
+		symlinkPath := filepath.Join(tempDir, "foo.txt")
+		if err := os.Symlink("Foo.txt", symlinkPath); err != nil {
+			t.Skipf("Skipping symlink test: %v", err)
+		}
+
+		renameToLower := func(s string) (string, error) {
+			return strings.ToLower(s), nil
+		}
+
+		paths := []string{filepath.Join(tempDir, "Foo.txt")}
+
+		// Should error because `foo.txt` exists as a symlink
+		err := RenameFiles(paths, renameToLower, false, false)
+		if err == nil {
+			t.Fatal("Expected collision error with symlink pointing to source, got nil")
+		}
+
+		if !strings.Contains(err.Error(), "already exists") {
+			t.Errorf("Expected already exists error message, got: %v", err)
+		}
+
+		// Verify symlink still there and intact
+		destStat, destErr := os.Lstat(symlinkPath)
+		if destErr != nil {
+			t.Errorf("Expected symlink to remain, got err: %v", destErr)
+		} else if destStat.Mode()&os.ModeSymlink == 0 {
+			t.Errorf("Expected symlink path to still be a symlink")
+		}
+
+		// Verify symlink target is correct
+		target, err := os.Readlink(symlinkPath)
+		if err != nil {
+			t.Errorf("Failed to readlink: %v", err)
+		}
+		if target != "Foo.txt" {
+			t.Errorf("Expected symlink to point to Foo.txt, got %s", target)
 		}
 	})
 

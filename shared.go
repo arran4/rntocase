@@ -159,15 +159,12 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		}
 
 		if plan.WillChange {
-			// Check if duplicate destination within batch, using canonical path to avoid mixed absolute/relative path bypasses.
-			// On some systems we might lowercase the path for key lookup, but using canonical paths is a good start.
-			// For case insensitive file systems, we lowercase the directory portion. However, standard cross-platform
-			// go code often relies just on EvalSymlinks + Abs. Let's lowercase the entire canonical path if we want robust
-			// cross platform comparison, but since we cannot easily detect FS case sensitivity, we'll map by the canonical string.
-			// On macOS/Windows, the newName will just be a string. Since we are doing a case-insensitive rename, mapping `foo.txt`
-			// and `FOO.txt` from different sources should be a collision. We can use `strings.ToLower(newCanonicalPath)` for the map key.
-			// Wait, the prompt said "Account for filesystem case behavior where practical". Just using absolute paths is a big step.
-			destKey := newCanonicalPath
+			// Check if duplicate destination within batch using a canonical path to prevent mixed absolute/relative bypasses.
+			// To conservatively account for case-insensitive filesystems (like macOS/Windows), we lowercase the entire
+			// canonical path for collision checking. This ensures that a batch planning to create both `foo.txt` and `FOO.txt`
+			// (from e.g. ` foo.TXT` and `foo .txt` trimming) will correctly trigger a collision on such systems rather than
+			// bypassing the check and letting execution arbitrarily overwrite files.
+			destKey := strings.ToLower(newCanonicalPath)
 
 			destCount[destKey]++
 			if destCount[destKey] > 1 {
