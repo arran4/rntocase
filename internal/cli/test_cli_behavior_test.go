@@ -92,11 +92,54 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	// Inject failure in ExtractEmbeddedSkill
 	originalExtract := extractEmbeddedSkillFn
 	extractEmbeddedSkillFn = func(skillName, destDir string) error {
-		return fmt.Errorf("simulated embedded extraction failure")
+		// Return success but do not create SKILL.md to simulate validation failure
+		return nil
 	}
 	defer func() { extractEmbeddedSkillFn = originalExtract }()
 
 	meta.OriginalSource = "official" // triggers embedded logic
+	err = updateSingleSkill("official-skill", meta, destDir, true)
+
+	// Expect it to fail
+	if err == nil {
+		t.Fatalf("Expected an error but got nil. Err: %v", err)
+	}
+	assert.Contains(t, err.Error(), "new skill version must contain a SKILL.md file")
+
+	// Ensure prior working installation is entirely intact
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	assert.NoError(t, err)
+	assert.Equal(t, "original working version", string(content))
+}
+
+func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing.T) {
+	homeDir := setupMockHome(t)
+
+	// Pre-create an installed, managed "official" skill
+	destDir := filepath.Join(homeDir, ".agents", "skills", "official-skill")
+	err := os.MkdirAll(destDir, 0755)
+	assert.NoError(t, err)
+
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	assert.NoError(t, err)
+
+	meta := &skill.Metadata{
+		Name:           "official-skill",
+		OriginalSource: "official",
+		InstallTime:    time.Now(),
+		InstallerApp:   "rntocase",
+		ContentDigest:  "some-old-digest",
+	}
+	err = skill.SaveMetadata(destDir, meta)
+	assert.NoError(t, err)
+
+	// Inject extraction failure
+	originalExtract := extractEmbeddedSkillFn
+	extractEmbeddedSkillFn = func(skillName, destDir string) error {
+		return fmt.Errorf("simulated embedded extraction failure")
+	}
+	defer func() { extractEmbeddedSkillFn = originalExtract }()
+
 	err = updateSingleSkill("official-skill", meta, destDir, true)
 
 	// Expect it to fail
