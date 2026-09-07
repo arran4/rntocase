@@ -5,8 +5,8 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
-	"testing"
 	"strings"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -158,25 +158,6 @@ func TestReplaceSafely_RemovesStaleFiles(t *testing.T) {
 	assert.Equal(t, "v2", string(content))
 }
 
-// Add regression test simulating rename failure
-func TestReplaceSafely_CommitRenameFailure(t *testing.T) {
-	parentDir, err := os.MkdirTemp("", "parent-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(parentDir) }()
-
-	destDir := filepath.Join(parentDir, "my-skill")
-	err = os.MkdirAll(destDir, 0755)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("working-v1"), 0644)
-	assert.NoError(t, err)
-
-	// Since we can't easily mock os.Rename in the core code without modifying its signature,
-	// we will simulate the scenario by locking the destination or similar,
-    // but cross-platform that's tricky.
-    // Instead, let's inject a mockable osRename for tests if needed, or just rely on the test structure.
-    // Let's modify ReplaceSafely slightly to take an optional rename override, or we can just test the error flow directly via permissions.
-}
-
 func TestReplaceSafely_CommitRenameFailureRollback(t *testing.T) {
 	parentDir, err := os.MkdirTemp("", "parent-dir-*")
 	assert.NoError(t, err)
@@ -235,7 +216,7 @@ func TestReplaceSafely_CommitRenameFailureAndRollbackFailure(t *testing.T) {
 	osRename = func(oldpath, newpath string) error {
 		// Fail both the commit and the rollback
 		if (strings.Contains(oldpath, ".staging-skill-") && newpath == destDir) ||
-		   (strings.Contains(oldpath, ".backup-skill-") && newpath == destDir) {
+			(strings.Contains(oldpath, ".backup-skill-") && newpath == destDir) {
 			return os.ErrPermission // Simulated failure
 		}
 		return os.Rename(oldpath, newpath)

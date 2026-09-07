@@ -246,11 +246,7 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 		}
 
 		err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
-			embeddedName := "rntocase"
-			if skill.OverrideEmbeddedSkillForTest != "" {
-				embeddedName = skill.OverrideEmbeddedSkillForTest
-			}
-			if err := skill.ExtractEmbeddedSkill(embeddedName, stagingDir); err != nil {
+			if err := extractEmbeddedSkillFn("rntocase", stagingDir); err != nil {
 				return err
 			}
 
