@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // GitHubCommit represents the basic info of a GitHub commit.
@@ -22,7 +21,7 @@ type GitHubCommit struct {
 // DownloadGitHubRepository downloads a repository tarball and returns the temp file path and commit SHA.
 func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 	// 1. Get latest commit SHA to track revision
-	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/commits/HEAD", ownerRepo)
+	apiURL := fmt.Sprintf("%s/repos/%s/commits/HEAD", GitHubAPIURL, ownerRepo)
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create request: %w", err)
@@ -33,8 +32,7 @@ func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 		req.Header.Set("Authorization", "token "+token)
 	}
 
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := HTTPClient.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to fetch repository metadata: %w", err)
 	}
@@ -50,7 +48,7 @@ func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 	}
 
 	// 2. Download tarball
-	tarballURL := fmt.Sprintf("https://api.github.com/repos/%s/tarball", ownerRepo)
+	tarballURL := fmt.Sprintf("%s/repos/%s/tarball", GitHubAPIURL, ownerRepo)
 	reqTar, err := http.NewRequest("GET", tarballURL, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create tarball request: %w", err)
@@ -59,7 +57,7 @@ func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 		reqTar.Header.Set("Authorization", "token "+token)
 	}
 
-	respTar, err := client.Do(reqTar)
+	respTar, err := HTTPClient.Do(reqTar)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to download tarball: %w", err)
 	}

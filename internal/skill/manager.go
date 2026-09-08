@@ -6,6 +6,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
+)
+
+var (
+	// GitHubAPIURL is the base URL for GitHub API requests.
+	GitHubAPIURL = "https://api.github.com"
+	// HTTPClient is the standard client for skill network operations, providing bounded timeouts.
+	HTTPClient = &http.Client{Timeout: 15 * time.Second}
 )
 
 // InstalledSkillInfo holds metadata and the agent it was found under.
@@ -95,7 +103,7 @@ func CheckUpdate(meta *Metadata) (bool, string, error) {
 		return false, "", fmt.Errorf("local skills cannot be updated automatically")
 	}
 
-	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/commits/HEAD", meta.OwnerRepo)
+	apiURL := fmt.Sprintf("%s/repos/%s/commits/HEAD", GitHubAPIURL, meta.OwnerRepo)
 	// Optionally add path parameter if it's a subfolder? We just check the whole repo HEAD here
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
@@ -106,10 +114,9 @@ func CheckUpdate(meta *Metadata) (bool, string, error) {
 		req.Header.Set("Authorization", "token "+token)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return false, "", err
+		return false, "", fmt.Errorf("failed to fetch upstream status: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
