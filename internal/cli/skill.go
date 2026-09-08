@@ -233,12 +233,10 @@ func RunSkillUpdate(args []string) error {
 }
 
 func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force bool) error {
-	return updateSingleSkillWithExtractor(name, meta, destDir, force, func(stagingDir string) error {
-		return skill.ExtractEmbeddedSkill("rntocase", stagingDir)
-	})
+	return updateSingleSkillWithExtractor(name, meta, destDir, force, skill.ExtractEmbeddedSkill)
 }
 
-func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir string, force bool, extractEmbedded func(destDir string) error) error {
+func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir string, force bool, extractEmbedded func(assetName, destDir string) error) error {
 	if meta.OriginalSource == "official" || meta.OriginalSource == "rntocase" {
 		fmt.Printf("Checking for updates for official skill '%s'...\n", name)
 
@@ -252,7 +250,7 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 		}
 
 		err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
-			if err := extractEmbedded(stagingDir); err != nil {
+			if err := extractEmbedded("rntocase", stagingDir); err != nil {
 				return err
 			}
 

@@ -90,7 +90,7 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	assert.NoError(t, err)
 
 	// Inject failure in ExtractEmbeddedSkill via the explicit dependency injection parameter
-	mockExtract := func(destDir string) error {
+	mockExtract := func(assetName, destDir string) error {
 		// Return success but do not create SKILL.md to simulate validation failure
 		return nil
 	}
@@ -132,7 +132,7 @@ func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing
 	assert.NoError(t, err)
 
 	// Inject extraction failure via explicit dependency injection
-	mockExtract := func(destDir string) error {
+	mockExtract := func(assetName, destDir string) error {
 		return fmt.Errorf("simulated embedded extraction failure")
 	}
 
@@ -173,13 +173,8 @@ func TestUpdateSingleSkill_CustomDestNamePreservesOfficialAsset(t *testing.T) {
 	assert.NoError(t, err)
 
 	capturedExtractedName := ""
-	mockExtract := func(destDir string) error {
-		// Just record that we were called, simulating success.
-		// Note: The previous iteration passed the installed name down,
-		// but we expect the closure inside updateSingleSkill to explicitly request "rntocase".
-		// Since we removed the skillName from the closure's signature per reviewer request,
-		// we verify the structure itself doesn't regress because the production closure is hardcoded to "rntocase".
-		capturedExtractedName = "rntocase"
+	mockExtract := func(assetName, destDir string) error {
+		capturedExtractedName = assetName
 
 		// Create SKILL.md to pass validation
 		return os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("new version"), 0644)
@@ -189,6 +184,5 @@ func TestUpdateSingleSkill_CustomDestNamePreservesOfficialAsset(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Confirm the production integration invokes the right asset name by design.
-	// The real updateSingleSkill func hardcodes this. Let's make sure updateSingleSkill doesn't panic.
 	assert.Equal(t, "rntocase", capturedExtractedName)
 }
