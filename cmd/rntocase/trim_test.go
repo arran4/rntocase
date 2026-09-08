@@ -22,8 +22,6 @@ func TestTrim_Execute(t *testing.T) {
 	}
 
 	args := []string{}
-	args = append(args, "--algorithm")
-	args = append(args, "test")
 	args = append(args, "--trim-chars")
 	args = append(args, "test")
 	args = append(args, "--dry-run")
@@ -38,9 +36,6 @@ func TestTrim_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
-	if cmd.algorithm != "test" {
-		t.Errorf("Expected algorithm to be 'test', got '%v'", cmd.algorithm)
-	}
 	if cmd.trimChars != "test" {
 		t.Errorf("Expected trimChars to be 'test', got '%v'", cmd.trimChars)
 	}
