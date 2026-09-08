@@ -20,7 +20,7 @@ func TestRunSkill_UnknownSubcommand(t *testing.T) {
 func TestRunSkillInstall_RequiresSource(t *testing.T) {
 	err := RunSkillInstall([]string{})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "usage: skill install <source>")
+	assert.Contains(t, err.Error(), "usage: skill install [--replace] <source>")
 }
 
 func TestRunSkillUpdate_RequiresName(t *testing.T) {
