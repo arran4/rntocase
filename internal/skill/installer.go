@@ -261,18 +261,22 @@ func CopyLocalDirectory(src, dest string) error {
 // If populateFunc fails, destDir is untouched.
 // If the final rename fails, destDir is rolled back to its previous state if possible.
 func ReplaceSafely(destDir string, populateFunc func(stagingDir string) error) error {
+	return replaceSafelyWithFS(destDir, populateFunc, OSFSOps{})
+}
+
+func replaceSafelyWithFS(destDir string, populateFunc func(stagingDir string) error, fsOps FSOps) error {
 	parentDir := filepath.Dir(destDir)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := fsOps.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
 
 	// 1. Create a staging directory
-	stagingDir, err := os.MkdirTemp(parentDir, ".staging-skill-*")
+	stagingDir, err := fsOps.MkdirTemp(parentDir, ".staging-skill-*")
 	if err != nil {
 		return fmt.Errorf("failed to create staging directory: %w", err)
 	}
 	defer func() {
-		_ = os.RemoveAll(stagingDir)
+		_ = fsOps.RemoveAll(stagingDir)
 	}()
 
 	// 2. Populate the staging directory
@@ -282,26 +286,26 @@ func ReplaceSafely(destDir string, populateFunc func(stagingDir string) error) e
 
 	// 3. Swap the directories safely
 	backupDir := ""
-	if _, err := os.Stat(destDir); err == nil {
+	if _, err := fsOps.Stat(destDir); err == nil {
 		// Existing directory found, create a backup
-		backupDir, err = os.MkdirTemp(parentDir, ".backup-skill-*")
+		backupDir, err = fsOps.MkdirTemp(parentDir, ".backup-skill-*")
 		if err != nil {
 			return fmt.Errorf("failed to create backup directory: %w", err)
 		}
 		// MkdirTemp creates it, so we need to remove it so Rename can use the path, or just create the name.
 		// os.Rename requires the destination to be empty or not exist on most platforms.
-		_ = os.Remove(backupDir)
+		_ = fsOps.Remove(backupDir)
 
-		if err := osRename(destDir, backupDir); err != nil {
+		if err := fsOps.Rename(destDir, backupDir); err != nil {
 			return fmt.Errorf("failed to backup existing installation: %w", err)
 		}
 	}
 
 	// Move staging to destination
-	if err := osRename(stagingDir, destDir); err != nil {
+	if err := fsOps.Rename(stagingDir, destDir); err != nil {
 		// Rollback on failure
 		if backupDir != "" {
-			if restoreErr := osRename(backupDir, destDir); restoreErr != nil {
+			if restoreErr := fsOps.Rename(backupDir, destDir); restoreErr != nil {
 				return fmt.Errorf("failed to commit new installation (%v) and rollback failed: %v", err, restoreErr)
 			}
 		}
@@ -310,7 +314,7 @@ func ReplaceSafely(destDir string, populateFunc func(stagingDir string) error) e
 
 	// Cleanup backup on success
 	if backupDir != "" {
-		_ = os.RemoveAll(backupDir)
+		_ = fsOps.RemoveAll(backupDir)
 	}
 
 	return nil

@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,9 +40,7 @@ func createTestTarball(t *testing.T, files map[string]string) string {
 }
 
 func TestExtractTarGz_PathTraversal(t *testing.T) {
-	destDir, err := os.MkdirTemp("", "dest-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(destDir) }()
+	destDir := t.TempDir()
 
 	files := map[string]string{
 		"repo-sha/valid.txt":      "valid content",
@@ -53,15 +50,13 @@ func TestExtractTarGz_PathTraversal(t *testing.T) {
 	tarPath := createTestTarball(t, files)
 	defer func() { _ = os.Remove(tarPath) }()
 
-	err = ExtractTarGz(tarPath, destDir, "")
+	err := ExtractTarGz(tarPath, destDir, "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "path traversal detected")
 }
 
 func TestExtractTarGz_Success(t *testing.T) {
-	destDir, err := os.MkdirTemp("", "dest-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(destDir) }()
+	destDir := t.TempDir()
 
 	files := map[string]string{
 		"repo-sha/SKILL.md":      "# My Skill\n",
@@ -71,7 +66,7 @@ func TestExtractTarGz_Success(t *testing.T) {
 	tarPath := createTestTarball(t, files)
 	defer func() { _ = os.Remove(tarPath) }()
 
-	err = ExtractTarGz(tarPath, destDir, "")
+	err := ExtractTarGz(tarPath, destDir, "")
 	assert.NoError(t, err)
 
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
@@ -79,112 +74,83 @@ func TestExtractTarGz_Success(t *testing.T) {
 	assert.Equal(t, "# My Skill\n", string(content))
 }
 
-func TestReplaceSafely_Success(t *testing.T) {
-	parentDir, err := os.MkdirTemp("", "parent-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(parentDir) }()
-
-	destDir := filepath.Join(parentDir, "my-skill")
+func TestReplaceSafelyWithFS_Success(t *testing.T) {
+	fakeFS := NewFakeFSOps()
+	destDir := "/opt/skills/my-skill"
 
 	// Initially does not exist
-	err = ReplaceSafely(destDir, func(stagingDir string) error {
-		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("v1"), 0644)
-	})
+	err := replaceSafelyWithFS(destDir, func(stagingDir string) error {
+		fakeFS.Files[filepath.Join(stagingDir, "SKILL.md")] = true
+		return nil
+	}, fakeFS)
 	assert.NoError(t, err)
 
-	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
-	assert.NoError(t, err)
-	assert.Equal(t, "v1", string(content))
+	assert.True(t, fakeFS.Dirs[destDir])
+	assert.True(t, fakeFS.Files[filepath.Join(destDir, "SKILL.md")])
 
 	// Replace existing
-	err = ReplaceSafely(destDir, func(stagingDir string) error {
-		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("v2"), 0644)
-	})
+	err = replaceSafelyWithFS(destDir, func(stagingDir string) error {
+		fakeFS.Files[filepath.Join(stagingDir, "NEW_FILE.md")] = true
+		return nil
+	}, fakeFS)
 	assert.NoError(t, err)
 
-	content, err = os.ReadFile(filepath.Join(destDir, "SKILL.md"))
-	assert.NoError(t, err)
-	assert.Equal(t, "v2", string(content))
+	assert.True(t, fakeFS.Dirs[destDir])
+	assert.False(t, fakeFS.Files[filepath.Join(destDir, "SKILL.md")]) // Old file gone
+	assert.True(t, fakeFS.Files[filepath.Join(destDir, "NEW_FILE.md")])
 }
 
-func TestReplaceSafely_RollbackOnFailure(t *testing.T) {
-	parentDir, err := os.MkdirTemp("", "parent-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(parentDir) }()
-
-	destDir := filepath.Join(parentDir, "my-skill")
-	err = os.MkdirAll(destDir, 0755)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("working-v1"), 0644)
-	assert.NoError(t, err)
+func TestReplaceSafelyWithFS_RollbackOnFailure(t *testing.T) {
+	fakeFS := NewFakeFSOps()
+	destDir := "/opt/skills/my-skill"
+	fakeFS.Dirs[destDir] = true
+	fakeFS.Files[filepath.Join(destDir, "SKILL.md")] = true
 
 	// Simulate a failure during populate (e.g., validation failed)
-	err = ReplaceSafely(destDir, func(stagingDir string) error {
+	err := replaceSafelyWithFS(destDir, func(stagingDir string) error {
 		return os.ErrPermission // Some simulated error
-	})
+	}, fakeFS)
 	assert.Error(t, err)
 
 	// Original destination should remain completely untouched
-	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
-	assert.NoError(t, err)
-	assert.Equal(t, "working-v1", string(content))
+	assert.True(t, fakeFS.Dirs[destDir])
+	assert.True(t, fakeFS.Files[filepath.Join(destDir, "SKILL.md")])
 }
 
-func TestReplaceSafely_RemovesStaleFiles(t *testing.T) {
-	parentDir, err := os.MkdirTemp("", "parent-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(parentDir) }()
-
-	destDir := filepath.Join(parentDir, "my-skill")
-	err = os.MkdirAll(destDir, 0755)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("v1"), 0644)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(destDir, "stale.py"), []byte("print('stale')"), 0644)
-	assert.NoError(t, err)
+func TestReplaceSafelyWithFS_RemovesStaleFiles(t *testing.T) {
+	fakeFS := NewFakeFSOps()
+	destDir := "/opt/skills/my-skill"
+	fakeFS.Dirs[destDir] = true
+	fakeFS.Files[filepath.Join(destDir, "SKILL.md")] = true
+	fakeFS.Files[filepath.Join(destDir, "stale.py")] = true
 
 	// Replace existing but new version doesn't have stale.py
-	err = ReplaceSafely(destDir, func(stagingDir string) error {
-		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("v2"), 0644)
-	})
+	err := replaceSafelyWithFS(destDir, func(stagingDir string) error {
+		fakeFS.Files[filepath.Join(stagingDir, "SKILL.md")] = true
+		return nil
+	}, fakeFS)
 	assert.NoError(t, err)
 
 	// Verify old files are gone
-	_, err = os.Stat(filepath.Join(destDir, "stale.py"))
-	assert.True(t, os.IsNotExist(err))
-
-	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
-	assert.NoError(t, err)
-	assert.Equal(t, "v2", string(content))
+	assert.False(t, fakeFS.Files[filepath.Join(destDir, "stale.py")])
+	assert.True(t, fakeFS.Files[filepath.Join(destDir, "SKILL.md")])
 }
 
-func TestReplaceSafely_CommitRenameFailureRollback(t *testing.T) {
-	parentDir, err := os.MkdirTemp("", "parent-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(parentDir) }()
+func TestReplaceSafelyWithFS_CommitRenameFailureRollback(t *testing.T) {
+	fakeFS := NewFakeFSOps()
+	destDir := "/opt/skills/my-skill"
+	fakeFS.Dirs[destDir] = true
+	fakeFS.Files[filepath.Join(destDir, "SKILL.md")] = true
 
-	destDir := filepath.Join(parentDir, "my-skill")
-	err = os.MkdirAll(destDir, 0755)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("working-v1"), 0644)
-	assert.NoError(t, err)
+	var stagingDirName string
+	err := replaceSafelyWithFS(destDir, func(stagingDir string) error {
+		stagingDirName = stagingDir
+		fakeFS.Files[filepath.Join(stagingDir, "new-v2")] = true
 
-	originalOsRename := osRename
-	defer func() { osRename = originalOsRename }()
-
-	// Inject a rename function that fails when moving staging to destDir
-	osRename = func(oldpath, newpath string) error {
-		// If trying to swap the staging directory into the final destination, fail
-		if strings.Contains(oldpath, ".staging-skill-") && newpath == destDir {
-			return os.ErrPermission // Simulated failure
-		}
-		// Otherwise behave normally (like backing up or rolling back)
-		return os.Rename(oldpath, newpath)
-	}
-
-	err = ReplaceSafely(destDir, func(stagingDir string) error {
-		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("new-v2"), 0644)
-	})
+		// Inject failure for commit phase: moving stagingDir -> destDir fails
+		fakeFS.RenameFailFS[stagingDir+"->"+destDir] = os.ErrPermission
+		return nil
+	}, fakeFS)
 
 	// Expect the commit to fail
 	assert.Error(t, err)
@@ -192,42 +158,71 @@ func TestReplaceSafely_CommitRenameFailureRollback(t *testing.T) {
 	// Ensure it didn't throw a rollback failed error
 	assert.NotContains(t, err.Error(), "rollback failed")
 
-	// Verify rollback succeeded
-	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
-	assert.NoError(t, err)
-	assert.Equal(t, "working-v1", string(content))
+	// Verify rollback succeeded: original files restored
+	assert.True(t, fakeFS.Dirs[destDir])
+	assert.True(t, fakeFS.Files[filepath.Join(destDir, "SKILL.md")])
+	assert.False(t, fakeFS.Files[filepath.Join(destDir, "new-v2")])
+
+	// Staging dir is cleaned up via defer
+	assert.False(t, fakeFS.Dirs[stagingDirName])
 }
 
-func TestReplaceSafely_CommitRenameFailureAndRollbackFailure(t *testing.T) {
-	parentDir, err := os.MkdirTemp("", "parent-dir-*")
-	assert.NoError(t, err)
-	defer func() { _ = os.RemoveAll(parentDir) }()
-
+// Keep one OS integration test to ensure osRename / ReplaceSafely actually works on real disk
+func TestReplaceSafely_Integration(t *testing.T) {
+	parentDir := t.TempDir()
 	destDir := filepath.Join(parentDir, "my-skill")
-	err = os.MkdirAll(destDir, 0755)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("working-v1"), 0644)
+	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	originalOsRename := osRename
-	defer func() { osRename = originalOsRename }()
-
-	// Inject a rename function that fails when moving staging to destDir AND fails on rollback
-	osRename = func(oldpath, newpath string) error {
-		// Fail both the commit and the rollback
-		if (strings.Contains(oldpath, ".staging-skill-") && newpath == destDir) ||
-			(strings.Contains(oldpath, ".backup-skill-") && newpath == destDir) {
-			return os.ErrPermission // Simulated failure
-		}
-		return os.Rename(oldpath, newpath)
-	}
+	err = os.WriteFile(filepath.Join(destDir, "stale.txt"), []byte("stale"), 0644)
+	assert.NoError(t, err)
 
 	err = ReplaceSafely(destDir, func(stagingDir string) error {
-		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("new-v2"), 0644)
+		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("v2"), 0644)
 	})
+	assert.NoError(t, err)
 
-	// Expect both commit and rollback to fail
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	assert.NoError(t, err)
+	assert.Equal(t, "v2", string(content))
+
+	_, err = os.Stat(filepath.Join(destDir, "stale.txt"))
+	assert.True(t, os.IsNotExist(err))
+}
+
+// Fixing the double failure test to use the fake properly
+func TestReplaceSafelyWithFS_DoubleFailure(t *testing.T) {
+	fakeFS := NewFakeFSOps()
+	destDir := "/opt/skills/my-skill"
+	fakeFS.Dirs[destDir] = true
+	fakeFS.Files[filepath.Join(destDir, "SKILL.md")] = true
+
+	// Custom Rename in FakeFSOps to fail both commit and rollback
+	originalRename := fakeFS.RenameFailFS
+	defer func() { fakeFS.RenameFailFS = originalRename }()
+
+	// For the fake FS we just need to ensure Rename returns error when target is destDir
+	err := replaceSafelyWithFS(destDir, func(stagingDir string) error {
+		// Just fail any rename that targets destDir
+		fakeFS.RenameFailFS[stagingDir+"->"+destDir] = os.ErrPermission
+		// Note: The backup dir name is dynamically generated. In fakeFS, MkdirTemp yields predictable names like `/opt/skills/.backup-skill-X`
+		// We'll just hardcode a catch-all in the Rename logic if we need to, or just find the backup dir.
+		return nil
+	}, &failAllDestRenameFS{FakeFSOps: fakeFS, destDir: destDir})
+
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to commit new installation")
 	assert.Contains(t, err.Error(), "and rollback failed")
+}
+
+type failAllDestRenameFS struct {
+	*FakeFSOps
+	destDir string
+}
+
+func (f *failAllDestRenameFS) Rename(oldpath, newpath string) error {
+	if newpath == f.destDir {
+		return os.ErrPermission
+	}
+	return f.FakeFSOps.Rename(oldpath, newpath)
 }
