@@ -3,9 +3,13 @@ package skill
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -37,6 +41,64 @@ func createTestTarball(t *testing.T, files map[string]string) string {
 	assert.NoError(t, f.Close())
 
 	return f.Name()
+}
+
+func TestNetwork_Timeout(t *testing.T) {
+	// Setup a slow mock server that hangs for 100ms
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	// Override API URL and timeout
+	originalAPIURL := GitHubAPIURL
+	originalTimeout := HTTPClient.Timeout
+	defer func() {
+		GitHubAPIURL = originalAPIURL
+		HTTPClient.Timeout = originalTimeout
+	}()
+
+	GitHubAPIURL = ts.URL
+	HTTPClient.Timeout = 10 * time.Millisecond // Shorter than the server sleep
+
+	// Test DownloadGitHubRepository timeout
+	_, _, err := DownloadGitHubRepository("dummy/repo")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded, "expected deadline exceeded error")
+
+	// Test CheckUpdate timeout
+	meta := &Metadata{OwnerRepo: "dummy/repo"}
+	_, _, err = CheckUpdate(meta)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded, "expected deadline exceeded error")
+}
+
+func TestNetwork_Non200(t *testing.T) {
+	// Setup a mock server that returns 500
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	// Override API URL
+	originalAPIURL := GitHubAPIURL
+	defer func() {
+		GitHubAPIURL = originalAPIURL
+	}()
+
+	GitHubAPIURL = ts.URL
+
+	// Test DownloadGitHubRepository non-200
+	_, _, err := DownloadGitHubRepository("dummy/repo")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "HTTP 500")
+
+	// Test CheckUpdate non-200
+	meta := &Metadata{OwnerRepo: "dummy/repo"}
+	_, _, err = CheckUpdate(meta)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "HTTP 500")
 }
 
 func TestExtractTarGz_PathTraversal(t *testing.T) {

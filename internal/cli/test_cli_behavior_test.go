@@ -88,7 +88,7 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	}
 
 	meta.OriginalSource = "official" // triggers embedded logic
-	err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, mockExtract)
+	_, err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, mockExtract)
 
 	// Expect it to fail
 	if err == nil {
@@ -128,7 +128,7 @@ func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing
 		return fmt.Errorf("simulated embedded extraction failure")
 	}
 
-	err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, mockExtract)
+	_, err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, mockExtract)
 
 	// Expect it to fail
 	if err == nil {
@@ -172,7 +172,7 @@ func TestUpdateSingleSkill_CustomDestNamePreservesOfficialAsset(t *testing.T) {
 		return os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("new version"), 0644)
 	}
 
-	err = updateSingleSkillWithExtractor("my-custom-skill-name", meta, destDir, true, mockExtract)
+	_, err = updateSingleSkillWithExtractor("my-custom-skill-name", meta, destDir, true, mockExtract)
 	assert.NoError(t, err)
 
 	// Confirm the production integration invokes the right asset name by design.

@@ -183,11 +183,14 @@ func RunSkillUpdate(args []string) error {
 		return fmt.Errorf("usage: skill update <name> or skill update --all")
 	}
 
-	var skillsToUpdate []struct {
+	type skillUpdateTask struct {
 		Name string
 		Meta *skill.Metadata
 		Dir  string
+		Err  error
 	}
+
+	var skillsToUpdate []skillUpdateTask
 
 	if *all {
 		installed, err := skill.ListInstalledSkills(*scope)
@@ -196,26 +199,38 @@ func RunSkillUpdate(args []string) error {
 		}
 		for _, info := range installed {
 			// Find the actual path using the agent it was found under
-			_, dir, err := skill.InspectSkill(info.Meta.Name, *scope, info.Agent)
+			meta, dir, err := skill.InspectSkill(info.Meta.Name, *scope, info.Agent)
 			if err == nil {
-				skillsToUpdate = append(skillsToUpdate, struct {
-					Name string
-					Meta *skill.Metadata
-					Dir  string
-				}{info.Meta.Name, info.Meta, dir})
+				skillsToUpdate = append(skillsToUpdate, skillUpdateTask{
+					Name: info.Meta.Name,
+					Meta: meta,
+					Dir:  dir,
+				})
+			} else {
+				skillsToUpdate = append(skillsToUpdate, skillUpdateTask{
+					Name: info.Meta.Name,
+					Err:  err,
+				})
 			}
 		}
 	} else {
 		name := positionalArgs[0]
 		meta, destDir, err := skill.InspectSkill(name, *scope, *agent)
 		if err != nil {
+			// for single skill update, just return the inspect error immediately
 			return err
 		}
-		skillsToUpdate = append(skillsToUpdate, struct {
-			Name string
-			Meta *skill.Metadata
-			Dir  string
-		}{name, meta, destDir})
+
+		// explicitly preserve pre-existing single-skill behavior for local-only skills
+		if meta.OwnerRepo == "" && meta.OriginalSource != "official" && meta.OriginalSource != "rntocase" {
+			return fmt.Errorf("skill '%s' is locally installed and cannot be updated automatically", name)
+		}
+
+		skillsToUpdate = append(skillsToUpdate, skillUpdateTask{
+			Name: name,
+			Meta: meta,
+			Dir:  destDir,
+		})
 	}
 
 	if len(skillsToUpdate) == 0 {
@@ -223,20 +238,53 @@ func RunSkillUpdate(args []string) error {
 		return nil
 	}
 
+	type updateResult struct {
+		Name   string
+		Status string
+		Err    error
+	}
+	var results []updateResult
+
 	for _, s := range skillsToUpdate {
-		if err := updateSingleSkill(s.Name, s.Meta, s.Dir, *force); err != nil {
-			fmt.Printf("Failed to update '%s': %v\n", s.Name, err)
+		if s.Err != nil {
+			results = append(results, updateResult{Name: s.Name, Status: "inspection failed", Err: s.Err})
+			continue
 		}
+
+		status, err := updateSingleSkill(s.Name, s.Meta, s.Dir, *force)
+		results = append(results, updateResult{Name: s.Name, Status: status, Err: err})
+	}
+
+	fmt.Println("\nUpdate Summary:")
+	fmt.Printf("%-20s %-40s %s\n", "NAME", "STATUS", "ERROR")
+	fmt.Println(strings.Repeat("-", 80))
+
+	var failedSkills []string
+	for _, res := range results {
+		errStr := ""
+		if res.Err != nil {
+			errStr = res.Err.Error()
+			failedSkills = append(failedSkills, fmt.Sprintf("%s (%s: %v)", res.Name, res.Status, res.Err))
+		} else if res.Status == "update failed" || res.Status == "inspection failed" {
+			failedSkills = append(failedSkills, fmt.Sprintf("%s (%s)", res.Name, res.Status))
+		}
+
+		fmt.Printf("%-20s %-40s %s\n", res.Name, res.Status, errStr)
+	}
+	fmt.Println()
+
+	if len(failedSkills) > 0 {
+		return fmt.Errorf("one or more skills failed to update:\n- %s", strings.Join(failedSkills, "\n- "))
 	}
 
 	return nil
 }
 
-func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force bool) error {
+func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force bool) (string, error) {
 	return updateSingleSkillWithExtractor(name, meta, destDir, force, skill.ExtractEmbeddedSkill)
 }
 
-func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir string, force bool, extractEmbedded func(assetName, destDir string) error) error {
+func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir string, force bool, extractEmbedded func(assetName, destDir string) error) (string, error) {
 	if meta.OriginalSource == "official" || meta.OriginalSource == "rntocase" {
 		fmt.Printf("Checking for updates for official skill '%s'...\n", name)
 
@@ -246,7 +294,7 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 		currentDigest, err := skill.ComputeDirectoryDigest(destDir)
 		if err == nil && meta.ContentDigest != "" && currentDigest != meta.ContentDigest && !force {
 			fmt.Printf("Skill '%s' has local modifications. Use --force to replace.\n", name)
-			return nil
+			return "skipped because of local modifications", nil
 		}
 
 		err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
@@ -269,33 +317,34 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 		})
 
 		if err != nil {
-			return err
+			return "update failed", err
 		}
 
 		fmt.Printf("Skill '%s' updated from embedded source.\n", name)
-		return nil
+		return "updated", nil
 	}
 
 	if meta.OwnerRepo == "" {
-		return fmt.Errorf("skill '%s' is locally installed and cannot be updated automatically", name)
+		fmt.Printf("Skill '%s' is locally installed and cannot be updated automatically\n", name)
+		return "unsupported/local-only", nil
 	}
 
 	fmt.Printf("Checking for updates for '%s'...\n", name)
 	hasUpdate, shaUpdate, err := skill.CheckUpdate(meta)
 	if err != nil {
-		return fmt.Errorf("failed to check for updates: %w", err)
+		return "update failed", fmt.Errorf("failed to check for updates: %w", err)
 	}
 
 	if !hasUpdate {
 		fmt.Println("Skill is already up to date.")
-		return nil
+		return "already current", nil
 	}
 
 	// Check for local modifications
 	currentDigest, err := skill.ComputeDirectoryDigest(destDir)
 	if err == nil && meta.ContentDigest != "" && currentDigest != meta.ContentDigest && !force {
 		fmt.Printf("Skill '%s' has local modifications. Use --force to replace.\n", name)
-		return nil
+		return "skipped because of local modifications", nil
 	}
 
 	fmt.Println("Updating skill...")
@@ -303,7 +352,7 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 	// Re-download first to minimize staging time
 	tarPath, shaDownload, err := skill.DownloadGitHubRepository(meta.OwnerRepo)
 	if err != nil {
-		return fmt.Errorf("failed to download update: %w", err)
+		return "update failed", fmt.Errorf("failed to download update: %w", err)
 	}
 	defer func() { _ = os.Remove(tarPath) }()
 
@@ -333,7 +382,7 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 	})
 
 	if err != nil {
-		return err
+		return "update failed", err
 	}
 
 	shortSha := shaUpdate
@@ -342,7 +391,7 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 	}
 
 	fmt.Printf("Skill updated successfully to revision %s.\n", shortSha)
-	return nil
+	return "updated", nil
 }
 
 // RunSkillRemove is a subcommand `rntocase skill remove` -- Remove a skill
