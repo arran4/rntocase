@@ -220,6 +220,12 @@ func RunSkillUpdate(args []string) error {
 			// for single skill update, just return the inspect error immediately
 			return err
 		}
+
+		// explicitly preserve pre-existing single-skill behavior for local-only skills
+		if meta.OwnerRepo == "" && meta.OriginalSource != "official" && meta.OriginalSource != "rntocase" {
+			return fmt.Errorf("skill '%s' is locally installed and cannot be updated automatically", name)
+		}
+
 		skillsToUpdate = append(skillsToUpdate, skillUpdateTask{
 			Name: name,
 			Meta: meta,
