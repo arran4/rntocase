@@ -14,11 +14,7 @@ import (
 // Because skill target paths are complex, we override HOME for the test duration
 func setupMockHome(t *testing.T) string {
 	t.Helper()
-	homeDir, err := os.MkdirTemp("", "mock-home-*")
-	assert.NoError(t, err)
-	t.Cleanup(func() {
-		_ = os.RemoveAll(homeDir)
-	})
+	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 	return homeDir
 }
@@ -46,11 +42,7 @@ func TestRunSkillInstall_ReplaceFlagFailureLeavesPriorIntact(t *testing.T) {
 
 	// Try installing a local dir over it WITH --replace, but the local dir lacks SKILL.md
 	// so the validation phase inside ReplaceSafely will fail.
-	sourceDir, err := os.MkdirTemp("", "bad-source-*")
-	assert.NoError(t, err)
-	t.Cleanup(func() {
-		_ = os.RemoveAll(sourceDir)
-	})
+	sourceDir := t.TempDir()
 	// We do NOT write SKILL.md to sourceDir
 
 	// Run command
