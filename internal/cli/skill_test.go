@@ -51,10 +51,10 @@ func TestRunSkillInspect_RequiresName(t *testing.T) {
 func TestRunSkillUpdate_AllSuccess(t *testing.T) {
 	homeDir := setupMockHome(t)
 	destDir := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
-	os.MkdirAll(destDir, 0755)
-	os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("ok"), 0644)
+	_ = os.MkdirAll(destDir, 0755)
+	_ = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("ok"), 0644)
 
-	skill.SaveMetadata(destDir, &skill.Metadata{
+	_ = skill.SaveMetadata(destDir, &skill.Metadata{
 		Name:           "local-skill1",
 		OriginalSource: "local",
 	})
@@ -74,22 +74,22 @@ func TestRunSkillUpdate_PartialFailure(t *testing.T) {
 
 	// Create one valid local skill
 	destDir1 := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
-	os.MkdirAll(destDir1, 0755)
-	os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644)
-	skill.SaveMetadata(destDir1, &skill.Metadata{Name: "local-skill1", OriginalSource: "local"})
+	_ = os.MkdirAll(destDir1, 0755)
+	_ = os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644)
+	_ = skill.SaveMetadata(destDir1, &skill.Metadata{Name: "local-skill1", OriginalSource: "local"})
 
 	// Create one broken skill (missing metadata will fail inspect)
 	// Actually, ListInstalledSkills only returns it if it can successfully parse the metadata.
 	// So instead of --all, let's explicitly request a broken skill by name to force an inspection failure.
 	destDir2 := filepath.Join(homeDir, ".agents", "skills", "broken-skill")
-	os.MkdirAll(destDir2, 0755)
-	os.WriteFile(filepath.Join(destDir2, ".rntocase-skill.json"), []byte("{bad json"), 0644)
+	_ = os.MkdirAll(destDir2, 0755)
+	_ = os.WriteFile(filepath.Join(destDir2, ".rntocase-skill.json"), []byte("{bad json"), 0644)
 
 	// Here we want to simulate an error in the RunSkillUpdate process.
 	// If we provide the specific bad skill, it returns error early for single updates.
 	// But the PR issue mentions `--all` behavior.
 	// Let's mock a skill that parses but fails CheckUpdate or extract.
-	skill.SaveMetadata(destDir2, &skill.Metadata{Name: "broken-skill", OwnerRepo: "invalid/repo"})
+	_ = skill.SaveMetadata(destDir2, &skill.Metadata{Name: "broken-skill", OwnerRepo: "invalid/repo"})
 
 	// By making the API call fail, we can simulate an update failure.
 	// But let's just make it simpler by asking for an explicit bad API call?
@@ -108,13 +108,13 @@ func TestRunSkillUpdate_AlreadyCurrent(t *testing.T) {
 	homeDir := setupMockHome(t)
 
 	destDir1 := filepath.Join(homeDir, ".agents", "skills", "current-skill")
-	os.MkdirAll(destDir1, 0755)
-	os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644)
-	skill.SaveMetadata(destDir1, &skill.Metadata{Name: "current-skill", OwnerRepo: "dummy/repo", SourceRevision: "sha-123"})
+	_ = os.MkdirAll(destDir1, 0755)
+	_ = os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644)
+	_ = skill.SaveMetadata(destDir1, &skill.Metadata{Name: "current-skill", OwnerRepo: "dummy/repo", SourceRevision: "sha-123"})
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		commit := skill.GitHubCommit{Sha: "sha-123"}
-		json.NewEncoder(w).Encode(commit)
+		_ = json.NewEncoder(w).Encode(commit)
 	}))
 	defer ts.Close()
 
@@ -130,14 +130,14 @@ func TestRunSkillUpdate_MultipleFailures(t *testing.T) {
 	homeDir := setupMockHome(t)
 
 	destDir1 := filepath.Join(homeDir, ".agents", "skills", "bad1")
-	os.MkdirAll(destDir1, 0755)
-	os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644)
-	skill.SaveMetadata(destDir1, &skill.Metadata{Name: "bad1", OwnerRepo: "invalid/repo1"})
+	_ = os.MkdirAll(destDir1, 0755)
+	_ = os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644)
+	_ = skill.SaveMetadata(destDir1, &skill.Metadata{Name: "bad1", OwnerRepo: "invalid/repo1"})
 
 	destDir2 := filepath.Join(homeDir, ".agents", "skills", "bad2")
-	os.MkdirAll(destDir2, 0755)
-	os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("ok"), 0644)
-	skill.SaveMetadata(destDir2, &skill.Metadata{Name: "bad2", OwnerRepo: "invalid/repo2"})
+	_ = os.MkdirAll(destDir2, 0755)
+	_ = os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("ok"), 0644)
+	_ = skill.SaveMetadata(destDir2, &skill.Metadata{Name: "bad2", OwnerRepo: "invalid/repo2"})
 
 	err := RunSkillUpdate([]string{"--scope", "user", "--all"})
 	assert.Error(t, err)
