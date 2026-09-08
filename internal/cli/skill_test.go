@@ -98,18 +98,32 @@ func TestRunSkillUpdate_All_InspectionFailure(t *testing.T) {
 func TestRunSkillUpdate_PartialFailure(t *testing.T) {
 	homeDir := setupMockHome(t)
 
-	destDir1 := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
+	// Lexically-first failing remote skill
+	destDir1 := filepath.Join(homeDir, ".agents", "skills", "a-broken")
 	require.NoError(t, os.MkdirAll(destDir1, 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644))
-	require.NoError(t, skill.SaveMetadata(destDir1, &skill.Metadata{Name: "local-skill1", OriginalSource: "local"}))
+	require.NoError(t, skill.SaveMetadata(destDir1, &skill.Metadata{Name: "a-broken", OwnerRepo: "invalid/repo"}))
 
-	destDir2 := filepath.Join(homeDir, ".agents", "skills", "broken-skill")
+	// Lexically-later valid remote skill
+	destDir2 := filepath.Join(homeDir, ".agents", "skills", "z-current")
 	require.NoError(t, os.MkdirAll(destDir2, 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("ok"), 0644))
-	require.NoError(t, skill.SaveMetadata(destDir2, &skill.Metadata{Name: "broken-skill", OwnerRepo: "dummy/repo"}))
+	require.NoError(t, skill.SaveMetadata(destDir2, &skill.Metadata{Name: "z-current", OwnerRepo: "valid/repo", SourceRevision: "sha-123"}))
+
+	var validRepoCalled bool
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
+		if r.URL.Path == "/repos/invalid/repo/commits/HEAD" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if r.URL.Path == "/repos/valid/repo/commits/HEAD" {
+			validRepoCalled = true
+			commit := skill.GitHubCommit{Sha: "sha-123"}
+			require.NoError(t, json.NewEncoder(w).Encode(commit))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer ts.Close()
 
@@ -119,9 +133,12 @@ func TestRunSkillUpdate_PartialFailure(t *testing.T) {
 
 	err := RunSkillUpdate([]string{"--scope", "user", "--all"})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "broken-skill")
+	assert.Contains(t, err.Error(), "a-broken")
 	assert.Contains(t, err.Error(), "update failed")
-	assert.NotContains(t, err.Error(), "local-skill1")
+	assert.NotContains(t, err.Error(), "z-current")
+
+	// Crucial assertion: Verify the loop continued and the valid repo was still checked!
+	assert.True(t, validRepoCalled, "The valid remote skill should have been processed even though a prior skill failed")
 }
 
 func TestRunSkillUpdate_AlreadyCurrent(t *testing.T) {
