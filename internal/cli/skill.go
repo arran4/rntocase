@@ -224,7 +224,7 @@ func RunSkillUpdate(args []string) error {
 	}
 
 	for _, s := range skillsToUpdate {
-		if err := updateSingleSkill(s.Name, s.Meta, s.Dir, *force); err != nil {
+		if err := updateSingleSkillWithExtractor(s.Name, s.Meta, s.Dir, *force, skill.ExtractEmbeddedSkill); err != nil {
 			fmt.Printf("Failed to update '%s': %v\n", s.Name, err)
 		}
 	}
@@ -232,7 +232,12 @@ func RunSkillUpdate(args []string) error {
 	return nil
 }
 
+// updateSingleSkill remains for compatibility but delegates to updateSingleSkillWithExtractor
 func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force bool) error {
+	return updateSingleSkillWithExtractor(name, meta, destDir, force, skill.ExtractEmbeddedSkill)
+}
+
+func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir string, force bool, extractEmbedded func(string, string) error) error {
 	if meta.OriginalSource == "official" || meta.OriginalSource == "rntocase" {
 		fmt.Printf("Checking for updates for official skill '%s'...\n", name)
 
@@ -246,7 +251,7 @@ func updateSingleSkill(name string, meta *skill.Metadata, destDir string, force 
 		}
 
 		err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
-			if err := extractEmbeddedSkillFn("rntocase", stagingDir); err != nil {
+			if err := extractEmbedded(name, stagingDir); err != nil {
 				return err
 			}
 

@@ -89,16 +89,14 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	err = skill.SaveMetadata(destDir, meta)
 	assert.NoError(t, err)
 
-	// Inject failure in ExtractEmbeddedSkill
-	originalExtract := extractEmbeddedSkillFn
-	extractEmbeddedSkillFn = func(skillName, destDir string) error {
+	// Inject failure in ExtractEmbeddedSkill via the explicit dependency injection parameter
+	mockExtract := func(skillName, destDir string) error {
 		// Return success but do not create SKILL.md to simulate validation failure
 		return nil
 	}
-	defer func() { extractEmbeddedSkillFn = originalExtract }()
 
 	meta.OriginalSource = "official" // triggers embedded logic
-	err = updateSingleSkill("official-skill", meta, destDir, true)
+	err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, mockExtract)
 
 	// Expect it to fail
 	if err == nil {
@@ -133,14 +131,12 @@ func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing
 	err = skill.SaveMetadata(destDir, meta)
 	assert.NoError(t, err)
 
-	// Inject extraction failure
-	originalExtract := extractEmbeddedSkillFn
-	extractEmbeddedSkillFn = func(skillName, destDir string) error {
+	// Inject extraction failure via explicit dependency injection
+	mockExtract := func(skillName, destDir string) error {
 		return fmt.Errorf("simulated embedded extraction failure")
 	}
-	defer func() { extractEmbeddedSkillFn = originalExtract }()
 
-	err = updateSingleSkill("official-skill", meta, destDir, true)
+	err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, mockExtract)
 
 	// Expect it to fail
 	if err == nil {
