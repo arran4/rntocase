@@ -32,10 +32,10 @@ changelog:
 nfpms:
   -
     vendor: Ubels Software Development
-    homepage: https://github.com/arran4/
+    homepage: https://github.com/arran4/rntocase
     maintainer: Arran Ubels <arran@ubels.com.au>
-    description: NA
-    license: Private
+    description: A utility to rename files by converting their casing
+    license: GPL-3.0-only
     formats:
       - apk
       - deb
