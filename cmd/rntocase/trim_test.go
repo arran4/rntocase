@@ -68,3 +68,16 @@ func TestTrim_ExecuteHelpAndUnknownFlags(t *testing.T) {
 		t.Error("expected an error for an unknown short flag")
 	}
 }
+
+func TestTrim_AlgorithmFlagRemoved(t *testing.T) {
+	cmd := &Trim{
+		RootCmd: &RootCmd{},
+	}
+	args := []string{"--algorithm", "go", "--trim-chars", "_"}
+	err := cmd.Execute(args)
+	if err == nil {
+		t.Error("Expected Execute to fail with unknown flag '--algorithm', but it succeeded")
+	} else if err.Error() != "unknown flag: --algorithm" && err.Error() != "unknown argument: --algorithm" {
+		t.Errorf("Expected 'unknown flag: --algorithm' error, got %v", err)
+	}
+}
