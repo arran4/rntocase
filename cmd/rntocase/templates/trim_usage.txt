@@ -15,6 +15,7 @@ Subcommands:
 
 Flags:
     --trim-chars string    The characters to trim
+    --json                 Output in JSON format
     --dry-run              Print the rename operations to be performed without executing them
     --interactive          Prompt for confirmation before executing each rename operation
 

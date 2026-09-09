@@ -2,6 +2,7 @@ package rntocase
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/jedib0t/go-pretty/table"
 	"os"
@@ -51,6 +52,43 @@ func SplitExtension(filename string) (name, ext string) {
 	}
 
 	return name, ext
+}
+
+// RenameStatus represents the status of a rename operation
+type RenameStatus string
+
+const (
+	StatusPlanned   RenameStatus = "planned"
+	StatusRenamed   RenameStatus = "renamed"
+	StatusUnchanged RenameStatus = "unchanged"
+	StatusSkipped   RenameStatus = "skipped"
+	StatusCollision RenameStatus = "collision"
+	StatusFailed    RenameStatus = "failed"
+)
+
+// RenameOperation represents a single file rename operation in a structured format
+type RenameOperation struct {
+	Source      string       `json:"source"`
+	Destination string       `json:"destination"`
+	Status      RenameStatus `json:"status"`
+	Error       string       `json:"error,omitempty"`
+}
+
+// RenameSummary contains aggregate counts for a rename batch
+type RenameSummary struct {
+	Planned   int `json:"planned"`
+	Renamed   int `json:"renamed"`
+	Unchanged int `json:"unchanged"`
+	Skipped   int `json:"skipped"`
+	Collision int `json:"collision"`
+	Failed    int `json:"failed"`
+}
+
+// RenameResult represents the comprehensive result of a rename operation batch
+type RenameResult struct {
+	DryRun     bool              `json:"dry_run"`
+	Operations []RenameOperation `json:"operations"`
+	Summary    RenameSummary     `json:"summary"`
 }
 
 // RenamePlan represents a planned rename operation
@@ -114,7 +152,17 @@ func ConfirmWithReader(prompt string, reader *bufio.Reader) bool {
 
 // RenameFiles applies a renaming function to a list of files.
 // Supports dry-run and interactive modes.
-func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun bool, interactive bool) error {
+func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun bool, interactive bool, outputJSON bool) error {
+	if interactive && outputJSON {
+		return fmt.Errorf("cannot use interactive mode with JSON output")
+	}
+
+	result := RenameResult{
+		DryRun:     dryRun,
+		Operations: []RenameOperation{},
+		Summary:    RenameSummary{},
+	}
+
 	var plans []RenamePlan
 	destCount := make(map[string]int)
 
@@ -136,9 +184,6 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		newName := baseNameRenamed + ext
 		newPath := filepath.Join(dir, newName)
 
-		// To safely check identity, resolve absolute paths, evaluating parent dir symlinks.
-		// However, evaluating the final symlink (the base name) would obscure collisions with dangling links.
-		// Therefore we evaluate the directory and join the base name.
 		absDir, err := filepath.Abs(dir)
 		var evalDir string
 		if err == nil {
@@ -159,31 +204,20 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		}
 
 		if plan.WillChange {
-			// Check if duplicate destination within batch using a canonical path to prevent mixed absolute/relative bypasses.
-			// To conservatively account for case-insensitive filesystems (like macOS/Windows), we lowercase the entire
-			// canonical path for collision checking. This ensures that a batch planning to create both `foo.txt` and `FOO.txt`
-			// (from e.g. ` foo.TXT` and `foo .txt` trimming) will correctly trigger a collision on such systems rather than
-			// bypassing the check and letting execution arbitrarily overwrite files.
 			destKey := strings.ToLower(newCanonicalPath)
 
 			destCount[destKey]++
 			if destCount[destKey] > 1 {
 				plan.Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
 			} else {
-				// Check if destination exists (and isn't just a case-change rename of the same file)
-				// Use Lstat to detect dangling symlinks and avoid resolving symlinks when checking existence.
 				destStat, destErr := os.Lstat(newPath)
 				if destErr == nil {
-					// Destination exists (might be a symlink)
 					srcStat, srcErr := os.Lstat(file)
 
-					// If they are not the same file, it's a collision.
-					// `os.SameFile` handles same inode checks.
 					if srcErr != nil || !os.SameFile(srcStat, destStat) {
 						plan.Error = fmt.Errorf("collision: destination '%s' already exists", newPath)
 					}
 				} else if !os.IsNotExist(destErr) {
-					// Some other error during Lstat (permissions, etc)
 					plan.Error = fmt.Errorf("collision: could not read destination '%s': %v", newPath, destErr)
 				}
 			}
@@ -195,53 +229,123 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 	var batchErrors []*RenameError
 
 	// Phase 1b: Batch Safety Validation
-	// If any planning error occurred (e.g. collision), abort the entire batch
-	// to ensure we don't leave the filesystem in a partially mutated state.
 	for _, plan := range plans {
 		if plan.Error != nil {
-			fmt.Printf("Error planning '%s': %v\n", plan.OriginalPath, plan.Error)
+			if !outputJSON {
+				fmt.Fprintf(os.Stderr, "Error planning '%s': %v\n", plan.OriginalPath, plan.Error)
+			}
 			batchErrors = append(batchErrors, &RenameError{
 				Path:    plan.OriginalPath,
 				NewPath: plan.NewPath,
 				Err:     plan.Error,
 			})
+
+			// Determine if it was a collision or other failure
+			status := StatusFailed
+			if strings.Contains(plan.Error.Error(), "collision:") {
+				status = StatusCollision
+				result.Summary.Collision++
+			} else {
+				result.Summary.Failed++
+			}
+
+			result.Operations = append(result.Operations, RenameOperation{
+				Source:      plan.OriginalPath,
+				Destination: plan.NewPath,
+				Status:      status,
+				Error:       plan.Error.Error(),
+			})
 		}
 	}
 
 	if len(batchErrors) > 0 {
+		if outputJSON {
+			jsonBytes, _ := json.MarshalIndent(result, "", "  ")
+			fmt.Println(string(jsonBytes))
+		}
 		return &RenameBatchError{Errors: batchErrors}
 	}
 
 	// Phase 2: Execution & Reporting
 	for _, plan := range plans {
 		if !plan.WillChange {
-			fmt.Printf("Skipping '%s' (already matches desired format).\n", plan.OriginalPath)
+			if !outputJSON {
+				fmt.Printf("Skipping '%s' (already matches desired format).\n", plan.OriginalPath)
+			}
+			result.Summary.Unchanged++
+			result.Operations = append(result.Operations, RenameOperation{
+				Source:      plan.OriginalPath,
+				Destination: plan.NewPath,
+				Status:      StatusUnchanged,
+			})
 			continue
 		}
 
-		fmt.Printf("Rename: '%s' -> '%s'\n", plan.OriginalPath, plan.NewPath)
-
 		if dryRun {
+			if !outputJSON {
+				fmt.Printf("Rename: '%s' -> '%s'\n", plan.OriginalPath, plan.NewPath)
+			}
+			result.Summary.Planned++
+			result.Operations = append(result.Operations, RenameOperation{
+				Source:      plan.OriginalPath,
+				Destination: plan.NewPath,
+				Status:      StatusPlanned,
+			})
 			continue
 		}
 
 		if interactive {
 			if !Confirm(fmt.Sprintf("Rename '%s' to '%s'?", plan.OriginalPath, filepath.Base(plan.NewPath))) {
-				fmt.Println("Skipped.")
+				if !outputJSON {
+					fmt.Println("Skipped.")
+				}
+				result.Summary.Skipped++
+				result.Operations = append(result.Operations, RenameOperation{
+					Source:      plan.OriginalPath,
+					Destination: plan.NewPath,
+					Status:      StatusSkipped,
+				})
 				continue
 			}
 		}
 
+		if !outputJSON {
+			fmt.Printf("Rename: '%s' -> '%s'\n", plan.OriginalPath, plan.NewPath)
+		}
+
 		if err := os.Rename(plan.OriginalPath, plan.NewPath); err != nil {
-			fmt.Printf("Error renaming '%s': %v\n", plan.OriginalPath, err)
+			if !outputJSON {
+				fmt.Fprintf(os.Stderr, "Error renaming '%s': %v\n", plan.OriginalPath, err)
+			}
 			batchErrors = append(batchErrors, &RenameError{
 				Path:    plan.OriginalPath,
 				NewPath: plan.NewPath,
 				Err:     err,
 			})
+			result.Summary.Failed++
+			result.Operations = append(result.Operations, RenameOperation{
+				Source:      plan.OriginalPath,
+				Destination: plan.NewPath,
+				Status:      StatusFailed,
+				Error:       err.Error(),
+			})
 			continue
 		}
-		fmt.Println("Renamed successfully.")
+
+		if !outputJSON {
+			fmt.Println("Renamed successfully.")
+		}
+		result.Summary.Renamed++
+		result.Operations = append(result.Operations, RenameOperation{
+			Source:      plan.OriginalPath,
+			Destination: plan.NewPath,
+			Status:      StatusRenamed,
+		})
+	}
+
+	if outputJSON {
+		jsonBytes, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Println(string(jsonBytes))
 	}
 
 	if len(batchErrors) > 0 {

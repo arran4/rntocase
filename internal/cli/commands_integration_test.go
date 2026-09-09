@@ -13,7 +13,7 @@ func TestIntegrationCamelVsPascal(t *testing.T) {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
 
-	err := RunCamel(false, false, filePath)
+	err := RunCamel(false, false, false, filePath)
 	if err != nil {
 		t.Fatalf("RunCamel failed: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestIntegrationCamelVsPascal(t *testing.T) {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
 
-	err = RunPascal(false, false, filePath2)
+	err = RunPascal(false, false, false, filePath2)
 	if err != nil {
 		t.Fatalf("RunPascal failed: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestIntegrationDotDefault(t *testing.T) {
 	}
 
 	// Call RunDot with empty delimiter to test default
-	err := RunDot("", false, false, filePath)
+	err := RunDot("", false, false, false, filePath)
 	if err != nil {
 		t.Fatalf("RunDot failed: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestIntegrationTrim(t *testing.T) {
 	}
 
 	// Call RunTrim
-	err := RunTrim("_", false, false, filePath)
+	err := RunTrim("_", false, false, false, filePath)
 	if err != nil {
 		t.Fatalf("RunTrim failed: %v", err)
 	}

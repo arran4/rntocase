@@ -21,6 +21,7 @@ type Dot struct {
 	*RootCmd
 	Flags         *flag.FlagSet
 	delimiter     string
+	outputJSON    bool
 	dryRun        bool
 	interactive   bool
 	files         []string
@@ -83,6 +84,17 @@ func (c *Dot) Execute(args []string) error {
 					}
 				}
 				c.delimiter = value
+
+			case "outputJSON", "json":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.outputJSON = b
+				} else {
+					c.outputJSON = true
+				}
 
 			case "dryRun", "dry-run":
 				if hasValue {
@@ -165,6 +177,8 @@ func (c *RootCmd) NewDot() *Dot {
 
 	set.StringVar(&v.delimiter, "delimiter", ".", "The delimiter to use")
 
+	set.BoolVar(&v.outputJSON, "json", false, "Output in JSON format")
+
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
 	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
@@ -172,7 +186,7 @@ func (c *RootCmd) NewDot() *Dot {
 
 	v.CommandAction = func(c *Dot) error {
 
-		err := cli.RunDot(c.delimiter, c.dryRun, c.interactive, c.files...)
+		err := cli.RunDot(c.delimiter, c.outputJSON, c.dryRun, c.interactive, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

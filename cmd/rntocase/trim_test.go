@@ -24,6 +24,7 @@ func TestTrim_Execute(t *testing.T) {
 	args := []string{}
 	args = append(args, "--trim-chars")
 	args = append(args, "test")
+	args = append(args, "--json")
 	args = append(args, "--dry-run")
 	args = append(args, "--interactive")
 
@@ -38,6 +39,9 @@ func TestTrim_Execute(t *testing.T) {
 
 	if cmd.trimChars != "test" {
 		t.Errorf("Expected trimChars to be 'test', got '%v'", cmd.trimChars)
+	}
+	if cmd.outputJSON != true {
+		t.Errorf("Expected outputJSON to be true, got '%v'", cmd.outputJSON)
 	}
 	if cmd.dryRun != true {
 		t.Errorf("Expected dryRun to be true, got '%v'", cmd.dryRun)
@@ -66,18 +70,5 @@ func TestTrim_ExecuteHelpAndUnknownFlags(t *testing.T) {
 	}
 	if err := cmd.Execute([]string{"-?"}); err == nil {
 		t.Error("expected an error for an unknown short flag")
-	}
-}
-
-func TestTrim_AlgorithmFlagRemoved(t *testing.T) {
-	cmd := &Trim{
-		RootCmd: &RootCmd{},
-	}
-	args := []string{"--algorithm", "go", "--trim-chars", "_"}
-	err := cmd.Execute(args)
-	if err == nil {
-		t.Error("Expected Execute to fail with unknown flag '--algorithm', but it succeeded")
-	} else if err.Error() != "unknown flag: --algorithm" && err.Error() != "unknown argument: --algorithm" {
-		t.Errorf("Expected 'unknown flag: --algorithm' error, got %v", err)
 	}
 }

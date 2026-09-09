@@ -1293,3 +1293,58 @@ Remote skills can be updated to fetch the latest changes:
 ```bash
 $ rntocase skill update rntocase
 ```
+
+## Machine-Readable JSON Output
+
+For automation workflows, `rntocase` provides a `--json` flag to output rename plans and results in a stable, machine-readable format.
+
+* The JSON object is printed exclusively to `stdout`.
+* Diagnostic errors are printed to `stderr`.
+* Interactive prompts are blocked when `--json` is enabled.
+* The exit status remains authoritative (zero on success/clean dry run, non-zero on failure/collision).
+
+### Example JSON Schema
+
+The `RenameResult` schema includes details on the batch `summary` and individual `operations`.
+
+```json
+{
+  "dry_run": false,
+  "operations": [
+    {
+      "source": "myFile.txt",
+      "destination": "my-file.txt",
+      "status": "renamed"
+    },
+    {
+      "source": "unchanged-file.txt",
+      "destination": "unchanged-file.txt",
+      "status": "unchanged"
+    }
+  ],
+  "summary": {
+    "planned": 0,
+    "renamed": 1,
+    "unchanged": 1,
+    "skipped": 0,
+    "collision": 0,
+    "failed": 0
+  }
+}
+```
+
+**Status Enumerations:**
+- `planned`: A successful dry-run operation intended to happen.
+- `renamed`: A successful execution of a rename operation.
+- `unchanged`: The source and destination are identical; no rename is necessary.
+- `skipped`: Interactive mode only (if bypassed).
+- `collision`: Multiple sources mapped to the same destination, or the destination already exists.
+- `failed`: An underlying OS error prevented the rename.
+
+### `jq` Automation Example
+
+Find how many files would successfully be renamed during a dry-run:
+
+```bash
+rntocase snake --json --dry-run * | jq '.summary.planned'
+```

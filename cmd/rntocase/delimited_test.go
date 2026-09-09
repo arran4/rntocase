@@ -26,6 +26,7 @@ func TestDelimited_Execute(t *testing.T) {
 	args = append(args, "test")
 	args = append(args, "--ignore")
 	args = append(args, "test")
+	args = append(args, "--json")
 	args = append(args, "--dry-run")
 	args = append(args, "--interactive")
 
@@ -43,6 +44,9 @@ func TestDelimited_Execute(t *testing.T) {
 	}
 	if cmd.ignore != "test" {
 		t.Errorf("Expected ignore to be 'test', got '%v'", cmd.ignore)
+	}
+	if cmd.outputJSON != true {
+		t.Errorf("Expected outputJSON to be true, got '%v'", cmd.outputJSON)
 	}
 	if cmd.dryRun != true {
 		t.Errorf("Expected dryRun to be true, got '%v'", cmd.dryRun)
