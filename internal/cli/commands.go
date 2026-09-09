@@ -57,7 +57,7 @@ func RunAcronym(dryRun bool, interactive bool, files ...string) error {
 //	files: @1... (min: 1) The files to rename
 func RunCamel(dryRun bool, interactive bool, files ...string) error {
 	converter := func(s string) (string, error) {
-		return strings2.ToPascal(s, strings2.ParserEmitEmpty(true))
+		return strings2.ToCamel(s, strings2.ParserEmitEmpty(true))
 	}
 	return rntocase.RenameFiles(files, converter, dryRun, interactive)
 }
@@ -129,16 +129,19 @@ func RunDelimited(delimiter string, ignore string, dryRun bool, interactive bool
 // RunDot is a subcommand `rntocase dot` -- Rename files to dot case
 // Examples:
 //
-//	rntocase dot --delimiter "." --dry-run "hello world"
+//	rntocase dot --dry-run "hello world"
 //	rntocase dot -interactive *
 //
 // Flags:
 //
-//	delimiter: --delimiter (default: "") The delimiter to use
+//	delimiter: --delimiter (default: ".") The delimiter to use
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
 //	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	files: @1... (min: 1) The files to rename
 func RunDot(delimiter string, dryRun bool, interactive bool, files ...string) error {
+	if delimiter == "" {
+		delimiter = "."
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToFormattedString(s, strings2.OptionDelimiter(delimiter), strings2.OptionFirstLower(), strings2.ParserEmitEmpty(true))
 	}
@@ -338,12 +341,11 @@ func RunUpperLeading(dryRun bool, interactive bool, files ...string) error {
 //
 // Flags:
 //
-//	algorithm: --algorithm (default: "") The trim algorithm to use
 //	trimChars: --trim-chars (default: "") The characters to trim
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
 //	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	files: @1... (min: 1) The files to rename
-func RunTrim(algorithm string, trimChars string, dryRun bool, interactive bool, files ...string) error {
+func RunTrim(trimChars string, dryRun bool, interactive bool, files ...string) error {
 
 	converter := func(s string) (string, error) {
 		if trimChars == "" {

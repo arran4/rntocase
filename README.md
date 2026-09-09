@@ -1075,43 +1075,20 @@ exit status 1
 ```
 
 
-## `rntrim`
+## `trim`
 
 ```bash
-$ rntrim
-Error: No files provided.
-Usage: rntrim [options] <file1> [<file2> ...]
+$ rntocase trim
+Error: minimum number of arguments is 1
+Usage: rntocase trim [options] <files>
 
 Options:
-  -algorithm string
-    	Choose the trim algorithm to use, supported: go. (default "go")
+  -trim-chars string
+	The characters to trim
   -dry-run
-    	Display the intended changes without renaming.
+	Print the rename operations to be performed without executing them
   -interactive
-    	Ask for confirmation before renaming each file.
-  -trim string
-    	Characters to trim off end and start of name white space if not set.
-
-Conversion Examples:
-+-----------+--------------------+-----------------------+-------------------------+--------------------------------+-------------------------+
-| ALGORITHM |                    |                       |                         |                                |                         |
-+-----------+--------------------+-----------------------+-------------------------+--------------------------------+-------------------------+
-|           | Basic Cases        | Hello World           | helloWorld              | HelloWorld                     | Hello_WORLD             |
-| go        |                    | Hello World           | helloWorld              | HelloWorld                     | Hello_WORLD             |
-|           | Underscore Cases   | __camel_snake_kebab__ | _leading_snake_case_    | __trailing__underscore__       |                         |
-| go        |                    | __camel_snake_kebab__ | _leading_snake_case_    | __trailing__underscore__       |                         |
-|           | Hyphen Cases       | --camel-snake-kebab   | -leading-kebab-case-    | --trailing--hyphen--           |                         |
-| go        |                    | --camel-snake-kebab   | -leading-kebab-case-    | --trailing--hyphen--           |                         |
-|           | Mixed Delimiters   | hello_world-and-kebab | Mixed_Snake-Kebab--Case | UPPER_snake-KEBAB_Case         |                         |
-| go        |                    | hello_world-and-kebab | Mixed_Snake-Kebab--Case | UPPER_snake-KEBAB_Case         |                         |
-|           | Acronym Handling   | ID_NUMBER             | HTTP_Response_Code      | XML_HTTP_REQUEST               | API_Version_2           |
-| go        |                    | ID_NUMBER             | HTTP_Response_Code      | XML_HTTP_REQUEST               | API_Version_2           |
-|           | Spaces and Words   |    leading spaces     | trailing spaces         |    both sides                  | This is a test sentence |
-| go        |                    | leading spaces        | trailing spaces         | both sides                     | This is a test sentence |
-|           | Symbols and Random | 123_ABC-xyz--789      | !!special$$characters** | ___!!!___weird___CASE___!!!___ |                         |
-| go        |                    | 123_ABC-xyz--789      | !!special$$characters** | ___!!!___weird___CASE___!!!___ |                         |
-+-----------+--------------------+-----------------------+-------------------------+--------------------------------+-------------------------+
-exit status 1
+	Prompt for confirmation before executing each rename operation
 ```
 
 # Examples
@@ -1160,16 +1137,16 @@ Rename: 'Hello World.txt' -> 'dlroW olleH.txt'
 Renamed successfully.
 
 $ touch Hello\ World Hello\ World.txt
-$ rntocamel *
-Rename: 'Hello World' -> 'HelloWorld'
+$ rntocase camel *
+Rename: 'Hello World' -> 'helloWorld'
 Renamed successfully.
-Rename: 'Hello World.txt' -> 'HelloWorld.txt'
+Rename: 'Hello World.txt' -> 'helloWorld.txt'
 Renamed successfully.
 
 $ touch Hello\ World Hello\ World.txt
 $ ls
 'Hello World'  'Hello World.txt'
-$ rntocamel *                        
+$ rntocase pascal *
 Rename: 'Hello World' -> 'HelloWorld'
 Renamed successfully.
 Rename: 'Hello World.txt' -> 'HelloWorld.txt'
@@ -1189,7 +1166,7 @@ $ ls
 $ touch Hello\ World Hello\ World.txt
 $ ls
 'Hello World'  'Hello World.txt'
-$ rntodelimited *
+$ rntocase dot *
 Rename: 'Hello World' -> 'hello.world'
 Renamed successfully.
 Rename: 'Hello World.txt' -> 'hello.world.txt'
@@ -1253,7 +1230,7 @@ Renamed successfully.
 $ touch Hello.txt ' Hello world .txt' 'hello     .txt'
 $ ls                                                  
 'hello     .txt'   Hello.txt  ' Hello world .txt'
-$ rntrim *
+$ rntocase trim *
 Rename: 'hello     .txt' -> 'hello.txt'
 Renamed successfully.
 Skipping 'Hello.txt' (already matches desired format).

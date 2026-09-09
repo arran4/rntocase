@@ -23,7 +23,7 @@ As an automated agent, you should follow these rules when using `rntocase`:
 
 *   **Forgetting arguments:** A subcommand requires file arguments to operate on. Running `rntocase snake` without files will result in an error: `Error: No files provided.`
 *   **Using `-interactive`:** As mentioned, this blocks execution.
-*   **Misunderstanding delimitations:** When using `rntocase delimited` or `rntocase dot`, you may need to provide additional flags like `-delimiter "."`. Use `rntocase <subcommand> -h` to see available flags for a specific operation.
+*   **Misunderstanding delimitations:** When using `rntocase delimited`, you may need to provide an additional flag like `-delimiter "_"`. Use `rntocase <subcommand> -h` to see available flags for a specific operation.
 
 ## Available Subcommands (Examples)
 

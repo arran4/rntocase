@@ -20,7 +20,6 @@ var _ Cmd = (*Trim)(nil)
 type Trim struct {
 	*RootCmd
 	Flags         *flag.FlagSet
-	algorithm     string
 	trimChars     string
 	dryRun        bool
 	interactive   bool
@@ -73,17 +72,6 @@ func (c *Trim) Execute(args []string) error {
 			_ = value
 			_ = hasValue
 			switch name {
-
-			case "algorithm":
-				if !hasValue {
-					if i+1 < len(args) {
-						value = args[i+1]
-						i++
-					} else {
-						return fmt.Errorf("flag %s requires a value", name)
-					}
-				}
-				c.algorithm = value
 
 			case "trimChars", "trim-chars":
 				if !hasValue {
@@ -175,8 +163,6 @@ func (c *RootCmd) NewTrim() *Trim {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.StringVar(&v.algorithm, "algorithm", "", "The trim algorithm to use")
-
 	set.StringVar(&v.trimChars, "trim-chars", "", "The characters to trim")
 
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
@@ -186,7 +172,7 @@ func (c *RootCmd) NewTrim() *Trim {
 
 	v.CommandAction = func(c *Trim) error {
 
-		err := cli.RunTrim(c.algorithm, c.trimChars, c.dryRun, c.interactive, c.files...)
+		err := cli.RunTrim(c.trimChars, c.dryRun, c.interactive, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

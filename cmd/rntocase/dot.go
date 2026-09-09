@@ -163,7 +163,7 @@ func (c *RootCmd) NewDot() *Dot {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.StringVar(&v.delimiter, "delimiter", "", "The delimiter to use")
+	set.StringVar(&v.delimiter, "delimiter", ".", "The delimiter to use")
 
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 

@@ -5,7 +5,7 @@ Rename files to dot case
 
 Examples:
 
-rntocase dot --delimiter "." --dry-run "hello world"
+rntocase dot --dry-run "hello world"
 rntocase dot -interactive *
 
 Subcommands:
@@ -14,9 +14,9 @@ Subcommands:
 
 
 Flags:
-    --delimiter string    The delimiter to use
-    --dry-run             Print the rename operations to be performed without executing them
-    --interactive         Prompt for confirmation before executing each rename operation
+    --delimiter string   (default: ".")   The delimiter to use
+    --dry-run                             Print the rename operations to be performed without executing them
+    --interactive                         Prompt for confirmation before executing each rename operation
 
 Positional Arguments:
     files      (min: 1) The files to rename
