@@ -96,6 +96,7 @@ type RenamePlan struct {
 	OriginalPath string
 	NewPath      string
 	WillChange   bool
+	Status       RenameStatus
 	Error        error
 }
 
@@ -176,6 +177,7 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		if err != nil {
 			plans = append(plans, RenamePlan{
 				OriginalPath: file,
+				Status:       StatusFailed,
 				Error:        fmt.Errorf("failed to generate new name: %w", err),
 			})
 			continue
@@ -201,14 +203,18 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 			OriginalPath: file,
 			NewPath:      newPath,
 			WillChange:   newPath != file,
+			Status:       StatusPlanned,
 		}
 
-		if plan.WillChange {
+		if !plan.WillChange {
+			plan.Status = StatusUnchanged
+		} else {
 			destKey := strings.ToLower(newCanonicalPath)
 
 			destCount[destKey]++
 			if destCount[destKey] > 1 {
 				plan.Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
+				plan.Status = StatusCollision
 			} else {
 				destStat, destErr := os.Lstat(newPath)
 				if destErr == nil {
@@ -216,9 +222,11 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 
 					if srcErr != nil || !os.SameFile(srcStat, destStat) {
 						plan.Error = fmt.Errorf("collision: destination '%s' already exists", newPath)
+						plan.Status = StatusCollision
 					}
 				} else if !os.IsNotExist(destErr) {
 					plan.Error = fmt.Errorf("collision: could not read destination '%s': %v", newPath, destErr)
+					plan.Status = StatusCollision
 				}
 			}
 		}
@@ -240,25 +248,43 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 				Err:     plan.Error,
 			})
 
-			// Determine if it was a collision or other failure
-			status := StatusFailed
-			if strings.Contains(plan.Error.Error(), "collision:") {
-				status = StatusCollision
-				result.Summary.Collision++
-			} else {
-				result.Summary.Failed++
-			}
-
-			result.Operations = append(result.Operations, RenameOperation{
-				Source:      plan.OriginalPath,
-				Destination: plan.NewPath,
-				Status:      status,
-				Error:       plan.Error.Error(),
-			})
 		}
 	}
 
 	if len(batchErrors) > 0 {
+		// If batch fails, write ALL plans to the result before aborting
+		for _, plan := range plans {
+			if plan.Error != nil {
+				if plan.Status == StatusCollision {
+					result.Summary.Collision++
+				} else {
+					plan.Status = StatusFailed
+					result.Summary.Failed++
+				}
+				result.Operations = append(result.Operations, RenameOperation{
+					Source:      plan.OriginalPath,
+					Destination: plan.NewPath,
+					Status:      plan.Status,
+					Error:       plan.Error.Error(),
+				})
+			} else {
+				// Record successful plans as skipped (or unchanged if they wouldn't have changed)
+				status := StatusSkipped
+				if plan.Status == StatusUnchanged {
+					status = StatusUnchanged
+					result.Summary.Unchanged++
+				} else {
+					result.Summary.Skipped++
+				}
+				result.Operations = append(result.Operations, RenameOperation{
+					Source:      plan.OriginalPath,
+					Destination: plan.NewPath,
+					Status:      status,
+					Error:       "batch aborted due to other errors",
+				})
+			}
+		}
+
 		if outputJSON {
 			jsonBytes, _ := json.MarshalIndent(result, "", "  ")
 			fmt.Println(string(jsonBytes))

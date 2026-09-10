@@ -1303,6 +1303,13 @@ For automation workflows, `rntocase` provides a `--json` flag to output rename p
 * Interactive prompts are blocked when `--json` is enabled.
 * The exit status remains authoritative (zero on success/clean dry run, non-zero on failure/collision).
 
+
+### Schema Compatibility Policy
+
+The JSON schema is designed to be stable for automated consumers. The following compatibility rules apply:
+- **Additive changes are non-breaking:** New keys, fields, or statuses may be added in future versions. Consumers should ignore unrecognized fields and map unrecognized statuses to a generic/failed state.
+- **Breaking changes:** Removing or renaming existing fields, or changing the core exit status semantics, will constitute a breaking change requiring a major version bump.
+
 ### Example JSON Schema
 
 The `RenameResult` schema includes details on the batch `summary` and individual `operations`.
@@ -1337,7 +1344,7 @@ The `RenameResult` schema includes details on the batch `summary` and individual
 - `planned`: A successful dry-run operation intended to happen.
 - `renamed`: A successful execution of a rename operation.
 - `unchanged`: The source and destination are identical; no rename is necessary.
-- `skipped`: Interactive mode only (if bypassed).
+- `skipped`: A successful plan that was bypassed (e.g., because another file in the batch failed preflight validation, aborting the batch).
 - `collision`: Multiple sources mapped to the same destination, or the destination already exists.
 - `failed`: An underlying OS error prevented the rename.
 

@@ -493,18 +493,38 @@ func TestRenameFilesJSON(t *testing.T) {
 	// Helper to capture stdout
 	captureStdout := func(f func()) string {
 		oldStdout := os.Stdout
-		r, w, _ := os.Pipe()
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("Failed to create pipe: %v", err)
+		}
 		os.Stdout = w
+
+		errCh := make(chan error, 2)
 
 		go func() {
 			f()
-			_ = w.Close()
+			errCh <- w.Close()
 		}()
 
 		var buf strings.Builder
-		_, _ = io.Copy(&buf, r)
+		_, copyErr := io.Copy(&buf, r)
+		errCh <- copyErr
+
 		os.Stdout = oldStdout
-		_ = r.Close()
+
+		closeErr1 := <-errCh
+		closeErr2 := <-errCh
+		if closeErr1 != nil {
+			t.Fatalf("Error in capture goroutine: %v", closeErr1)
+		}
+		if closeErr2 != nil {
+			t.Fatalf("Error copying from pipe: %v", closeErr2)
+		}
+
+		if err := r.Close(); err != nil {
+			t.Fatalf("Error closing pipe reader: %v", err)
+		}
+
 		return buf.String()
 	}
 
@@ -514,7 +534,9 @@ func TestRenameFilesJSON(t *testing.T) {
 
 	t.Run("successful dry run JSON", func(t *testing.T) {
 		fPath := filepath.Join(tempDir, "dry_run.txt")
-		_ = os.WriteFile(fPath, []byte("test"), 0644)
+		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath}, renameFunc, true, false, true)
@@ -544,7 +566,9 @@ func TestRenameFilesJSON(t *testing.T) {
 
 	t.Run("successful execution JSON", func(t *testing.T) {
 		fPath := filepath.Join(tempDir, "exec.txt")
-		_ = os.WriteFile(fPath, []byte("test"), 0644)
+		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
@@ -574,7 +598,9 @@ func TestRenameFilesJSON(t *testing.T) {
 
 	t.Run("unchanged operation", func(t *testing.T) {
 		fPath := filepath.Join(tempDir, "UNCHANGED.txt")
-		_ = os.WriteFile(fPath, []byte("test"), 0644)
+		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
@@ -599,8 +625,12 @@ func TestRenameFilesJSON(t *testing.T) {
 	t.Run("collision", func(t *testing.T) {
 		fPath1 := filepath.Join(tempDir, "col1.txt")
 		fPath2 := filepath.Join(tempDir, "COL1.txt")
-		_ = os.WriteFile(fPath1, []byte("test"), 0644)
-		_ = os.WriteFile(fPath2, []byte("test2"), 0644)
+		if err := os.WriteFile(fPath1, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file 1: %v", err)
+		}
+		if err := os.WriteFile(fPath2, []byte("test2"), 0644); err != nil {
+			t.Fatalf("failed to write test file 2: %v", err)
+		}
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath1}, renameFunc, false, false, true)
