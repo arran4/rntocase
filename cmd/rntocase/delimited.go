@@ -22,6 +22,7 @@ type Delimited struct {
 	Flags         *flag.FlagSet
 	delimiter     string
 	ignore        string
+	outputJSON    bool
 	dryRun        bool
 	interactive   bool
 	files         []string
@@ -95,6 +96,17 @@ func (c *Delimited) Execute(args []string) error {
 					}
 				}
 				c.ignore = value
+
+			case "outputJSON", "json":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.outputJSON = b
+				} else {
+					c.outputJSON = true
+				}
 
 			case "dryRun", "dry-run":
 				if hasValue {
@@ -179,6 +191,8 @@ func (c *RootCmd) NewDelimited() *Delimited {
 
 	set.StringVar(&v.ignore, "ignore", "", "The characters to ignore")
 
+	set.BoolVar(&v.outputJSON, "json", false, "Output in JSON format")
+
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
 	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
@@ -186,7 +200,7 @@ func (c *RootCmd) NewDelimited() *Delimited {
 
 	v.CommandAction = func(c *Delimited) error {
 
-		err := cli.RunDelimited(c.delimiter, c.ignore, c.dryRun, c.interactive, c.files...)
+		err := cli.RunDelimited(c.delimiter, c.ignore, c.outputJSON, c.dryRun, c.interactive, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

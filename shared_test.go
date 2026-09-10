@@ -1,8 +1,11 @@
 package rntocase
 
 import (
-	"bufio"
+	"encoding/json"
+	"fmt"
 	"io"
+
+	"bufio"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,7 +66,7 @@ func TestRenameFiles(t *testing.T) {
 			paths = append(paths, path)
 		}
 
-		if err := RenameFiles(paths, renameFunc, false, false); err != nil {
+		if err := RenameFiles(paths, renameFunc, false, false, false); err != nil {
 			t.Fatalf("RenameFiles failed: %v", err)
 		}
 
@@ -121,7 +124,7 @@ func TestRenameFiles(t *testing.T) {
 			return "baz", nil
 		}
 
-		err := RenameFiles([]string{filepath.Join(tempDir, "Bar.txt")}, renameToBaz, false, false)
+		err := RenameFiles([]string{filepath.Join(tempDir, "Bar.txt")}, renameToBaz, false, false, false)
 		if err == nil {
 			t.Fatal("Expected collision error, got nil")
 		}
@@ -145,7 +148,7 @@ func TestRenameFiles(t *testing.T) {
 		}
 
 		paths := []string{filepath.Join(tempDir, "File1.txt"), filepath.Join(tempDir, "File2.txt")}
-		err := RenameFiles(paths, renameToSame, false, false)
+		err := RenameFiles(paths, renameToSame, false, false, false)
 		if err == nil {
 			t.Fatal("Expected error due to multiple files mapping to same destination")
 		}
@@ -190,7 +193,7 @@ func TestRenameFiles(t *testing.T) {
 			filepath.Join(absPath, "BAR.txt"),
 		}
 
-		err = RenameFiles(paths, renameToLower, false, false)
+		err = RenameFiles(paths, renameToLower, false, false, false)
 		if err == nil {
 			t.Fatal("Expected error due to multiple files mapping to same destination across rel/abs paths")
 		}
@@ -237,7 +240,7 @@ func TestRenameFiles(t *testing.T) {
 			filepath.Join(tempDir, " bar.txt"),
 		}
 
-		err := RenameFiles(paths, trimFunc, false, false)
+		err := RenameFiles(paths, trimFunc, false, false, false)
 		if err == nil {
 			t.Fatal("Expected error due to case-insensitive multiple files mapping to same destination")
 		}
@@ -277,7 +280,7 @@ func TestRenameFiles(t *testing.T) {
 		paths := []string{filepath.Join(tempDir, "Foo.txt")}
 
 		// Should error because `foo.txt` exists as a symlink
-		err := RenameFiles(paths, renameToLower, false, false)
+		err := RenameFiles(paths, renameToLower, false, false, false)
 		if err == nil {
 			t.Fatal("Expected collision error with dangling symlink, got nil")
 		}
@@ -315,7 +318,7 @@ func TestRenameFiles(t *testing.T) {
 		paths := []string{filepath.Join(tempDir, "Foo.txt")}
 
 		// Should error because `foo.txt` exists as a symlink
-		err := RenameFiles(paths, renameToLower, false, false)
+		err := RenameFiles(paths, renameToLower, false, false, false)
 		if err == nil {
 			t.Fatal("Expected collision error with symlink pointing to source, got nil")
 		}
@@ -356,7 +359,7 @@ func TestRenameFiles(t *testing.T) {
 		}
 
 		paths := []string{filepath.Join(tempDir, "File1.txt"), filepath.Join(tempDir, "File2.txt")}
-		err := RenameFiles(paths, renameToSame, true, false)
+		err := RenameFiles(paths, renameToSame, true, false, false)
 		if err == nil {
 			t.Fatal("Expected dry-run to still detect planning collisions")
 		}
@@ -392,7 +395,7 @@ func TestRenameFiles(t *testing.T) {
 		// Remove it so the syscall fails
 		_ = os.Remove(filepath.Join(tempDir, "Bad1.txt"))
 
-		err := RenameFiles(paths, renameFuncLower, false, false)
+		err := RenameFiles(paths, renameFuncLower, false, false, false)
 		if err == nil {
 			t.Fatal("Expected error for the bad files")
 		}
@@ -428,7 +431,7 @@ func TestRenameFiles(t *testing.T) {
 			filepath.Join(tempDir, "Bad1.txt"),
 			filepath.Join(tempDir, "Bad2.txt"),
 		}
-		err := RenameFiles(paths, renameMixed, false, false)
+		err := RenameFiles(paths, renameMixed, false, false, false)
 		if err == nil {
 			t.Fatal("Expected error for the bad files")
 		}
@@ -447,7 +450,7 @@ func TestRenameFiles(t *testing.T) {
 		}
 
 		paths := []string{filepath.Join(tempDir, "alreadylower.txt")}
-		err := RenameFiles(paths, renameFunc, false, false)
+		err := RenameFiles(paths, renameFunc, false, false, false)
 		if err != nil {
 			t.Fatalf("Expected nil error for unchanged, got: %v", err)
 		}
@@ -482,4 +485,270 @@ func TestConfirm(t *testing.T) {
 	if !ConfirmWithReader("Confirm 2?", reader) {
 		t.Error("Failed to confirm 2")
 	}
+}
+
+func TestRenameFilesJSON(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Helper to capture stdout
+	captureStdout := func(f func()) string {
+		oldStdout := os.Stdout
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("Failed to create pipe: %v", err)
+		}
+		os.Stdout = w
+
+		errCh := make(chan error, 2)
+
+		go func() {
+			f()
+			errCh <- w.Close()
+		}()
+
+		var buf strings.Builder
+		_, copyErr := io.Copy(&buf, r)
+		errCh <- copyErr
+
+		os.Stdout = oldStdout
+
+		closeErr1 := <-errCh
+		closeErr2 := <-errCh
+		if closeErr1 != nil {
+			t.Fatalf("Error in capture goroutine: %v", closeErr1)
+		}
+		if closeErr2 != nil {
+			t.Fatalf("Error copying from pipe: %v", closeErr2)
+		}
+
+		if err := r.Close(); err != nil {
+			t.Fatalf("Error closing pipe reader: %v", err)
+		}
+
+		return buf.String()
+	}
+
+	renameFunc := func(s string) (string, error) {
+		return strings.ToUpper(s), nil
+	}
+
+	t.Run("successful dry run JSON", func(t *testing.T) {
+		fPath := filepath.Join(tempDir, "dry_run.txt")
+		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		output := captureStdout(func() {
+			err := RenameFiles([]string{fPath}, renameFunc, true, false, true)
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+		})
+
+		var result RenameResult
+		if err := json.Unmarshal([]byte(output), &result); err != nil {
+			t.Fatalf("Failed to parse JSON output: %v\nOutput: %s", err, output)
+		}
+
+		if !result.DryRun {
+			t.Error("Expected DryRun to be true")
+		}
+		if result.Summary.Planned != 1 {
+			t.Errorf("Expected 1 planned, got %d", result.Summary.Planned)
+		}
+		if len(result.Operations) != 1 {
+			t.Fatalf("Expected 1 operation, got %d", len(result.Operations))
+		}
+		if result.Operations[0].Status != StatusPlanned {
+			t.Errorf("Expected operation status %s, got %s", StatusPlanned, result.Operations[0].Status)
+		}
+	})
+
+	t.Run("successful execution JSON", func(t *testing.T) {
+		fPath := filepath.Join(tempDir, "exec.txt")
+		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		output := captureStdout(func() {
+			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+		})
+
+		var result RenameResult
+		if err := json.Unmarshal([]byte(output), &result); err != nil {
+			t.Fatalf("Failed to parse JSON output: %v", err)
+		}
+
+		if result.DryRun {
+			t.Error("Expected DryRun to be false")
+		}
+		if result.Summary.Renamed != 1 {
+			t.Errorf("Expected 1 renamed, got %d", result.Summary.Renamed)
+		}
+		if len(result.Operations) != 1 {
+			t.Fatalf("Expected 1 operation, got %d", len(result.Operations))
+		}
+		if result.Operations[0].Status != StatusRenamed {
+			t.Errorf("Expected operation status %s, got %s", StatusRenamed, result.Operations[0].Status)
+		}
+	})
+
+	t.Run("unchanged operation", func(t *testing.T) {
+		fPath := filepath.Join(tempDir, "UNCHANGED.txt")
+		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		output := captureStdout(func() {
+			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+		})
+
+		var result RenameResult
+		if err := json.Unmarshal([]byte(output), &result); err != nil {
+			t.Fatalf("Failed to parse JSON output: %v", err)
+		}
+
+		if result.Summary.Unchanged != 1 {
+			t.Errorf("Expected 1 unchanged, got %d", result.Summary.Unchanged)
+		}
+		if result.Operations[0].Status != StatusUnchanged {
+			t.Errorf("Expected operation status %s, got %s", StatusUnchanged, result.Operations[0].Status)
+		}
+	})
+
+	t.Run("collision exhaustive batch", func(t *testing.T) {
+		fPath1 := filepath.Join(tempDir, "col1.txt")
+		fPath2 := filepath.Join(tempDir, "col2.txt")
+		fPath3 := filepath.Join(tempDir, "col3.txt") // Will be a collision with col1.txt
+		fPath4 := filepath.Join(tempDir, "COL4.txt") // Already uppercase (unchanged)
+
+		if err := os.WriteFile(fPath1, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file 1: %v", err)
+		}
+		if err := os.WriteFile(fPath2, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file 2: %v", err)
+		}
+		if err := os.WriteFile(fPath3, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file 3: %v", err)
+		}
+		if err := os.WriteFile(fPath4, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file 4: %v", err)
+		}
+
+		// Map col3.txt to col1.txt destination (COL1.TXT)
+		badRenameFunc := func(s string) (string, error) {
+			if s == "col3" {
+				return "COL1", nil
+			}
+			return strings.ToUpper(s), nil
+		}
+
+		output := captureStdout(func() {
+			err := RenameFiles([]string{fPath1, fPath2, fPath3, fPath4}, badRenameFunc, false, false, true)
+			if err == nil {
+				t.Error("Expected error due to collision, got nil")
+			}
+		})
+
+		var result RenameResult
+		if err := json.Unmarshal([]byte(output), &result); err != nil {
+			t.Fatalf("Failed to parse JSON output: %v\nOutput: %s", err, output)
+		}
+
+		if result.Summary.Collision != 2 {
+			t.Errorf("Expected 2 collisions, got %d", result.Summary.Collision)
+		}
+		if result.Summary.Skipped != 1 {
+			t.Errorf("Expected 1 skipped, got %d", result.Summary.Skipped)
+		}
+		if result.Summary.Unchanged != 1 {
+			t.Errorf("Expected 1 unchanged, got %d", result.Summary.Unchanged)
+		}
+		if len(result.Operations) != 4 {
+			t.Fatalf("Expected 4 operations, got %d", len(result.Operations))
+		}
+
+		sourceCounts := make(map[string]int)
+		for _, op := range result.Operations {
+			sourceCounts[op.Source]++
+			if op.Source == fPath1 && op.Status != StatusCollision {
+				t.Errorf("Expected fPath1 to have StatusCollision, got %s", op.Status)
+			}
+			if op.Source == fPath3 && op.Status != StatusCollision {
+				t.Errorf("Expected fPath3 to have StatusCollision, got %s", op.Status)
+			}
+			if op.Source == fPath2 && op.Status != StatusSkipped {
+				t.Errorf("Expected fPath2 to have StatusSkipped, got %s", op.Status)
+			}
+			if op.Source == fPath4 && op.Status != StatusUnchanged {
+				t.Errorf("Expected fPath4 to have StatusUnchanged, got %s", op.Status)
+			}
+		}
+
+		// Verify every input source appeared exactly once
+		for _, p := range []string{fPath1, fPath2, fPath3, fPath4} {
+			if sourceCounts[p] != 1 {
+				t.Errorf("Expected source %s to appear exactly once, got %d", p, sourceCounts[p])
+			}
+		}
+
+		// Verify NO FILES were modified on disk
+		if _, err := os.Stat(filepath.Join(tempDir, "col1.txt")); err != nil {
+			t.Error("col1.txt should still exist unchanged")
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "col2.txt")); err != nil {
+			t.Error("col2.txt should still exist unchanged")
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "col3.txt")); err != nil {
+			t.Error("col3.txt should still exist unchanged")
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "COL4.txt")); err != nil {
+			t.Error("COL4.txt should still exist unchanged")
+		}
+
+		if _, err := os.Stat(filepath.Join(tempDir, "COL1.txt")); !os.IsNotExist(err) {
+			t.Error("COL1.txt was created incorrectly")
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "COL2.txt")); !os.IsNotExist(err) {
+			t.Error("COL2.txt was created incorrectly")
+		}
+	})
+
+	t.Run("failed rename", func(t *testing.T) {
+		fPath := filepath.Join(tempDir, "fail_test.txt")
+
+		output := captureStdout(func() {
+			// file doesn't exist, so rename execution should fail, BUT planning preflight might pass if we aren't careful
+			// However, in rntocase preflight lstat checks if destination exists, not if source exists.
+			// Let's force a failure by providing a rename function that returns an error
+			badRenameFunc := func(s string) (string, error) {
+				return "", fmt.Errorf("forced error")
+			}
+			err := RenameFiles([]string{fPath}, badRenameFunc, false, false, true)
+			if err == nil {
+				t.Error("Expected error due to failed generation, got nil")
+			}
+		})
+
+		var result RenameResult
+		if err := json.Unmarshal([]byte(output), &result); err != nil {
+			t.Fatalf("Failed to parse JSON output: %v\nOutput: %s", err, output)
+		}
+
+		if result.Summary.Failed != 1 {
+			t.Errorf("Expected 1 failed, got %d", result.Summary.Failed)
+		}
+		if len(result.Operations) != 1 {
+			t.Fatalf("Expected 1 operation, got %d", len(result.Operations))
+		}
+		if result.Operations[0].Status != StatusFailed {
+			t.Errorf("Expected operation status %s, got %s", StatusFailed, result.Operations[0].Status)
+		}
+	})
 }

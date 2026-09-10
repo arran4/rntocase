@@ -22,6 +22,7 @@ func TestPascal_Execute(t *testing.T) {
 	}
 
 	args := []string{}
+	args = append(args, "--json")
 	args = append(args, "--dry-run")
 	args = append(args, "--interactive")
 
@@ -34,6 +35,9 @@ func TestPascal_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
+	if cmd.outputJSON != true {
+		t.Errorf("Expected outputJSON to be true, got '%v'", cmd.outputJSON)
+	}
 	if cmd.dryRun != true {
 		t.Errorf("Expected dryRun to be true, got '%v'", cmd.dryRun)
 	}

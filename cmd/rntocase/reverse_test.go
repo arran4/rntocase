@@ -23,6 +23,7 @@ func TestReverse_Execute(t *testing.T) {
 
 	args := []string{}
 	args = append(args, "--word-mode")
+	args = append(args, "--json")
 	args = append(args, "--dry-run")
 	args = append(args, "--interactive")
 
@@ -37,6 +38,9 @@ func TestReverse_Execute(t *testing.T) {
 
 	if cmd.wordMode != true {
 		t.Errorf("Expected wordMode to be true, got '%v'", cmd.wordMode)
+	}
+	if cmd.outputJSON != true {
+		t.Errorf("Expected outputJSON to be true, got '%v'", cmd.outputJSON)
 	}
 	if cmd.dryRun != true {
 		t.Errorf("Expected dryRun to be true, got '%v'", cmd.dryRun)

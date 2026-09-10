@@ -21,6 +21,7 @@ type Reverse struct {
 	*RootCmd
 	Flags         *flag.FlagSet
 	wordMode      bool
+	outputJSON    bool
 	dryRun        bool
 	interactive   bool
 	files         []string
@@ -82,6 +83,17 @@ func (c *Reverse) Execute(args []string) error {
 					c.wordMode = b
 				} else {
 					c.wordMode = true
+				}
+
+			case "outputJSON", "json":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.outputJSON = b
+				} else {
+					c.outputJSON = true
 				}
 
 			case "dryRun", "dry-run":
@@ -165,6 +177,8 @@ func (c *RootCmd) NewReverse() *Reverse {
 
 	set.BoolVar(&v.wordMode, "word-mode", false, "Reverse words instead of characters")
 
+	set.BoolVar(&v.outputJSON, "json", false, "Output in JSON format")
+
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
 	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
@@ -172,7 +186,7 @@ func (c *RootCmd) NewReverse() *Reverse {
 
 	v.CommandAction = func(c *Reverse) error {
 
-		err := cli.RunReverse(c.wordMode, c.dryRun, c.interactive, c.files...)
+		err := cli.RunReverse(c.wordMode, c.outputJSON, c.dryRun, c.interactive, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

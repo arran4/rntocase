@@ -24,6 +24,7 @@ func TestDot_Execute(t *testing.T) {
 	args := []string{}
 	args = append(args, "--delimiter")
 	args = append(args, "test")
+	args = append(args, "--json")
 	args = append(args, "--dry-run")
 	args = append(args, "--interactive")
 
@@ -38,6 +39,9 @@ func TestDot_Execute(t *testing.T) {
 
 	if cmd.delimiter != "test" {
 		t.Errorf("Expected delimiter to be 'test', got '%v'", cmd.delimiter)
+	}
+	if cmd.outputJSON != true {
+		t.Errorf("Expected outputJSON to be true, got '%v'", cmd.outputJSON)
 	}
 	if cmd.dryRun != true {
 		t.Errorf("Expected dryRun to be true, got '%v'", cmd.dryRun)

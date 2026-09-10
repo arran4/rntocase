@@ -20,6 +20,7 @@ var _ Cmd = (*Lowerleading)(nil)
 type Lowerleading struct {
 	*RootCmd
 	Flags         *flag.FlagSet
+	outputJSON    bool
 	dryRun        bool
 	interactive   bool
 	files         []string
@@ -71,6 +72,17 @@ func (c *Lowerleading) Execute(args []string) error {
 			_ = value
 			_ = hasValue
 			switch name {
+
+			case "outputJSON", "json":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.outputJSON = b
+				} else {
+					c.outputJSON = true
+				}
 
 			case "dryRun", "dry-run":
 				if hasValue {
@@ -151,6 +163,8 @@ func (c *RootCmd) NewLowerleading() *Lowerleading {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
+	set.BoolVar(&v.outputJSON, "json", false, "Output in JSON format")
+
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
 	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
@@ -158,7 +172,7 @@ func (c *RootCmd) NewLowerleading() *Lowerleading {
 
 	v.CommandAction = func(c *Lowerleading) error {
 
-		err := cli.RunLowerLeading(c.dryRun, c.interactive, c.files...)
+		err := cli.RunLowerLeading(c.outputJSON, c.dryRun, c.interactive, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

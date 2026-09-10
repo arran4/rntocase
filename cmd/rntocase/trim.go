@@ -21,6 +21,7 @@ type Trim struct {
 	*RootCmd
 	Flags         *flag.FlagSet
 	trimChars     string
+	outputJSON    bool
 	dryRun        bool
 	interactive   bool
 	files         []string
@@ -83,6 +84,17 @@ func (c *Trim) Execute(args []string) error {
 					}
 				}
 				c.trimChars = value
+
+			case "outputJSON", "json":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.outputJSON = b
+				} else {
+					c.outputJSON = true
+				}
 
 			case "dryRun", "dry-run":
 				if hasValue {
@@ -165,6 +177,8 @@ func (c *RootCmd) NewTrim() *Trim {
 
 	set.StringVar(&v.trimChars, "trim-chars", "", "The characters to trim")
 
+	set.BoolVar(&v.outputJSON, "json", false, "Output in JSON format")
+
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
 	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
@@ -172,7 +186,7 @@ func (c *RootCmd) NewTrim() *Trim {
 
 	v.CommandAction = func(c *Trim) error {
 
-		err := cli.RunTrim(c.trimChars, c.dryRun, c.interactive, c.files...)
+		err := cli.RunTrim(c.trimChars, c.outputJSON, c.dryRun, c.interactive, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

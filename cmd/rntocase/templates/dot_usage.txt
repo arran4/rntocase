@@ -15,6 +15,7 @@ Subcommands:
 
 Flags:
     --delimiter string   (default: ".")   The delimiter to use
+    --json                                Output in JSON format
     --dry-run                             Print the rename operations to be performed without executing them
     --interactive                         Prompt for confirmation before executing each rename operation
 
