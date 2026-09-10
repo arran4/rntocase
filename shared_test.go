@@ -498,13 +498,13 @@ func TestRenameFilesJSON(t *testing.T) {
 
 		go func() {
 			f()
-			w.Close()
+			_ = w.Close()
 		}()
 
 		var buf strings.Builder
-		io.Copy(&buf, r)
+		_, _ = io.Copy(&buf, r)
 		os.Stdout = oldStdout
-		r.Close()
+		_ = r.Close()
 		return buf.String()
 	}
 
@@ -514,7 +514,7 @@ func TestRenameFilesJSON(t *testing.T) {
 
 	t.Run("successful dry run JSON", func(t *testing.T) {
 		fPath := filepath.Join(tempDir, "dry_run.txt")
-		os.WriteFile(fPath, []byte("test"), 0644)
+		_ = os.WriteFile(fPath, []byte("test"), 0644)
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath}, renameFunc, true, false, true)
@@ -544,7 +544,7 @@ func TestRenameFilesJSON(t *testing.T) {
 
 	t.Run("successful execution JSON", func(t *testing.T) {
 		fPath := filepath.Join(tempDir, "exec.txt")
-		os.WriteFile(fPath, []byte("test"), 0644)
+		_ = os.WriteFile(fPath, []byte("test"), 0644)
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
@@ -574,7 +574,7 @@ func TestRenameFilesJSON(t *testing.T) {
 
 	t.Run("unchanged operation", func(t *testing.T) {
 		fPath := filepath.Join(tempDir, "UNCHANGED.txt")
-		os.WriteFile(fPath, []byte("test"), 0644)
+		_ = os.WriteFile(fPath, []byte("test"), 0644)
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
@@ -599,8 +599,8 @@ func TestRenameFilesJSON(t *testing.T) {
 	t.Run("collision", func(t *testing.T) {
 		fPath1 := filepath.Join(tempDir, "col1.txt")
 		fPath2 := filepath.Join(tempDir, "COL1.txt")
-		os.WriteFile(fPath1, []byte("test"), 0644)
-		os.WriteFile(fPath2, []byte("test2"), 0644)
+		_ = os.WriteFile(fPath1, []byte("test"), 0644)
+		_ = os.WriteFile(fPath2, []byte("test2"), 0644)
 
 		output := captureStdout(func() {
 			err := RenameFiles([]string{fPath1}, renameFunc, false, false, true)
