@@ -674,33 +674,49 @@ func TestRenameFilesJSON(t *testing.T) {
 			t.Fatalf("Expected 4 operations, got %d", len(result.Operations))
 		}
 
-		hasSkipped := false
-		hasUnchanged := false
-		hasCollision := 0
+		sourceCounts := make(map[string]int)
 		for _, op := range result.Operations {
-			if op.Status == StatusSkipped {
-				hasSkipped = true
+			sourceCounts[op.Source]++
+			if op.Source == fPath1 && op.Status != StatusCollision {
+				t.Errorf("Expected fPath1 to have StatusCollision, got %s", op.Status)
 			}
-			if op.Status == StatusUnchanged {
-				hasUnchanged = true
+			if op.Source == fPath3 && op.Status != StatusCollision {
+				t.Errorf("Expected fPath3 to have StatusCollision, got %s", op.Status)
 			}
-			if op.Status == StatusCollision {
-				hasCollision++
+			if op.Source == fPath2 && op.Status != StatusSkipped {
+				t.Errorf("Expected fPath2 to have StatusSkipped, got %s", op.Status)
 			}
-		}
-		if !hasSkipped {
-			t.Error("Expected one skipped operation")
-		}
-		if !hasUnchanged {
-			t.Error("Expected one unchanged operation")
-		}
-		if hasCollision != 2 {
-			t.Errorf("Expected 2 collision operations, got %d", hasCollision)
+			if op.Source == fPath4 && op.Status != StatusUnchanged {
+				t.Errorf("Expected fPath4 to have StatusUnchanged, got %s", op.Status)
+			}
 		}
 
-		// Verify no files were renamed
+		// Verify every input source appeared exactly once
+		for _, p := range []string{fPath1, fPath2, fPath3, fPath4} {
+			if sourceCounts[p] != 1 {
+				t.Errorf("Expected source %s to appear exactly once, got %d", p, sourceCounts[p])
+			}
+		}
+
+		// Verify NO FILES were modified on disk
+		if _, err := os.Stat(filepath.Join(tempDir, "col1.txt")); err != nil {
+			t.Error("col1.txt should still exist unchanged")
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "col2.txt")); err != nil {
+			t.Error("col2.txt should still exist unchanged")
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "col3.txt")); err != nil {
+			t.Error("col3.txt should still exist unchanged")
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, "COL4.txt")); err != nil {
+			t.Error("COL4.txt should still exist unchanged")
+		}
+
+		if _, err := os.Stat(filepath.Join(tempDir, "COL1.txt")); !os.IsNotExist(err) {
+			t.Error("COL1.txt was created incorrectly")
+		}
 		if _, err := os.Stat(filepath.Join(tempDir, "COL2.txt")); !os.IsNotExist(err) {
-			t.Error("Files were renamed even though batch aborted")
+			t.Error("COL2.txt was created incorrectly")
 		}
 	})
 
