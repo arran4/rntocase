@@ -198,6 +198,7 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		}
 
 		newCanonicalPath := filepath.Join(evalDir, newName)
+		destKey := strings.ToLower(newCanonicalPath)
 
 		plan := RenamePlan{
 			OriginalPath: file,
@@ -209,17 +210,31 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		if !plan.WillChange {
 			plan.Status = StatusUnchanged
 		} else {
-			destKey := strings.ToLower(newCanonicalPath)
-
 			destCount[destKey]++
 			if destCount[destKey] > 1 {
 				plan.Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
 				plan.Status = StatusCollision
 
-				// Retroactively flag the FIRST mapped file as a collision too if it hasn't failed yet
+				// Retroactively flag the FIRST mapped file as a collision using the exact canonical key structure
 				for i := range plans {
-					if strings.ToLower(plans[i].NewPath) == strings.ToLower(newPath) && plans[i].Error == nil {
-						plans[i].Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
+					// re-derive the peer's canonical key
+					peerDir := filepath.Dir(plans[i].NewPath)
+					peerBase := filepath.Base(plans[i].NewPath)
+					peerAbsDir, err := filepath.Abs(peerDir)
+					var peerEvalDir string
+					if err == nil {
+						peerEvalDir, _ = filepath.EvalSymlinks(peerAbsDir)
+						if peerEvalDir == "" {
+							peerEvalDir = peerAbsDir
+						}
+					} else {
+						peerEvalDir = peerDir
+					}
+					peerCanonicalPath := filepath.Join(peerEvalDir, peerBase)
+					peerDestKey := strings.ToLower(peerCanonicalPath)
+
+					if peerDestKey == destKey && plans[i].Error == nil {
+						plans[i].Error = fmt.Errorf("collision: multiple source files map to destination '%s'", plans[i].NewPath)
 						plans[i].Status = StatusCollision
 					}
 				}
