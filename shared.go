@@ -215,6 +215,14 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 			if destCount[destKey] > 1 {
 				plan.Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
 				plan.Status = StatusCollision
+
+				// Retroactively flag the FIRST mapped file as a collision too if it hasn't failed yet
+				for i := range plans {
+					if strings.ToLower(plans[i].NewPath) == strings.ToLower(newPath) && plans[i].Error == nil {
+						plans[i].Error = fmt.Errorf("collision: multiple source files map to destination '%s'", newPath)
+						plans[i].Status = StatusCollision
+					}
+				}
 			} else {
 				destStat, destErr := os.Lstat(newPath)
 				if destErr == nil {
@@ -236,6 +244,7 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 
 	var batchErrors []*RenameError
 
+	// Ensure retroactive errors are collected in batchErrors
 	// Phase 1b: Batch Safety Validation
 	for _, plan := range plans {
 		if plan.Error != nil {
@@ -247,7 +256,6 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 				NewPath: plan.NewPath,
 				Err:     plan.Error,
 			})
-
 		}
 	}
 

@@ -622,18 +622,35 @@ func TestRenameFilesJSON(t *testing.T) {
 		}
 	})
 
-	t.Run("collision", func(t *testing.T) {
+	t.Run("collision exhaustive batch", func(t *testing.T) {
 		fPath1 := filepath.Join(tempDir, "col1.txt")
-		fPath2 := filepath.Join(tempDir, "COL1.txt")
+		fPath2 := filepath.Join(tempDir, "col2.txt")
+		fPath3 := filepath.Join(tempDir, "col3.txt") // Will be a collision with col1.txt
+		fPath4 := filepath.Join(tempDir, "COL4.txt") // Already uppercase (unchanged)
+
 		if err := os.WriteFile(fPath1, []byte("test"), 0644); err != nil {
 			t.Fatalf("failed to write test file 1: %v", err)
 		}
-		if err := os.WriteFile(fPath2, []byte("test2"), 0644); err != nil {
+		if err := os.WriteFile(fPath2, []byte("test"), 0644); err != nil {
 			t.Fatalf("failed to write test file 2: %v", err)
+		}
+		if err := os.WriteFile(fPath3, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file 3: %v", err)
+		}
+		if err := os.WriteFile(fPath4, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to write test file 4: %v", err)
+		}
+
+		// Map col3.txt to col1.txt destination (COL1.TXT)
+		badRenameFunc := func(s string) (string, error) {
+			if s == "col3" {
+				return "COL1", nil
+			}
+			return strings.ToUpper(s), nil
 		}
 
 		output := captureStdout(func() {
-			err := RenameFiles([]string{fPath1}, renameFunc, false, false, true)
+			err := RenameFiles([]string{fPath1, fPath2, fPath3, fPath4}, badRenameFunc, false, false, true)
 			if err == nil {
 				t.Error("Expected error due to collision, got nil")
 			}
@@ -644,14 +661,46 @@ func TestRenameFilesJSON(t *testing.T) {
 			t.Fatalf("Failed to parse JSON output: %v\nOutput: %s", err, output)
 		}
 
-		if result.Summary.Collision != 1 {
-			t.Errorf("Expected 1 collision, got %d", result.Summary.Collision)
+		if result.Summary.Collision != 2 {
+			t.Errorf("Expected 2 collisions, got %d", result.Summary.Collision)
 		}
-		if len(result.Operations) != 1 {
-			t.Fatalf("Expected 1 operation, got %d", len(result.Operations))
+		if result.Summary.Skipped != 1 {
+			t.Errorf("Expected 1 skipped, got %d", result.Summary.Skipped)
 		}
-		if result.Operations[0].Status != StatusCollision {
-			t.Errorf("Expected operation status %s, got %s", StatusCollision, result.Operations[0].Status)
+		if result.Summary.Unchanged != 1 {
+			t.Errorf("Expected 1 unchanged, got %d", result.Summary.Unchanged)
+		}
+		if len(result.Operations) != 4 {
+			t.Fatalf("Expected 4 operations, got %d", len(result.Operations))
+		}
+
+		hasSkipped := false
+		hasUnchanged := false
+		hasCollision := 0
+		for _, op := range result.Operations {
+			if op.Status == StatusSkipped {
+				hasSkipped = true
+			}
+			if op.Status == StatusUnchanged {
+				hasUnchanged = true
+			}
+			if op.Status == StatusCollision {
+				hasCollision++
+			}
+		}
+		if !hasSkipped {
+			t.Error("Expected one skipped operation")
+		}
+		if !hasUnchanged {
+			t.Error("Expected one unchanged operation")
+		}
+		if hasCollision != 2 {
+			t.Errorf("Expected 2 collision operations, got %d", hasCollision)
+		}
+
+		// Verify no files were renamed
+		if _, err := os.Stat(filepath.Join(tempDir, "COL2.txt")); !os.IsNotExist(err) {
+			t.Error("Files were renamed even though batch aborted")
 		}
 	})
 
