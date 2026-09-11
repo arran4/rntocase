@@ -6,12 +6,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/arran4/rntocase/cmd"
+	"github.com/arran4/rntocase/internal/cli"
 	"os"
 	"slices"
 	"strings"
-
-	"github.com/arran4/rntocase/cmd"
-	"github.com/arran4/rntocase/internal/cli"
 )
 
 var _ Cmd = (*SkillUpdate)(nil)
@@ -43,13 +42,11 @@ func (c *SkillUpdate) UsageRecursive() {
 	}
 }
 
-func (c *SkillUpdate) Execute(args []string) (err error) {
+func (c *SkillUpdate) Execute(args []string) error {
 	var remainingArgs []string
-	dashDashSeen := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
-			dashDashSeen = true
 			remainingArgs = append(remainingArgs, args[i+1:]...)
 			break
 		}
@@ -105,7 +102,7 @@ func (c *SkillUpdate) Execute(args []string) (err error) {
 		}
 	}
 
-	if !dashDashSeen && len(remainingArgs) > 0 {
+	if len(remainingArgs) > 0 {
 		if cmd, ok := c.SubCommands[remainingArgs[0]]; ok {
 			return cmd().Execute(remainingArgs[1:])
 		}

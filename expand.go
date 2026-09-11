@@ -30,7 +30,6 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 
 	discoveredMap := make(map[string]bool)
 	var discovered []string
-
 	for _, root := range files {
 		rootStat, err := os.Lstat(root)
 		if err != nil {
@@ -42,6 +41,11 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 				discoveredMap[root] = true
 				discovered = append(discovered, root)
 			}
+			continue
+		}
+
+		if recursive && (rootStat.Mode()&os.ModeSymlink) != 0 {
+			// Skip explicitly supplied symlinks when in recursive mode
 			continue
 		}
 

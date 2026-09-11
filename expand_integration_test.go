@@ -1,6 +1,8 @@
 package rntocase
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -84,10 +86,40 @@ func TestRenameFilesWithDiscovery_JSONOutput(t *testing.T) {
 	f1 := filepath.Join(tempDir, "file_one.txt")
 	require.NoError(t, os.WriteFile(f1, []byte("test"), 0644))
 
+	f2 := filepath.Join(tempDir, "file_two.txt")
+	require.NoError(t, os.WriteFile(f2, []byte("test"), 0644))
+
 	renameFunc := func(s string) (string, error) {
 		return s + "_renamed", nil
 	}
 
-	err := RenameFilesWithDiscovery([]string{tempDir}, true, nil, nil, renameFunc, false, false, true)
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := RenameFilesWithDiscovery([]string{tempDir}, true, nil, nil, renameFunc, true, false, true) // json=true, dryRun=true
 	require.NoError(t, err)
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+
+	var result RenameResult
+	err = json.Unmarshal(buf.Bytes(), &result)
+	require.NoError(t, err)
+
+	assert.True(t, result.DryRun)
+	assert.Equal(t, 2, len(result.Operations))
+	assert.Equal(t, 2, result.Summary.Planned)
+	assert.Equal(t, 0, result.Summary.Renamed)
+
+	// Ensure determinism by checking order
+	assert.Equal(t, f1, result.Operations[0].Source)
+	assert.Equal(t, filepath.Join(tempDir, "file_one_renamed.txt"), result.Operations[0].Destination)
+
+	assert.Equal(t, f2, result.Operations[1].Source)
+	assert.Equal(t, filepath.Join(tempDir, "file_two_renamed.txt"), result.Operations[1].Destination)
 }

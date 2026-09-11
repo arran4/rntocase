@@ -6,13 +6,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/arran4/rntocase/cmd"
+	"github.com/arran4/rntocase/internal/cli"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/arran4/rntocase/cmd"
-	"github.com/arran4/rntocase/internal/cli"
 )
 
 var _ Cmd = (*Dot)(nil)
@@ -51,13 +50,11 @@ func (c *Dot) UsageRecursive() {
 	}
 }
 
-func (c *Dot) Execute(args []string) (err error) {
+func (c *Dot) Execute(args []string) error {
 	var remainingArgs []string
-	dashDashSeen := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
-			dashDashSeen = true
 			remainingArgs = append(remainingArgs, args[i+1:]...)
 			break
 		}
@@ -184,7 +181,7 @@ func (c *Dot) Execute(args []string) (err error) {
 		}
 	}
 
-	if !dashDashSeen && len(remainingArgs) > 0 {
+	if len(remainingArgs) > 0 {
 		if cmd, ok := c.SubCommands[remainingArgs[0]]; ok {
 			return cmd().Execute(remainingArgs[1:])
 		}

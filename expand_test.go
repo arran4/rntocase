@@ -163,3 +163,43 @@ func TestExpandFiles_ExplicitFileRoot(t *testing.T) {
 		assert.Equal(t, []string{"missing_file"}, files)
 	})
 }
+
+func TestExpandFiles_SymlinkRoots(t *testing.T) {
+	tempDir := t.TempDir()
+
+	file1 := filepath.Join(tempDir, "file1.txt")
+	require.NoError(t, os.WriteFile(file1, []byte("test"), 0644))
+
+	symFile := filepath.Join(tempDir, "sym_file.txt")
+	require.NoError(t, os.Symlink(file1, symFile))
+
+	subDir := filepath.Join(tempDir, "sub")
+	require.NoError(t, os.Mkdir(subDir, 0755))
+
+	symDir := filepath.Join(tempDir, "sym_dir")
+	require.NoError(t, os.Symlink(subDir, symDir))
+
+	t.Run("Recursive Skips Explicit File Symlink", func(t *testing.T) {
+		files, err := ExpandFiles([]string{symFile}, true, nil, nil)
+		require.NoError(t, err)
+		assert.Empty(t, files) // should skip completely
+	})
+
+	t.Run("Recursive Skips Explicit Dir Symlink", func(t *testing.T) {
+		files, err := ExpandFiles([]string{symDir}, true, nil, nil)
+		require.NoError(t, err)
+		assert.Empty(t, files) // should skip completely
+	})
+
+	t.Run("NonRecursive Preserves File Symlink", func(t *testing.T) {
+		files, err := ExpandFiles([]string{symFile}, false, nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, []string{symFile}, files)
+	})
+
+	t.Run("NonRecursive Preserves Dir Symlink", func(t *testing.T) {
+		files, err := ExpandFiles([]string{symDir}, false, nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, []string{symDir}, files)
+	})
+}
