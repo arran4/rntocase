@@ -34,6 +34,9 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 	for _, root := range files {
 		rootStat, err := os.Lstat(root)
 		if err != nil {
+			if recursive {
+				return nil, fmt.Errorf("recursive root not accessible: %w", err)
+			}
 			// Let it pass through to the RenameFiles step which will fail with a good error
 			if !discoveredMap[root] {
 				discoveredMap[root] = true
@@ -43,7 +46,66 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 		}
 
 		if !rootStat.IsDir() {
-			// It's a file, keep it
+			if recursive {
+				// Apply filtering to the file root
+				slashRelPath := filepath.Base(root)
+
+				excluded := false
+				for _, pattern := range excludes {
+					matchPattern := pattern
+					if !strings.HasPrefix(pattern, "/") && !strings.HasPrefix(pattern, "**") {
+						matchPattern = "**/" + pattern
+					}
+					matched, _ := doublestar.Match(matchPattern, slashRelPath)
+					if matched {
+						excluded = true
+						break
+					}
+					if !strings.Contains(pattern, "/") {
+						matchedBase, _ := doublestar.Match(pattern, slashRelPath)
+						if matchedBase {
+							excluded = true
+							break
+						}
+					}
+				}
+
+				if excluded {
+					continue
+				}
+
+				included := len(includes) == 0
+				if !included {
+					for _, pattern := range includes {
+						matchPattern := pattern
+						if !strings.HasPrefix(pattern, "/") && !strings.HasPrefix(pattern, "**") {
+							matchPattern = "**/" + pattern
+						}
+						matched, _ := doublestar.Match(matchPattern, slashRelPath)
+						if matched {
+							included = true
+							break
+						}
+						if !strings.Contains(pattern, "/") {
+							matchedBase, _ := doublestar.Match(pattern, slashRelPath)
+							if matchedBase {
+								included = true
+								break
+							}
+						}
+					}
+				}
+
+				if included {
+					if !discoveredMap[root] {
+						discoveredMap[root] = true
+						discovered = append(discovered, root)
+					}
+				}
+				continue
+			}
+
+			// It's a file, keep it (non-recursive)
 			if !discoveredMap[root] {
 				discoveredMap[root] = true
 				discovered = append(discovered, root)
@@ -184,11 +246,6 @@ func RenameFilesWithDiscovery(files []string, recursive bool, includes []string,
 			return err
 		}
 		return err
-	}
-
-	if len(expandedFiles) == 0 && len(files) > 0 {
-		// If filtering removed all files, return success but maybe warn?
-		// We will just let RenameFiles handle the empty list cleanly.
 	}
 
 	return RenameFiles(expandedFiles, renameFunc, dryRun, interactive, outputJSON)

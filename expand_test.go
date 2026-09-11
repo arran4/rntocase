@@ -125,3 +125,41 @@ func TestExpandFiles(t *testing.T) {
 		assert.Equal(t, []string{f}, files)
 	})
 }
+
+func TestExpandFiles_ExplicitFileRoot(t *testing.T) {
+	tempDir := t.TempDir()
+
+	file1 := filepath.Join(tempDir, "file1.txt")
+	require.NoError(t, os.WriteFile(file1, []byte("test"), 0644))
+
+	file2 := filepath.Join(tempDir, "file2.jpg")
+	require.NoError(t, os.WriteFile(file2, []byte("test"), 0644))
+
+	t.Run("Recursive With Include JPG", func(t *testing.T) {
+		files, err := ExpandFiles([]string{file1, file2}, true, []string{"*.jpg"}, nil)
+		require.NoError(t, err)
+
+		expected := []string{
+			file2,
+		}
+
+		assert.Equal(t, expected, files)
+	})
+
+	t.Run("Recursive With Exclude TXT", func(t *testing.T) {
+		files, err := ExpandFiles([]string{file1, file2}, true, nil, []string{"*.txt"})
+		require.NoError(t, err)
+
+		expected := []string{
+			file2,
+		}
+
+		assert.Equal(t, expected, files)
+	})
+
+	t.Run("NonRecursive Preserves Missing", func(t *testing.T) {
+		files, err := ExpandFiles([]string{"missing_file"}, false, nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"missing_file"}, files)
+	})
+}
