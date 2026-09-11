@@ -17,6 +17,13 @@ var (
 	date    = "unknown"
 )
 
+// Provenance
+var (
+	GeneratorVersion = "v0.0.29"
+	GeneratedAt      = "2026-09-11T01:49:27Z"
+	ProjectCommit    = "d09294267859e05d195b43020d36aab977e8279c"
+)
+
 func main() {
 	root, err := NewRoot("rntocase", version, commit, date)
 	if err != nil {

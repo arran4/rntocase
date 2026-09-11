@@ -14,11 +14,14 @@ Subcommands:
 
 
 Flags:
-    --delimiter string    The delimiter to use
-    --ignore string       The characters to ignore
-    --json                Output in JSON format
-    --dry-run             Print the rename operations to be performed without executing them
-    --interactive         Prompt for confirmation before executing each rename operation
+    --delimiter string   (default: "")   The delimiter to use
+    --ignore string      (default: "")   The characters to ignore
+    --json                               Output in JSON format
+    --dry-run                            Print the rename operations to be performed without executing them
+    --interactive                        Prompt for confirmation before executing each rename operation
+    --recursive, -R                      Recursively traverse directories
+    --include []string                   (type: []string) Include files matching pattern
+    --exclude []string                   (type: []string) Exclude files matching pattern
 
 Positional Arguments:
-    files      (min: 1) The files to rename
+    [files...] (min: 1) The files to rename

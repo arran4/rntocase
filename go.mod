@@ -4,6 +4,7 @@ go 1.25.3
 
 require (
 	github.com/arran4/strings2 v0.0.18
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/stretchr/testify v1.9.0

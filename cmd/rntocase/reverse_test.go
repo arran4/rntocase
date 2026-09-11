@@ -26,6 +26,11 @@ func TestReverse_Execute(t *testing.T) {
 	args = append(args, "--json")
 	args = append(args, "--dry-run")
 	args = append(args, "--interactive")
+	args = append(args, "--recursive")
+	args = append(args, "--include")
+	args = append(args, "test")
+	args = append(args, "--exclude")
+	args = append(args, "test")
 
 	err := cmd.Execute(args)
 	if err != nil {
@@ -47,6 +52,9 @@ func TestReverse_Execute(t *testing.T) {
 	}
 	if cmd.interactive != true {
 		t.Errorf("Expected interactive to be true, got '%v'", cmd.interactive)
+	}
+	if cmd.recursive != true {
+		t.Errorf("Expected recursive to be true, got '%v'", cmd.recursive)
 	}
 }
 
