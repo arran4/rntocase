@@ -1308,6 +1308,9 @@ You can install a skill into your user profile or the current project directory 
 # Install from a remote GitHub repository
 $ rntocase skill install arran4/rntocase --scope user
 
+# Install a specific pinned revision and path
+$ rntocase skill install arran4/rntocase --ref v0.0.1 --path skills/example --name example
+
 # Install from a local path
 $ rntocase skill install ./skills/rntocase --scope project
 ```

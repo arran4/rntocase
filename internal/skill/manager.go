@@ -103,7 +103,26 @@ func CheckUpdate(meta *Metadata) (bool, string, error) {
 		return false, "", fmt.Errorf("local skills cannot be updated automatically")
 	}
 
-	apiURL := fmt.Sprintf("%s/repos/%s/commits/HEAD", GitHubAPIURL, meta.OwnerRepo)
+	// If the requested ref is a 40-character hex string (an exact SHA pin), it never updates.
+	if len(meta.RequestedRef) == 40 {
+		isHex := true
+		for _, c := range meta.RequestedRef {
+			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+				isHex = false
+				break
+			}
+		}
+		if isHex {
+			return false, meta.SourceRevision, nil
+		}
+	}
+
+	ref := meta.RequestedRef
+	if ref == "" {
+		ref = "HEAD"
+	}
+
+	apiURL := fmt.Sprintf("%s/repos/%s/commits/%s", GitHubAPIURL, meta.OwnerRepo, ref)
 	// Optionally add path parameter if it's a subfolder? We just check the whole repo HEAD here
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
