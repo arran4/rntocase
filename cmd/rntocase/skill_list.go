@@ -3,15 +3,14 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"github.com/arran4/rntocase/cmd"
+	"github.com/arran4/rntocase/internal/cli"
 	"os"
 	"slices"
 	"strings"
-
-	"errors"
-	"github.com/arran4/rntocase/cmd"
-	"github.com/arran4/rntocase/internal/cli"
 )
 
 var _ Cmd = (*SkillList)(nil)

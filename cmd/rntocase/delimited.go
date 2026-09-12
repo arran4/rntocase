@@ -3,16 +3,15 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"github.com/arran4/rntocase/cmd"
+	"github.com/arran4/rntocase/internal/cli"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
-
-	"errors"
-	"github.com/arran4/rntocase/cmd"
-	"github.com/arran4/rntocase/internal/cli"
 )
 
 var _ Cmd = (*Delimited)(nil)
@@ -25,6 +24,9 @@ type Delimited struct {
 	outputJSON    bool
 	dryRun        bool
 	interactive   bool
+	recursive     bool
+	include       []string
+	exclude       []string
 	files         []string
 	SubCommands   map[string]func() Cmd
 	CommandAction func(c *Delimited) error
@@ -129,6 +131,39 @@ func (c *Delimited) Execute(args []string) error {
 				} else {
 					c.interactive = true
 				}
+
+			case "recursive":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.recursive = b
+				} else {
+					c.recursive = true
+				}
+
+			case "include":
+				if !hasValue {
+					if i+1 < len(args) {
+						value = args[i+1]
+						i++
+					} else {
+						return fmt.Errorf("flag %s requires a value", name)
+					}
+				}
+				c.include = append(c.include, value)
+
+			case "exclude":
+				if !hasValue {
+					if i+1 < len(args) {
+						value = args[i+1]
+						i++
+					} else {
+						return fmt.Errorf("flag %s requires a value", name)
+					}
+				}
+				c.exclude = append(c.exclude, value)
 			default:
 				return fmt.Errorf("unknown flag: --%s", name)
 			}
@@ -142,6 +177,11 @@ func (c *Delimited) Execute(args []string) error {
 					return nil
 				}
 				found := false
+
+				if char == "R" {
+					found = true
+					c.recursive = true
+				}
 
 				if !found {
 					return fmt.Errorf("unknown flag: -%s", char)
@@ -196,11 +236,18 @@ func (c *RootCmd) NewDelimited() *Delimited {
 	set.BoolVar(&v.dryRun, "dry-run", false, "Print the rename operations to be performed without executing them")
 
 	set.BoolVar(&v.interactive, "interactive", false, "Prompt for confirmation before executing each rename operation")
+
+	set.BoolVar(&v.recursive, "recursive", false, "Recursively traverse directories")
+	set.BoolVar(&v.recursive, "R", false, "Recursively traverse directories")
+
+	set.Var((*StringSlice)(&v.include), "include", "(type: []string) Include files matching pattern")
+
+	set.Var((*StringSlice)(&v.exclude), "exclude", "(type: []string) Exclude files matching pattern")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *Delimited) error {
 
-		err := cli.RunDelimited(c.delimiter, c.ignore, c.outputJSON, c.dryRun, c.interactive, c.files...)
+		err := cli.RunDelimited(c.delimiter, c.ignore, c.outputJSON, c.dryRun, c.interactive, c.recursive, c.include, c.exclude, c.files...)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()
