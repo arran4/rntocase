@@ -93,22 +93,41 @@ func TestRenameFilesWithDiscovery_JSONOutput(t *testing.T) {
 		return s + "_renamed", nil
 	}
 
-	// Capture stdout
+	// Capture stdout safely
 	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	err := RenameFilesWithDiscovery([]string{tempDir}, true, nil, nil, renameFunc, true, false, true) // json=true, dryRun=true
+	r, w, err := os.Pipe()
 	require.NoError(t, err)
 
-	w.Close()
-	os.Stdout = oldStdout
+	t.Cleanup(func() {
+		os.Stdout = oldStdout
+		_ = w.Close()
+		_ = r.Close()
+	})
+	os.Stdout = w
 
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	outCh := make(chan []byte, 1)
+	readErrCh := make(chan error, 1)
+
+	go func() {
+		var buf bytes.Buffer
+		_, readErr := buf.ReadFrom(r)
+		readErrCh <- readErr
+		outCh <- buf.Bytes()
+	}()
+
+	renameErr := RenameFilesWithDiscovery([]string{tempDir}, true, nil, nil, renameFunc, true, false, true) // json=true, dryRun=true
+
+	os.Stdout = oldStdout
+	require.NoError(t, w.Close())
+
+	require.NoError(t, <-readErrCh)
+	capturedBytes := <-outCh
+
+	require.NoError(t, r.Close())
+	require.NoError(t, renameErr)
 
 	var result RenameResult
-	err = json.Unmarshal(buf.Bytes(), &result)
+	err = json.Unmarshal(capturedBytes, &result)
 	require.NoError(t, err)
 
 	assert.True(t, result.DryRun)

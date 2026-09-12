@@ -33,6 +33,47 @@ If an operation fails during execution (e.g., due to permission errors), the too
 ## Extension Policy
 The renaming algorithm preserves standard file extensions, including common compound extensions like `.tar.gz`, `.tar.bz2`, and `.tar.xz`. It will correctly identify and exclude these extensions from the casing transformation. It also correctly handles extensionless files and dotfiles (e.g., `.env`).
 
+## Recursive Renaming & Filtering
+
+Directory traversal is explicit and opt-in via `-R` or `--recursive`. When recursion is enabled, `rntocase` traverses provided directory roots to discover target files.
+
+* **Explicit and opt-in:** Recursive mode must be explicitly requested using `-R` or `--recursive`.
+* **Files only by default:** Recursive mode selects regular files only; directory names are never renamed.
+* **Symlink handling:** Recursively discovered symlinks are skipped, and directory symlinks are not followed to prevent traversal cycles. Explicitly supplied symlinks are also skipped in recursive mode.
+* **Existing non-recursive behavior unchanged:** When `-R` / `--recursive` is omitted, `rntocase` preserves its existing non-recursive positional-file behavior.
+* **Safe preflight planning:** Discovered files are gathered across all provided roots upfront before the safe rename planner runs. Collision preflight checks (detecting multiple files mapping to the same destination or collisions with existing files) validate the entire discovered set before any filesystem modifications occur. If a collision is detected, the operation aborts cleanly with no modifications made.
+* **Filtering with doublestar globs:** Repeatable `--include` and `--exclude` flags allow filtering discovered files. Filters use shell-style doublestar globs rather than regexes, evaluated against slash-normalized paths relative to each supplied directory root.
+  * `**` semantics match across directory hierarchies (e.g., `--exclude '.git/**'` skips `.git` directories and all nested contents, and `--include '**/*.jpg'` matches `.jpg` files at any depth).
+  * Multiple `--include` flags behave as alternatives (union): a file is included if it matches any pattern (or if no `--include` flags are provided).
+  * Exclusions take precedence: any file matching an `--exclude` filter is omitted even if it matches an `--include` filter.
+* **Always inspect with dry-run first:** Users should inspect recursive operations with `--dry-run` before applying changes to disk.
+
+### Examples
+
+Preview recursive renaming safely with a dry run:
+
+```bash
+rntocase snake --dry-run --recursive ./assets
+```
+
+Filter with include and exclude globs:
+
+```bash
+rntocase kebab --dry-run -R \
+  --include '*.jpg' \
+  --exclude '.git/**' \
+  ./photos
+```
+
+Execute once verified:
+
+```bash
+rntocase kebab -R \
+  --include '*.jpg' \
+  --exclude '.git/**' \
+  ./photos
+```
+
 # Usage
 
 ## `rnacronym`
