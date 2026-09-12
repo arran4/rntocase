@@ -306,10 +306,10 @@ func TestRunSkillUpdate_TrackingRef(t *testing.T) {
 			gw := gzip.NewWriter(w)
 			tw := tar.NewWriter(gw)
 			hdr := &tar.Header{Name: "repo-sha/SKILL.md", Mode: 0600, Size: 2}
-			tw.WriteHeader(hdr)
-			tw.Write([]byte("ok"))
-			tw.Close()
-			gw.Close()
+			if err := tw.WriteHeader(hdr); err != nil { panic(err) }
+			if _, err := tw.Write([]byte("ok")); err != nil { panic(err) }
+			if err := tw.Close(); err != nil { panic(err) }
+			if err := gw.Close(); err != nil { panic(err) }
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)

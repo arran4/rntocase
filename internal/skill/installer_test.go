@@ -312,7 +312,8 @@ func TestDownloadGitHubRepository_CustomRef(t *testing.T) {
 	defer func() { GitHubAPIURL = originalAPIURL }()
 
 	// Even if it fails creating/writing tarball due to empty response body, we just check if it queried the right path
-	DownloadGitHubRepository("dummy/repo", "v1.0")
+	_, _, err := DownloadGitHubRepository("dummy/repo", "v1.0")
+	_ = err
 	assert.Contains(t, capturedURL, "tarball/sha-456")
 }
 
