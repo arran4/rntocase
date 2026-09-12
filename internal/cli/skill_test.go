@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/arran4/rntocase/internal/skill"
@@ -28,7 +31,7 @@ func TestRunSkill_UnknownSubcommand(t *testing.T) {
 func TestRunSkillInstall_RequiresSource(t *testing.T) {
 	err := RunSkillInstall([]string{})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "usage: skill install [--replace] <source>")
+	assert.Contains(t, err.Error(), "usage: skill install [--replace] [--ref <ref>] [--path <path>] [--name <name>] <source>")
 }
 
 func TestRunSkillUpdate_RequiresName(t *testing.T) {
@@ -189,4 +192,138 @@ func TestRunSkillUpdate_MultipleFailures(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bad1")
 	assert.Contains(t, err.Error(), "bad2")
+}
+
+func TestRunSkillInstall_WithFlags(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "custom-skill-name")
+
+	// Create a mock local source with a SKILL.md
+	sourceDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), []byte("ok"), 0644))
+
+	err := RunSkillInstall([]string{"--scope", "user", "--name", "custom-skill-name", sourceDir})
+	assert.NoError(t, err)
+
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", string(content))
+}
+
+func TestRunSkillInstall_WithFlags_PathTraversal(t *testing.T) {
+	_ = setupMockHome(t)
+	sourceDir := t.TempDir()
+
+	err := RunSkillInstall([]string{"--scope", "user", "--name", "../escaped", sourceDir})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid skill name: ../escaped")
+}
+func TestRunSkillInstall_DotName(t *testing.T) {
+	_ = setupMockHome(t)
+	sourceDir := t.TempDir()
+
+	err := RunSkillInstall([]string{"--scope", "user", "--name", ".", sourceDir})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid skill name: .")
+}
+
+func TestRunSkillInstall_PathTraversal(t *testing.T) {
+	_ = setupMockHome(t)
+	sourceDir := t.TempDir()
+
+	err := RunSkillInstall([]string{"--scope", "user", "--name", "..", sourceDir})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid skill name: ..")
+}
+
+func TestRunSkillUpdate_PinnedRef(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "pinned-skill")
+	require.NoError(t, os.MkdirAll(destDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("ok"), 0644))
+
+	require.NoError(t, skill.SaveMetadata(destDir, &skill.Metadata{
+		Name:           "pinned-skill",
+		OriginalSource: "dummy/repo",
+		OwnerRepo:      "dummy/repo",
+		SourceRevision: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+		RequestedRef:   "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+	}))
+
+	// Start a dummy server that panics if called, to prove CheckUpdate exits early
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("Update check should have been skipped for exact SHA pin")
+	}))
+	defer ts.Close()
+
+	originalAPIURL := skill.GitHubAPIURL
+	skill.GitHubAPIURL = ts.URL
+	defer func() { skill.GitHubAPIURL = originalAPIURL }()
+
+	err := RunSkillUpdate([]string{"--scope", "user", "pinned-skill"})
+	assert.NoError(t, err) // Already current, should not error
+}
+
+func TestRunSkillInstall_RefNotFound(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	originalAPIURL := skill.GitHubAPIURL
+	skill.GitHubAPIURL = ts.URL
+	defer func() { skill.GitHubAPIURL = originalAPIURL }()
+
+	_ = setupMockHome(t)
+	err := RunSkillInstall([]string{"--scope", "user", "--ref", "does-not-exist", "dummy/repo"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get repository metadata: HTTP 404")
+}
+
+func TestRunSkillUpdate_TrackingRef(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "tracking-skill")
+	require.NoError(t, os.MkdirAll(destDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("ok"), 0644))
+
+	require.NoError(t, skill.SaveMetadata(destDir, &skill.Metadata{
+		Name:           "tracking-skill",
+		OriginalSource: "dummy/repo",
+		OwnerRepo:      "dummy/repo",
+		SourceRevision: "old-sha",
+		RequestedRef:   "main",
+	}))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "commits/main") {
+			commit := skill.GitHubCommit{Sha: "new-sha"}
+			_ = json.NewEncoder(w).Encode(commit)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "tarball/new-sha") {
+			w.WriteHeader(http.StatusOK)
+			// Return dummy tarball with SKILL.md
+			gw := gzip.NewWriter(w)
+			tw := tar.NewWriter(gw)
+			hdr := &tar.Header{Name: "repo-sha/SKILL.md", Mode: 0600, Size: 2}
+			if err := tw.WriteHeader(hdr); err != nil { panic(err) }
+			if _, err := tw.Write([]byte("ok")); err != nil { panic(err) }
+			if err := tw.Close(); err != nil { panic(err) }
+			if err := gw.Close(); err != nil { panic(err) }
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	originalAPIURL := skill.GitHubAPIURL
+	skill.GitHubAPIURL = ts.URL
+	defer func() { skill.GitHubAPIURL = originalAPIURL }()
+
+	err := RunSkillUpdate([]string{"--scope", "user", "tracking-skill"})
+	assert.NoError(t, err)
+
+	meta, err := skill.LoadMetadata(destDir)
+	assert.NoError(t, err)
+	assert.Equal(t, "new-sha", meta.SourceRevision)
 }

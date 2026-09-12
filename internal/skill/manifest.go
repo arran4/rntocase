@@ -17,6 +17,7 @@ type Metadata struct {
 	OwnerRepo      string    `json:"owner_repo,omitempty"`  // For GitHub/remote sources
 	PathWithin     string    `json:"path_within,omitempty"` // For subdirectories in a repo
 	SourceRevision string    `json:"source_revision,omitempty"`
+	RequestedRef   string    `json:"requested_ref,omitempty"` // For pinned refs like branches or tags
 	InstallTime    time.Time `json:"install_time"`
 	InstallerApp   string    `json:"installer_app"`
 	ContentDigest  string    `json:"content_digest,omitempty"`

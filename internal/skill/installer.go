@@ -19,9 +19,12 @@ type GitHubCommit struct {
 }
 
 // DownloadGitHubRepository downloads a repository tarball and returns the temp file path and commit SHA.
-func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
+func DownloadGitHubRepository(ownerRepo, ref string) (string, string, error) {
+	if ref == "" {
+		ref = "HEAD"
+	}
 	// 1. Get latest commit SHA to track revision
-	apiURL := fmt.Sprintf("%s/repos/%s/commits/HEAD", GitHubAPIURL, ownerRepo)
+	apiURL := fmt.Sprintf("%s/repos/%s/commits/%s", GitHubAPIURL, ownerRepo, ref)
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create request: %w", err)
@@ -48,7 +51,7 @@ func DownloadGitHubRepository(ownerRepo string) (string, string, error) {
 	}
 
 	// 2. Download tarball
-	tarballURL := fmt.Sprintf("%s/repos/%s/tarball", GitHubAPIURL, ownerRepo)
+	tarballURL := fmt.Sprintf("%s/repos/%s/tarball/%s", GitHubAPIURL, ownerRepo, commit.Sha)
 	reqTar, err := http.NewRequest("GET", tarballURL, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create tarball request: %w", err)

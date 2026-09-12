@@ -3,6 +3,17 @@ Usage: rntocase skill [flags...] install [flags...]
 
 Install a skill
 
+--scope string    Installation scope: user or project (default "project")
+--agent string    Target agent: common, copilot, cursor, codex, claude (default "common")
+--replace         Replace existing skill if it already exists
+--ref string      Specific Git ref to install (branch, tag, or SHA)
+--path string     Subdirectory path within the repository
+--name string     Local name for the installed skill
+
+Examples:
+
+rntocase skill install owner/repo --ref v1.2.0 --path skills/example --name example
+
 Subcommands:
     help         Print this help message
     usage        Print this usage message

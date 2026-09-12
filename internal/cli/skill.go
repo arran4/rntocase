@@ -38,16 +38,31 @@ func RunSkill(args []string) error {
 }
 
 // RunSkillInstall is a subcommand `rntocase skill install` -- Install a skill
+// Flags:
+//
+//	--scope string    Installation scope: user or project (default "project")
+//	--agent string    Target agent: common, copilot, cursor, codex, claude (default "common")
+//	--replace         Replace existing skill if it already exists
+//	--ref string      Specific Git ref to install (branch, tag, or SHA)
+//	--path string     Subdirectory path within the repository
+//	--name string     Local name for the installed skill
+//
+// Examples:
+//
+//	rntocase skill install owner/repo --ref v1.2.0 --path skills/example --name example
 func RunSkillInstall(args []string) error {
 	fs := flag.NewFlagSet("skill install", flag.ExitOnError)
 	scope := fs.String("scope", "project", "Installation scope: user or project")
 	agent := fs.String("agent", "common", "Target agent: common, copilot, cursor, codex, claude")
 	replace := fs.Bool("replace", false, "Replace existing skill if it already exists")
+	refFlag := fs.String("ref", "", "Specific Git ref to install (branch, tag, or SHA)")
+	pathFlag := fs.String("path", "", "Subdirectory path within the repository")
+	nameFlag := fs.String("name", "", "Local name for the installed skill")
 	_ = fs.Parse(args)
 
 	positionalArgs := fs.Args()
 	if len(positionalArgs) < 1 {
-		return fmt.Errorf("usage: skill install [--replace] <source> [skill-name-or-path]")
+		return fmt.Errorf("usage: skill install [--replace] [--ref <ref>] [--path <path>] [--name <name>] <source> [skill-name-or-path]")
 	}
 
 	source := positionalArgs[0]
@@ -64,24 +79,51 @@ func RunSkillInstall(args []string) error {
 	isLocal := strings.HasPrefix(source, ".") || strings.HasPrefix(source, "/")
 	isOfficial := source == "official" || source == "rntocase"
 
+	// Mapping old positional arguments to new concepts
+	pathWithin := *pathFlag
+	skillName := *nameFlag
+	if nameOrPath != "" {
+		if skillName == "" {
+			if !isLocal && !isOfficial && strings.Contains(nameOrPath, "/") {
+				if pathWithin == "" {
+					pathWithin = nameOrPath
+				}
+			} else {
+				skillName = nameOrPath
+			}
+		} else if pathWithin == "" && !isLocal && !isOfficial && strings.Contains(nameOrPath, "/") {
+			pathWithin = nameOrPath
+		}
+	}
+
 	// Determine final skill name
-	skillName := nameOrPath
 	if skillName == "" {
 		if isLocal {
 			skillName = filepath.Base(source)
 		} else if isOfficial {
 			skillName = "rntocase"
 		} else {
-			parts := strings.Split(source, "/")
-			if len(parts) >= 2 {
-				skillName = parts[1] // fallback to repo name
+			if pathWithin != "" {
+				skillName = filepath.Base(pathWithin)
 			} else {
-				return fmt.Errorf("could not determine skill name automatically, please provide it")
+				parts := strings.Split(source, "/")
+				if len(parts) >= 2 {
+					skillName = parts[1] // fallback to repo name
+				} else {
+					return fmt.Errorf("could not determine skill name automatically, please provide it using --name")
+				}
 			}
 		}
 	}
 
-	destDir := filepath.Join(target.Path, skillName)
+	// Validate skillName doesn't escape the target dir or overwrite it directly
+	cleanedDest := filepath.Clean(filepath.Join(target.Path, skillName))
+	cleanedTarget := filepath.Clean(target.Path)
+	if !strings.HasPrefix(cleanedDest, cleanedTarget+string(filepath.Separator)) || cleanedDest == cleanedTarget {
+		return fmt.Errorf("invalid skill name: %s", skillName)
+	}
+
+	destDir := cleanedDest
 
 	// Check if destination exists before proceeding
 	if _, err := os.Stat(destDir); err == nil {
@@ -103,7 +145,6 @@ func RunSkillInstall(args []string) error {
 	}
 
 	var tarPath string
-	var pathWithin string
 
 	if !isLocal && !isOfficial {
 		// Remote Github Download outside ReplaceSafely to minimize staging time
@@ -112,13 +153,9 @@ func RunSkillInstall(args []string) error {
 			return fmt.Errorf("remote source must be in owner/repo format (e.g. arran4/rntocase) or 'official'")
 		}
 
-		if nameOrPath != "" && strings.Contains(nameOrPath, "/") {
-			pathWithin = nameOrPath
-		}
-
 		var sha string
 		var err error
-		tarPath, sha, err = skill.DownloadGitHubRepository(ownerRepo)
+		tarPath, sha, err = skill.DownloadGitHubRepository(ownerRepo, *refFlag)
 		if err != nil {
 			return fmt.Errorf("failed to download skill: %w", err)
 		}
@@ -127,6 +164,7 @@ func RunSkillInstall(args []string) error {
 		meta.OwnerRepo = ownerRepo
 		meta.SourceRevision = sha
 		meta.PathWithin = pathWithin
+		meta.RequestedRef = *refFlag
 	}
 
 	err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
@@ -350,7 +388,7 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 	fmt.Println("Updating skill...")
 
 	// Re-download first to minimize staging time
-	tarPath, shaDownload, err := skill.DownloadGitHubRepository(meta.OwnerRepo)
+	tarPath, shaDownload, err := skill.DownloadGitHubRepository(meta.OwnerRepo, meta.RequestedRef)
 	if err != nil {
 		return "update failed", fmt.Errorf("failed to download update: %w", err)
 	}
