@@ -17,13 +17,9 @@ func RunSkill() error {
 }
 
 // RunSkillInstall is a subcommand `rntocase skill install` -- Install a skill
+//
 // Flags:
 //
-//	--scope string    Installation scope: user or project (default "project")
-//	--agent string    Target agent: common, copilot, cursor, codex, claude (default "common")
-//	--replace         Replace existing skill if it already exists
-//	--ref string      Specific Git ref to install (branch, tag, or SHA)
-//	--path string     Subdirectory path within the repository
 //	scope:      --scope (default: "project") Installation scope: user or project
 //	agent:      --agent (default: "common") Target agent
 //	replace:    --replace Replace existing skill
