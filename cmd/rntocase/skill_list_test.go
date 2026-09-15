@@ -23,7 +23,7 @@ func TestSkillList_Execute(t *testing.T) {
 	}
 
 	args := []string{}
-	args = append(args, "--args")
+	args = append(args, "--scope")
 	args = append(args, "test")
 
 	err := cmd.Execute(args)
@@ -35,6 +35,9 @@ func TestSkillList_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
+	if cmd.scope != "test" {
+		t.Errorf("Expected scope to be 'test', got '%v'", cmd.scope)
+	}
 }
 
 func TestSkillList_ExecuteHelpAndUnknownFlags(t *testing.T) {

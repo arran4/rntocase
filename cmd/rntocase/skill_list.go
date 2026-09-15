@@ -6,11 +6,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/arran4/rntocase/cmd"
-	"github.com/arran4/rntocase/internal/cli"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/arran4/rntocase/cmd"
+	"github.com/arran4/rntocase/internal/cli"
 )
 
 var _ Cmd = (*SkillList)(nil)
@@ -18,7 +19,7 @@ var _ Cmd = (*SkillList)(nil)
 type SkillList struct {
 	*Skill
 	Flags         *flag.FlagSet
-	args          []string
+	scope         string
 	SubCommands   map[string]func() Cmd
 	CommandAction func(c *SkillList) error
 }
@@ -44,9 +45,11 @@ func (c *SkillList) UsageRecursive() {
 
 func (c *SkillList) Execute(args []string) error {
 	var remainingArgs []string
+	dashDashSeen := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
+			dashDashSeen = true
 			remainingArgs = append(remainingArgs, args[i+1:]...)
 			break
 		}
@@ -68,7 +71,7 @@ func (c *SkillList) Execute(args []string) error {
 			_ = hasValue
 			switch name {
 
-			case "args":
+			case "scope":
 				if !hasValue {
 					if i+1 < len(args) {
 						value = args[i+1]
@@ -77,7 +80,7 @@ func (c *SkillList) Execute(args []string) error {
 						return fmt.Errorf("flag %s requires a value", name)
 					}
 				}
-				c.args = append(c.args, value)
+				c.scope = value
 			default:
 				return fmt.Errorf("unknown flag: --%s", name)
 			}
@@ -102,7 +105,7 @@ func (c *SkillList) Execute(args []string) error {
 		}
 	}
 
-	if len(remainingArgs) > 0 {
+	if !dashDashSeen && len(remainingArgs) > 0 {
 		if cmd, ok := c.SubCommands[remainingArgs[0]]; ok {
 			return cmd().Execute(remainingArgs[1:])
 		}
@@ -127,12 +130,12 @@ func (c *Skill) NewSkillList() *SkillList {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.Var((*StringSlice)(&v.args), "args", "TODO: Add usage text")
+	set.StringVar(&v.scope, "scope", "project", "Installation scope")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *SkillList) error {
 
-		err := cli.RunSkillList(c.args)
+		err := cli.RunSkillList(c.scope)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

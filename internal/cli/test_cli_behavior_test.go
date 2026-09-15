@@ -46,7 +46,7 @@ func TestRunSkillInstall_ReplaceFlagFailureLeavesPriorIntact(t *testing.T) {
 	// We do NOT write SKILL.md to sourceDir
 
 	// Run command
-	err = RunSkillInstall([]string{"--replace", "--scope=user", "--agent=common", sourceDir, "my-bad-skill"})
+	err = RunSkillInstall("user", "common", true, "", "", "", sourceDir, "my-bad-skill")
 
 	// Expect failure because of missing SKILL.md
 	if err == nil {

@@ -4,10 +4,12 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -63,7 +65,7 @@ func TestNetwork_Timeout(t *testing.T) {
 	HTTPClient.Timeout = 10 * time.Millisecond // Shorter than the server sleep
 
 	// Test DownloadGitHubRepository timeout
-	_, _, err := DownloadGitHubRepository("dummy/repo")
+	_, _, err := DownloadGitHubRepository("dummy/repo", "")
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, context.DeadlineExceeded, "expected deadline exceeded error")
 
@@ -90,7 +92,7 @@ func TestNetwork_Non200(t *testing.T) {
 	GitHubAPIURL = ts.URL
 
 	// Test DownloadGitHubRepository non-200
-	_, _, err := DownloadGitHubRepository("dummy/repo")
+	_, _, err := DownloadGitHubRepository("dummy/repo", "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "HTTP 500")
 
@@ -287,4 +289,47 @@ func (f *failAllDestRenameFS) Rename(oldpath, newpath string) error {
 		return os.ErrPermission
 	}
 	return f.FakeFSOps.Rename(oldpath, newpath)
+}
+
+func TestDownloadGitHubRepository_CustomRef(t *testing.T) {
+	var capturedURL string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.Path
+		if strings.HasSuffix(r.URL.Path, "tarball/sha-456") {
+			w.WriteHeader(http.StatusOK)
+			// Need a valid tarball to avoid gzip reader errors, or just let it fail at extract
+			// We only care about the URL for this test, so writing some junk and ignoring extraction error is ok.
+			return
+		}
+
+		commit := GitHubCommit{Sha: "sha-456"}
+		_ = json.NewEncoder(w).Encode(commit)
+	}))
+	defer ts.Close()
+
+	originalAPIURL := GitHubAPIURL
+	GitHubAPIURL = ts.URL
+	defer func() { GitHubAPIURL = originalAPIURL }()
+
+	// Even if it fails creating/writing tarball due to empty response body, we just check if it queried the right path
+	_, _, err := DownloadGitHubRepository("dummy/repo", "v1.0")
+	_ = err
+	assert.Contains(t, capturedURL, "tarball/sha-456")
+}
+
+func TestExtractTarGz_MissingSKILLmd(t *testing.T) {
+	destDir := t.TempDir()
+
+	files := map[string]string{
+		"repo-sha/lib/helper.py": "print('hello')",
+	}
+
+	tarPath := createTestTarball(t, files)
+	defer func() { _ = os.Remove(tarPath) }()
+
+	err := ExtractTarGz(tarPath, destDir, "")
+	assert.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(destDir, "SKILL.md"))
+	assert.True(t, os.IsNotExist(err))
 }

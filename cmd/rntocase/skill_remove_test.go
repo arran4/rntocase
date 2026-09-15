@@ -23,7 +23,10 @@ func TestSkillRemove_Execute(t *testing.T) {
 	}
 
 	args := []string{}
-	args = append(args, "--args")
+	args = append(args, "--scope")
+	args = append(args, "test")
+	args = append(args, "--agent")
+	args = append(args, "test")
 	args = append(args, "test")
 
 	err := cmd.Execute(args)
@@ -35,6 +38,15 @@ func TestSkillRemove_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
+	if cmd.scope != "test" {
+		t.Errorf("Expected scope to be 'test', got '%v'", cmd.scope)
+	}
+	if cmd.agent != "test" {
+		t.Errorf("Expected agent to be 'test', got '%v'", cmd.agent)
+	}
+	if cmd.name != "test" {
+		t.Errorf("Expected name to be 'test', got '%v'", cmd.name)
+	}
 }
 
 func TestSkillRemove_ExecuteHelpAndUnknownFlags(t *testing.T) {

@@ -22,8 +22,6 @@ func TestSkill_Execute(t *testing.T) {
 	}
 
 	args := []string{}
-	args = append(args, "--args")
-	args = append(args, "test")
 
 	err := cmd.Execute(args)
 	if err != nil {

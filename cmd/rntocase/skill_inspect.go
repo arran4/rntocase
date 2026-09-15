@@ -6,11 +6,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/arran4/rntocase/cmd"
-	"github.com/arran4/rntocase/internal/cli"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
+
+	"github.com/arran4/rntocase/cmd"
+	"github.com/arran4/rntocase/internal/cli"
 )
 
 var _ Cmd = (*SkillInspect)(nil)
@@ -18,7 +20,10 @@ var _ Cmd = (*SkillInspect)(nil)
 type SkillInspect struct {
 	*Skill
 	Flags         *flag.FlagSet
-	args          []string
+	scope         string
+	agent         string
+	outputJSON    bool
+	name          string
 	SubCommands   map[string]func() Cmd
 	CommandAction func(c *SkillInspect) error
 }
@@ -44,9 +49,11 @@ func (c *SkillInspect) UsageRecursive() {
 
 func (c *SkillInspect) Execute(args []string) error {
 	var remainingArgs []string
+	dashDashSeen := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
+			dashDashSeen = true
 			remainingArgs = append(remainingArgs, args[i+1:]...)
 			break
 		}
@@ -68,7 +75,7 @@ func (c *SkillInspect) Execute(args []string) error {
 			_ = hasValue
 			switch name {
 
-			case "args":
+			case "scope":
 				if !hasValue {
 					if i+1 < len(args) {
 						value = args[i+1]
@@ -77,7 +84,29 @@ func (c *SkillInspect) Execute(args []string) error {
 						return fmt.Errorf("flag %s requires a value", name)
 					}
 				}
-				c.args = append(c.args, value)
+				c.scope = value
+
+			case "agent":
+				if !hasValue {
+					if i+1 < len(args) {
+						value = args[i+1]
+						i++
+					} else {
+						return fmt.Errorf("flag %s requires a value", name)
+					}
+				}
+				c.agent = value
+
+			case "outputJSON", "json":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.outputJSON = b
+				} else {
+					c.outputJSON = true
+				}
 			default:
 				return fmt.Errorf("unknown flag: --%s", name)
 			}
@@ -102,9 +131,21 @@ func (c *SkillInspect) Execute(args []string) error {
 		}
 	}
 
-	if len(remainingArgs) > 0 {
+	if !dashDashSeen && len(remainingArgs) > 0 {
 		if cmd, ok := c.SubCommands[remainingArgs[0]]; ok {
 			return cmd().Execute(remainingArgs[1:])
+		}
+	}
+	if len(remainingArgs) < 1 {
+		return fmt.Errorf("expected at least 1 positional arguments, got %d", len(remainingArgs))
+	}
+	// Handle positional argument name
+	{
+		argIndex := 0
+		if argIndex >= 0 && argIndex < len(remainingArgs) {
+			argVal := remainingArgs[argIndex]
+			c.name = argVal
+		} else {
 		}
 	}
 
@@ -127,12 +168,16 @@ func (c *Skill) NewSkillInspect() *SkillInspect {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.Var((*StringSlice)(&v.args), "args", "TODO: Add usage text")
+	set.StringVar(&v.scope, "scope", "project", "Installation scope")
+
+	set.StringVar(&v.agent, "agent", "common", "Target agent")
+
+	set.BoolVar(&v.outputJSON, "json", false, "Output in JSON format")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *SkillInspect) error {
 
-		err := cli.RunSkillInspect(c.args)
+		err := cli.RunSkillInspect(c.scope, c.agent, c.outputJSON, c.name)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

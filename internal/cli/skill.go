@@ -2,7 +2,6 @@ package cli
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,50 +12,44 @@ import (
 )
 
 // RunSkill is a subcommand `rntocase skill` -- Manage AI agent skills for this CLI
-func RunSkill(args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("skill command requires a subcommand (install, update, remove, list, inspect)")
-	}
-
-	subcommand := args[0]
-	subArgs := args[1:]
-
-	switch subcommand {
-	case "install":
-		return RunSkillInstall(subArgs)
-	case "update":
-		return RunSkillUpdate(subArgs)
-	case "remove":
-		return RunSkillRemove(subArgs)
-	case "list":
-		return RunSkillList(subArgs)
-	case "inspect":
-		return RunSkillInspect(subArgs)
-	default:
-		return fmt.Errorf("unknown skill subcommand: %s", subcommand)
-	}
+func RunSkill() error {
+	return fmt.Errorf("skill command requires a subcommand (install, update, remove, list, inspect)")
 }
 
 // RunSkillInstall is a subcommand `rntocase skill install` -- Install a skill
-func RunSkillInstall(args []string) error {
-	fs := flag.NewFlagSet("skill install", flag.ExitOnError)
-	scope := fs.String("scope", "project", "Installation scope: user or project")
-	agent := fs.String("agent", "common", "Target agent: common, copilot, cursor, codex, claude")
-	replace := fs.Bool("replace", false, "Replace existing skill if it already exists")
-	_ = fs.Parse(args)
-
-	positionalArgs := fs.Args()
-	if len(positionalArgs) < 1 {
-		return fmt.Errorf("usage: skill install [--replace] <source> [skill-name-or-path]")
+//
+// Flags:
+//
+//	scope:      --scope (default: "project") Installation scope: user or project
+//	agent:      --agent (default: "common") Target agent
+//	replace:    --replace Replace existing skill
+//	ref:        --ref Specific Git ref
+//	path:       --path Repository subdirectory
+//	name:       --name Local skill name
+//	source:     @1 (min: 1) Source repository/path
+//	nameOrPath: @2 (default: "") Optional fallback name/path
+//
+// Examples:
+//
+//	rntocase skill install --ref v1.2.0 --path skills/example --name example owner/repo
+func RunSkillInstall(
+	scope string,
+	agent string,
+	replace bool,
+	ref string,
+	path string,
+	name string,
+	source string,
+	nameOrPath string,
+) error {
+	if scope == "" {
+		scope = "project"
+	}
+	if agent == "" {
+		agent = "common"
 	}
 
-	source := positionalArgs[0]
-	nameOrPath := ""
-	if len(positionalArgs) > 1 {
-		nameOrPath = positionalArgs[1]
-	}
-
-	target, err := skill.ResolveTarget(*scope, *agent)
+	target, err := skill.ResolveTarget(scope, agent)
 	if err != nil {
 		return err
 	}
@@ -64,28 +57,55 @@ func RunSkillInstall(args []string) error {
 	isLocal := strings.HasPrefix(source, ".") || strings.HasPrefix(source, "/")
 	isOfficial := source == "official" || source == "rntocase"
 
+	// Mapping old positional arguments to new concepts
+	pathWithin := path
+	skillName := name
+	if nameOrPath != "" {
+		if skillName == "" {
+			if !isLocal && !isOfficial && strings.Contains(nameOrPath, "/") {
+				if pathWithin == "" {
+					pathWithin = nameOrPath
+				}
+			} else {
+				skillName = nameOrPath
+			}
+		} else if pathWithin == "" && !isLocal && !isOfficial && strings.Contains(nameOrPath, "/") {
+			pathWithin = nameOrPath
+		}
+	}
+
 	// Determine final skill name
-	skillName := nameOrPath
 	if skillName == "" {
 		if isLocal {
 			skillName = filepath.Base(source)
 		} else if isOfficial {
 			skillName = "rntocase"
 		} else {
-			parts := strings.Split(source, "/")
-			if len(parts) >= 2 {
-				skillName = parts[1] // fallback to repo name
+			if pathWithin != "" {
+				skillName = filepath.Base(pathWithin)
 			} else {
-				return fmt.Errorf("could not determine skill name automatically, please provide it")
+				parts := strings.Split(source, "/")
+				if len(parts) >= 2 {
+					skillName = parts[1] // fallback to repo name
+				} else {
+					return fmt.Errorf("could not determine skill name automatically, please provide it using --name")
+				}
 			}
 		}
 	}
 
-	destDir := filepath.Join(target.Path, skillName)
+	// Validate skillName doesn't escape the target dir or overwrite it directly
+	cleanedDest := filepath.Clean(filepath.Join(target.Path, skillName))
+	cleanedTarget := filepath.Clean(target.Path)
+	if !strings.HasPrefix(cleanedDest, cleanedTarget+string(filepath.Separator)) || cleanedDest == cleanedTarget {
+		return fmt.Errorf("invalid skill name: %s", skillName)
+	}
+
+	destDir := cleanedDest
 
 	// Check if destination exists before proceeding
 	if _, err := os.Stat(destDir); err == nil {
-		if !*replace {
+		if !replace {
 			if _, metaErr := skill.LoadMetadata(destDir); metaErr == nil {
 				return fmt.Errorf("skill '%s' is already installed at %s. Use 'skill update' to update it, or use --replace to force reinstall", skillName, destDir)
 			}
@@ -103,7 +123,6 @@ func RunSkillInstall(args []string) error {
 	}
 
 	var tarPath string
-	var pathWithin string
 
 	if !isLocal && !isOfficial {
 		// Remote Github Download outside ReplaceSafely to minimize staging time
@@ -112,13 +131,9 @@ func RunSkillInstall(args []string) error {
 			return fmt.Errorf("remote source must be in owner/repo format (e.g. arran4/rntocase) or 'official'")
 		}
 
-		if nameOrPath != "" && strings.Contains(nameOrPath, "/") {
-			pathWithin = nameOrPath
-		}
-
 		var sha string
 		var err error
-		tarPath, sha, err = skill.DownloadGitHubRepository(ownerRepo)
+		tarPath, sha, err = skill.DownloadGitHubRepository(ownerRepo, ref)
 		if err != nil {
 			return fmt.Errorf("failed to download skill: %w", err)
 		}
@@ -127,6 +142,7 @@ func RunSkillInstall(args []string) error {
 		meta.OwnerRepo = ownerRepo
 		meta.SourceRevision = sha
 		meta.PathWithin = pathWithin
+		meta.RequestedRef = ref
 	}
 
 	err = skill.ReplaceSafely(destDir, func(stagingDir string) error {
@@ -170,16 +186,21 @@ func RunSkillInstall(args []string) error {
 }
 
 // RunSkillUpdate is a subcommand `rntocase skill update` -- Update a skill
-func RunSkillUpdate(args []string) error {
-	fs := flag.NewFlagSet("skill update", flag.ExitOnError)
-	scope := fs.String("scope", "project", "Installation scope")
-	agent := fs.String("agent", "common", "Target agent")
-	force := fs.Bool("force", false, "Force update and overwrite local changes")
-	all := fs.Bool("all", false, "Update all installed skills in the given scope")
-	_ = fs.Parse(args)
+// Flags:
+//	scope: --scope (default: "project") Installation scope
+//	agent: --agent (default: "common") Target agent
+//	force: --force Force update and overwrite local changes
+//	all:   --all Update all installed skills in the given scope
+//	name:  @1 The name of the skill to update
+func RunSkillUpdate(scope string, agent string, force bool, all bool, name string) error {
+	if scope == "" {
+		scope = "project"
+	}
+	if agent == "" {
+		agent = "common"
+	}
 
-	positionalArgs := fs.Args()
-	if len(positionalArgs) < 1 && !*all {
+	if name == "" && !all {
 		return fmt.Errorf("usage: skill update <name> or skill update --all")
 	}
 
@@ -192,14 +213,14 @@ func RunSkillUpdate(args []string) error {
 
 	var skillsToUpdate []skillUpdateTask
 
-	if *all {
-		installed, err := skill.ListInstalledSkills(*scope)
+	if all {
+		installed, err := skill.ListInstalledSkills(scope)
 		if err != nil {
 			return err
 		}
 		for _, info := range installed {
 			// Find the actual path using the agent it was found under
-			meta, dir, err := skill.InspectSkill(info.Meta.Name, *scope, info.Agent)
+			meta, dir, err := skill.InspectSkill(info.Meta.Name, scope, info.Agent)
 			if err == nil {
 				skillsToUpdate = append(skillsToUpdate, skillUpdateTask{
 					Name: info.Meta.Name,
@@ -214,8 +235,7 @@ func RunSkillUpdate(args []string) error {
 			}
 		}
 	} else {
-		name := positionalArgs[0]
-		meta, destDir, err := skill.InspectSkill(name, *scope, *agent)
+		meta, destDir, err := skill.InspectSkill(name, scope, agent)
 		if err != nil {
 			// for single skill update, just return the inspect error immediately
 			return err
@@ -251,7 +271,7 @@ func RunSkillUpdate(args []string) error {
 			continue
 		}
 
-		status, err := updateSingleSkill(s.Name, s.Meta, s.Dir, *force)
+		status, err := updateSingleSkill(s.Name, s.Meta, s.Dir, force)
 		results = append(results, updateResult{Name: s.Name, Status: status, Err: err})
 	}
 
@@ -350,7 +370,7 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 	fmt.Println("Updating skill...")
 
 	// Re-download first to minimize staging time
-	tarPath, shaDownload, err := skill.DownloadGitHubRepository(meta.OwnerRepo)
+	tarPath, shaDownload, err := skill.DownloadGitHubRepository(meta.OwnerRepo, meta.RequestedRef)
 	if err != nil {
 		return "update failed", fmt.Errorf("failed to download update: %w", err)
 	}
@@ -395,20 +415,25 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 }
 
 // RunSkillRemove is a subcommand `rntocase skill remove` -- Remove a skill
-func RunSkillRemove(args []string) error {
-	fs := flag.NewFlagSet("skill remove", flag.ExitOnError)
-	scope := fs.String("scope", "project", "Installation scope")
-	agent := fs.String("agent", "common", "Target agent")
-	_ = fs.Parse(args)
-
-	positionalArgs := fs.Args()
-	if len(positionalArgs) < 1 {
-		return fmt.Errorf("usage: skill remove <name>")
+//
+// Flags:
+//
+//	scope: --scope (default: "project") Installation scope
+//	agent: --agent (default: "common") Target agent
+//	name:  @1 (min: 1) The name of the skill to remove
+func RunSkillRemove(scope string, agent string, name string) error {
+	if scope == "" {
+		scope = "project"
+	}
+	if agent == "" {
+		agent = "common"
 	}
 
-	name := positionalArgs[0]
+	if name == "" {
+	    return fmt.Errorf("usage: skill remove <name>")
+	}
 
-	if err := skill.RemoveSkill(name, *scope, *agent); err != nil {
+	if err := skill.RemoveSkill(name, scope, agent); err != nil {
 		return err
 	}
 
@@ -417,12 +442,16 @@ func RunSkillRemove(args []string) error {
 }
 
 // RunSkillList is a subcommand `rntocase skill list` -- List skills
-func RunSkillList(args []string) error {
-	fs := flag.NewFlagSet("skill list", flag.ExitOnError)
-	scope := fs.String("scope", "project", "Installation scope")
-	_ = fs.Parse(args)
+//
+// Flags:
+//
+//	scope: --scope (default: "project") Installation scope
+func RunSkillList(scope string) error {
+	if scope == "" {
+		scope = "project"
+	}
 
-	skills, err := skill.ListInstalledSkills(*scope)
+	skills, err := skill.ListInstalledSkills(scope)
 	if err != nil {
 		return err
 	}
@@ -440,26 +469,31 @@ func RunSkillList(args []string) error {
 }
 
 // RunSkillInspect is a subcommand `rntocase skill inspect` -- Inspect a skill
-func RunSkillInspect(args []string) error {
-	fs := flag.NewFlagSet("skill inspect", flag.ExitOnError)
-	scope := fs.String("scope", "project", "Installation scope")
-	agent := fs.String("agent", "common", "Target agent")
-	outputJSON := fs.Bool("json", false, "Output in JSON format")
-	_ = fs.Parse(args)
-
-	positionalArgs := fs.Args()
-	if len(positionalArgs) < 1 {
-		return fmt.Errorf("usage: skill inspect <name>")
+//
+// Flags:
+//
+//	scope:      --scope (default: "project") Installation scope
+//	agent:      --agent (default: "common") Target agent
+//	outputJSON: --json Output in JSON format
+//	name:       @1 (min: 1) The name of the skill to inspect
+func RunSkillInspect(scope string, agent string, outputJSON bool, name string) error {
+	if scope == "" {
+		scope = "project"
+	}
+	if agent == "" {
+		agent = "common"
 	}
 
-	name := positionalArgs[0]
+	if name == "" {
+	    return fmt.Errorf("usage: skill inspect <name>")
+	}
 
-	meta, destDir, err := skill.InspectSkill(name, *scope, *agent)
+	meta, destDir, err := skill.InspectSkill(name, scope, agent)
 	if err != nil {
 		return err
 	}
 
-	if *outputJSON {
+	if outputJSON {
 		data, _ := json.MarshalIndent(meta, "", "  ")
 		fmt.Println(string(data))
 		return nil

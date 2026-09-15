@@ -23,7 +23,18 @@ func TestSkillInstall_Execute(t *testing.T) {
 	}
 
 	args := []string{}
-	args = append(args, "--args")
+	args = append(args, "--scope")
+	args = append(args, "test")
+	args = append(args, "--agent")
+	args = append(args, "test")
+	args = append(args, "--replace")
+	args = append(args, "--ref")
+	args = append(args, "test")
+	args = append(args, "--path")
+	args = append(args, "test")
+	args = append(args, "--name")
+	args = append(args, "test")
+	args = append(args, "test")
 	args = append(args, "test")
 
 	err := cmd.Execute(args)
@@ -35,6 +46,30 @@ func TestSkillInstall_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
+	if cmd.scope != "test" {
+		t.Errorf("Expected scope to be 'test', got '%v'", cmd.scope)
+	}
+	if cmd.agent != "test" {
+		t.Errorf("Expected agent to be 'test', got '%v'", cmd.agent)
+	}
+	if cmd.replace != true {
+		t.Errorf("Expected replace to be true, got '%v'", cmd.replace)
+	}
+	if cmd.ref != "test" {
+		t.Errorf("Expected ref to be 'test', got '%v'", cmd.ref)
+	}
+	if cmd.path != "test" {
+		t.Errorf("Expected path to be 'test', got '%v'", cmd.path)
+	}
+	if cmd.name != "test" {
+		t.Errorf("Expected name to be 'test', got '%v'", cmd.name)
+	}
+	if cmd.source != "test" {
+		t.Errorf("Expected source to be 'test', got '%v'", cmd.source)
+	}
+	if cmd.nameOrPath != "test" {
+		t.Errorf("Expected nameOrPath to be 'test', got '%v'", cmd.nameOrPath)
+	}
 }
 
 func TestSkillInstall_ExecuteHelpAndUnknownFlags(t *testing.T) {
