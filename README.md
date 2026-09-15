@@ -1306,13 +1306,13 @@ You can install a skill into your user profile or the current project directory 
 
 ```bash
 # Install from a remote GitHub repository
-$ rntocase skill install arran4/rntocase --scope user
+$ rntocase skill install --scope user arran4/rntocase
 
 # Install a specific pinned revision and path
-$ rntocase skill install arran4/rntocase --ref v0.0.1 --path skills/example --name example
+$ rntocase skill install --ref v0.0.1 --path skills/example --name example arran4/rntocase
 
 # Install from a local path
-$ rntocase skill install ./skills/rntocase --scope project
+$ rntocase skill install --scope project ./skills/rntocase
 ```
 
 ## Managing Skills
@@ -1337,6 +1337,14 @@ Remote skills can be updated to fetch the latest changes:
 ```bash
 $ rntocase skill update rntocase
 ```
+
+When you run `rntocase skill update <name>`, the update behavior depends on how the skill was installed:
+
+- **No requested ref:** If no `--ref` was provided during installation, the tool resolves and checks the upstream repository's `HEAD` on update.
+- **Branch or tag tracking:** If a branch or tag was provided to `--ref` during installation, the tool re-resolves the exact same requested ref and updates if its resolved commit changes.
+- **Pinned Commit SHA:** If a 40-character hexadecimal commit SHA was provided, the installation is considered an immutable pin. `skill update` will skip upstream network checks and report it is already up to date.
+
+The `SourceRevision` property in the skill's metadata tracks the fully resolved commit SHA from the time of installation or last update.
 
 ## Machine-Readable JSON Output
 

@@ -35,7 +35,7 @@ func RunSkill() error {
 //
 // Examples:
 //
-//	rntocase skill install owner/repo --ref v1.2.0 --path skills/example --name example
+//	rntocase skill install --ref v1.2.0 --path skills/example --name example owner/repo
 func RunSkillInstall(
 	scope string,
 	agent string,

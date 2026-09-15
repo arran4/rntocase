@@ -11,7 +11,7 @@ Install a skill
 
 Examples:
 
-rntocase skill install owner/repo --ref v1.2.0 --path skills/example --name example
+rntocase skill install --ref v1.2.0 --path skills/example --name example owner/repo
 
 Subcommands:
     help         Print this help message
