@@ -23,7 +23,11 @@ func TestSkillInspect_Execute(t *testing.T) {
 	}
 
 	args := []string{}
-	args = append(args, "--args")
+	args = append(args, "--scope")
+	args = append(args, "test")
+	args = append(args, "--agent")
+	args = append(args, "test")
+	args = append(args, "--json")
 	args = append(args, "test")
 
 	err := cmd.Execute(args)
@@ -35,6 +39,18 @@ func TestSkillInspect_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
+	if cmd.scope != "test" {
+		t.Errorf("Expected scope to be 'test', got '%v'", cmd.scope)
+	}
+	if cmd.agent != "test" {
+		t.Errorf("Expected agent to be 'test', got '%v'", cmd.agent)
+	}
+	if cmd.outputJSON != true {
+		t.Errorf("Expected outputJSON to be true, got '%v'", cmd.outputJSON)
+	}
+	if cmd.name != "test" {
+		t.Errorf("Expected name to be 'test', got '%v'", cmd.name)
+	}
 }
 
 func TestSkillInspect_ExecuteHelpAndUnknownFlags(t *testing.T) {

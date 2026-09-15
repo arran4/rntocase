@@ -23,7 +23,12 @@ func TestSkillUpdate_Execute(t *testing.T) {
 	}
 
 	args := []string{}
-	args = append(args, "--args")
+	args = append(args, "--scope")
+	args = append(args, "test")
+	args = append(args, "--agent")
+	args = append(args, "test")
+	args = append(args, "--force")
+	args = append(args, "--all")
 	args = append(args, "test")
 
 	err := cmd.Execute(args)
@@ -35,6 +40,21 @@ func TestSkillUpdate_Execute(t *testing.T) {
 		t.Error("CommandAction was not called")
 	}
 
+	if cmd.scope != "test" {
+		t.Errorf("Expected scope to be 'test', got '%v'", cmd.scope)
+	}
+	if cmd.agent != "test" {
+		t.Errorf("Expected agent to be 'test', got '%v'", cmd.agent)
+	}
+	if cmd.force != true {
+		t.Errorf("Expected force to be true, got '%v'", cmd.force)
+	}
+	if cmd.all != true {
+		t.Errorf("Expected all to be true, got '%v'", cmd.all)
+	}
+	if cmd.name != "test" {
+		t.Errorf("Expected name to be 'test', got '%v'", cmd.name)
+	}
 }
 
 func TestSkillUpdate_ExecuteHelpAndUnknownFlags(t *testing.T) {

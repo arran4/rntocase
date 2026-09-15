@@ -19,7 +19,6 @@ var _ Cmd = (*Skill)(nil)
 type Skill struct {
 	*RootCmd
 	Flags         *flag.FlagSet
-	args          []string
 	SubCommands   map[string]func() Cmd
 	CommandAction func(c *Skill) error
 }
@@ -70,17 +69,6 @@ func (c *Skill) Execute(args []string) error {
 			_ = value
 			_ = hasValue
 			switch name {
-
-			case "args":
-				if !hasValue {
-					if i+1 < len(args) {
-						value = args[i+1]
-						i++
-					} else {
-						return fmt.Errorf("flag %s requires a value", name)
-					}
-				}
-				c.args = append(c.args, value)
 			default:
 				return fmt.Errorf("unknown flag: --%s", name)
 			}
@@ -94,7 +82,6 @@ func (c *Skill) Execute(args []string) error {
 					return nil
 				}
 				found := false
-
 				if !found {
 					return fmt.Errorf("unknown flag: -%s", char)
 				}
@@ -129,13 +116,11 @@ func (c *RootCmd) NewSkill() *Skill {
 		Flags:       set,
 		SubCommands: make(map[string]func() Cmd),
 	}
-
-	set.Var((*StringSlice)(&v.args), "args", "TODO: Add usage text")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *Skill) error {
 
-		err := cli.RunSkill(c.args)
+		err := cli.RunSkill()
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()

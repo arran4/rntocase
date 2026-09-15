@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/arran4/rntocase/cmd"
@@ -19,7 +20,14 @@ var _ Cmd = (*SkillInstall)(nil)
 type SkillInstall struct {
 	*Skill
 	Flags         *flag.FlagSet
-	args          []string
+	scope         string
+	agent         string
+	replace       bool
+	ref           string
+	path          string
+	name          string
+	source        string
+	nameOrPath    string
 	SubCommands   map[string]func() Cmd
 	CommandAction func(c *SkillInstall) error
 }
@@ -71,7 +79,7 @@ func (c *SkillInstall) Execute(args []string) error {
 			_ = hasValue
 			switch name {
 
-			case "args":
+			case "scope":
 				if !hasValue {
 					if i+1 < len(args) {
 						value = args[i+1]
@@ -80,7 +88,62 @@ func (c *SkillInstall) Execute(args []string) error {
 						return fmt.Errorf("flag %s requires a value", name)
 					}
 				}
-				c.args = append(c.args, value)
+				c.scope = value
+
+			case "agent":
+				if !hasValue {
+					if i+1 < len(args) {
+						value = args[i+1]
+						i++
+					} else {
+						return fmt.Errorf("flag %s requires a value", name)
+					}
+				}
+				c.agent = value
+
+			case "replace":
+				if hasValue {
+					b, err := strconv.ParseBool(value)
+					if err != nil {
+						return fmt.Errorf("invalid boolean value for flag %s: %s", name, value)
+					}
+					c.replace = b
+				} else {
+					c.replace = true
+				}
+
+			case "ref":
+				if !hasValue {
+					if i+1 < len(args) {
+						value = args[i+1]
+						i++
+					} else {
+						return fmt.Errorf("flag %s requires a value", name)
+					}
+				}
+				c.ref = value
+
+			case "path":
+				if !hasValue {
+					if i+1 < len(args) {
+						value = args[i+1]
+						i++
+					} else {
+						return fmt.Errorf("flag %s requires a value", name)
+					}
+				}
+				c.path = value
+
+			case "name":
+				if !hasValue {
+					if i+1 < len(args) {
+						value = args[i+1]
+						i++
+					} else {
+						return fmt.Errorf("flag %s requires a value", name)
+					}
+				}
+				c.name = value
 			default:
 				return fmt.Errorf("unknown flag: --%s", name)
 			}
@@ -110,6 +173,28 @@ func (c *SkillInstall) Execute(args []string) error {
 			return cmd().Execute(remainingArgs[1:])
 		}
 	}
+	if len(remainingArgs) < 1 {
+		return fmt.Errorf("expected at least 1 positional arguments, got %d", len(remainingArgs))
+	}
+	// Handle positional argument source
+	{
+		argIndex := 0
+		if argIndex >= 0 && argIndex < len(remainingArgs) {
+			argVal := remainingArgs[argIndex]
+			c.source = argVal
+		} else {
+		}
+	}
+	// Handle positional argument nameOrPath
+	{
+		argIndex := 1
+		if argIndex >= 0 && argIndex < len(remainingArgs) {
+			argVal := remainingArgs[argIndex]
+			c.nameOrPath = argVal
+		} else {
+			c.nameOrPath = ""
+		}
+	}
 
 	if c.CommandAction != nil {
 		if err := c.CommandAction(c); err != nil {
@@ -130,12 +215,22 @@ func (c *Skill) NewSkillInstall() *SkillInstall {
 		SubCommands: make(map[string]func() Cmd),
 	}
 
-	set.Var((*StringSlice)(&v.args), "args", "TODO: Add usage text")
+	set.StringVar(&v.scope, "scope", "project", "Installation scope: user or project")
+
+	set.StringVar(&v.agent, "agent", "common", "Target agent")
+
+	set.BoolVar(&v.replace, "replace", false, "Replace existing skill")
+
+	set.StringVar(&v.ref, "ref", "", "Specific Git ref")
+
+	set.StringVar(&v.path, "path", "", "Repository subdirectory")
+
+	set.StringVar(&v.name, "name", "", "Local skill name")
 	set.Usage = v.Usage
 
 	v.CommandAction = func(c *SkillInstall) error {
 
-		err := cli.RunSkillInstall(c.args)
+		err := cli.RunSkillInstall(c.scope, c.agent, c.replace, c.ref, c.path, c.name, c.source, c.nameOrPath)
 		if err != nil {
 			if errors.Is(err, cmd.ErrPrintHelp) {
 				c.Usage()
