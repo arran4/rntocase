@@ -92,8 +92,6 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 	}, nil
 }
 
-// ResolveSkillPath verifies that combining a target with a user-supplied name results
-
 // findProjectRoot attempts to find the root of the project (e.g., where .git is).
 // If not found, it returns the original directory.
 func findProjectRoot(dir string) string {
@@ -134,7 +132,7 @@ func ResolveSkillPath(target *Target, name string) (string, error) {
 	cleanedTarget := filepath.Clean(target.Path)
 
 	rel, err := filepath.Rel(cleanedTarget, cleanedDest)
-	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("invalid skill name prevents traversal or root installation: %s", name)
 	}
 
