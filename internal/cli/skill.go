@@ -96,6 +96,10 @@ func RunSkillInstall(
 		}
 	}
 
+	if err := skill.ValidateSkillName(skillName); err != nil {
+		return fmt.Errorf("invalid skill name: %w", err)
+	}
+
 	// Validate skillName doesn't escape the target dir or overwrite it directly
 	destDir, err := skill.ResolveSkillPath(target, skillName)
 	if err != nil {
