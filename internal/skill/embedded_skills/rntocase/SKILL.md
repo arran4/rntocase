@@ -1,7 +1,3 @@
----
-name: rntocase
-description: batch-rename files by changing their casing
----
 # rntocase Agent Skill
 
 Welcome to the `rntocase` skill for AI coding agents! `rntocase` is a CLI application that helps humans and automated agents batch-rename files by changing their casing (e.g., camelCase, snake_case, PascalCase, kebab-case, etc.).

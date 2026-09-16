@@ -54,10 +54,8 @@ func RunSkillInstall(
 		return err
 	}
 
-	isLocal, isOfficial, ownerRepo, err := skill.ClassifySource(source)
-	if err != nil {
-		return err
-	}
+	isLocal := strings.HasPrefix(source, ".") || strings.HasPrefix(source, "/")
+	isOfficial := source == "official" || source == "rntocase"
 
 	// Mapping old positional arguments to new concepts
 	pathWithin := path
@@ -86,7 +84,7 @@ func RunSkillInstall(
 			if pathWithin != "" {
 				skillName = filepath.Base(pathWithin)
 			} else {
-				parts := strings.Split(ownerRepo, "/")
+				parts := strings.Split(source, "/")
 				if len(parts) >= 2 {
 					skillName = parts[1] // fallback to repo name
 				} else {
@@ -96,15 +94,14 @@ func RunSkillInstall(
 		}
 	}
 
-	if err := skill.ValidateSkillName(skillName); err != nil {
-		return fmt.Errorf("invalid skill name: %w", err)
+	// Validate skillName doesn't escape the target dir or overwrite it directly
+	cleanedDest := filepath.Clean(filepath.Join(target.Path, skillName))
+	cleanedTarget := filepath.Clean(target.Path)
+	if !strings.HasPrefix(cleanedDest, cleanedTarget+string(filepath.Separator)) || cleanedDest == cleanedTarget {
+		return fmt.Errorf("invalid skill name: %s", skillName)
 	}
 
-	// Validate skillName doesn't escape the target dir or overwrite it directly
-	destDir, err := skill.ResolveSkillPath(target, skillName)
-	if err != nil {
-		return fmt.Errorf("invalid skill name: %w", err)
-	}
+	destDir := cleanedDest
 
 	// Check if destination exists before proceeding
 	if _, err := os.Stat(destDir); err == nil {
@@ -129,6 +126,11 @@ func RunSkillInstall(
 
 	if !isLocal && !isOfficial {
 		// Remote Github Download outside ReplaceSafely to minimize staging time
+		ownerRepo := source
+		if !strings.Contains(ownerRepo, "/") {
+			return fmt.Errorf("remote source must be in owner/repo format (e.g. arran4/rntocase) or 'official'")
+		}
+
 		var sha string
 		var err error
 		tarPath, sha, err = skill.DownloadGitHubRepository(ownerRepo, ref)
@@ -159,22 +161,8 @@ func RunSkillInstall(
 		}
 
 		// Validate SKILL.md
-		skillMdPath := filepath.Join(stagingDir, "SKILL.md")
-		mdContent, err := os.ReadFile(skillMdPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("installation failed: skill must contain a SKILL.md file")
-			}
-			return fmt.Errorf("failed to read SKILL.md: %w", err)
-		}
-
-		manifest, err := skill.ParseAndValidateManifest(mdContent)
-		if err != nil {
-			return fmt.Errorf("invalid SKILL.md manifest: %w", err)
-		}
-
-		if manifest.Name != meta.Name {
-			return fmt.Errorf("installation failed: skill name in manifest ('%s') does not match installed directory name ('%s')", manifest.Name, meta.Name)
+		if _, err := os.Stat(filepath.Join(stagingDir, "SKILL.md")); os.IsNotExist(err) {
+			return fmt.Errorf("installation failed: skill must contain a SKILL.md file")
 		}
 
 		digest, err := skill.ComputeDirectoryDigest(stagingDir)
@@ -227,7 +215,7 @@ func RunSkillUpdate(scope string, agent string, force bool, all bool, name strin
 	var skillsToUpdate []skillUpdateTask
 
 	if all {
-		installed, err := skill.ListInstalledSkills(scope, agent)
+		installed, err := skill.ListInstalledSkills(scope)
 		if err != nil {
 			return err
 		}
@@ -336,22 +324,8 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 			}
 
 			// Validate SKILL.md for official/embedded update too
-			skillMdPath := filepath.Join(stagingDir, "SKILL.md")
-			mdContent, err := os.ReadFile(skillMdPath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					return fmt.Errorf("update failed: new skill version must contain a SKILL.md file")
-				}
-				return fmt.Errorf("failed to read SKILL.md: %w", err)
-			}
-
-			manifest, err := skill.ParseAndValidateManifest(mdContent)
-			if err != nil {
-				return fmt.Errorf("invalid SKILL.md manifest: %w", err)
-			}
-
-			if manifest.Name != meta.Name {
-				return fmt.Errorf("update failed: skill name in manifest ('%s') does not match installed directory name ('%s')", manifest.Name, meta.Name)
+			if _, err := os.Stat(filepath.Join(stagingDir, "SKILL.md")); os.IsNotExist(err) {
+				return fmt.Errorf("update failed: new skill version must contain a SKILL.md file")
 			}
 
 			digest, _ := skill.ComputeDirectoryDigest(stagingDir)
@@ -409,22 +383,8 @@ func updateSingleSkillWithExtractor(name string, meta *skill.Metadata, destDir s
 		}
 
 		// Validate SKILL.md for update too
-		skillMdPath := filepath.Join(stagingDir, "SKILL.md")
-		mdContent, err := os.ReadFile(skillMdPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("update failed: new skill version must contain a SKILL.md file")
-			}
-			return fmt.Errorf("failed to read SKILL.md: %w", err)
-		}
-
-		manifest, err := skill.ParseAndValidateManifest(mdContent)
-		if err != nil {
-			return fmt.Errorf("invalid SKILL.md manifest: %w", err)
-		}
-
-		if manifest.Name != meta.Name {
-			return fmt.Errorf("update failed: skill name in manifest ('%s') does not match installed directory name ('%s')", manifest.Name, meta.Name)
+		if _, err := os.Stat(filepath.Join(stagingDir, "SKILL.md")); os.IsNotExist(err) {
+			return fmt.Errorf("update failed: new skill version must contain a SKILL.md file")
 		}
 
 		meta.SourceRevision = shaDownload
@@ -492,7 +452,7 @@ func RunSkillList(scope string) error {
 		scope = "project"
 	}
 
-	skills, err := skill.ListInstalledSkills(scope, "all")
+	skills, err := skill.ListInstalledSkills(scope)
 	if err != nil {
 		return err
 	}

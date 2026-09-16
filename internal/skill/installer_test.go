@@ -123,7 +123,7 @@ func TestExtractTarGz_Success(t *testing.T) {
 	destDir := t.TempDir()
 
 	files := map[string]string{
-		"repo-sha/SKILL.md":      "---\nname: my-skill\ndescription: test\n---\n# My Skill\n",
+		"repo-sha/SKILL.md":      "# My Skill\n",
 		"repo-sha/lib/helper.py": "print('hello')",
 	}
 
@@ -135,7 +135,7 @@ func TestExtractTarGz_Success(t *testing.T) {
 
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "---\nname: my-skill\ndescription: test\n---\n# My Skill\n", string(content))
+	assert.Equal(t, "# My Skill\n", string(content))
 }
 
 func TestReplaceSafelyWithFS_Success(t *testing.T) {
@@ -332,47 +332,4 @@ func TestExtractTarGz_MissingSKILLmd(t *testing.T) {
 
 	_, err = os.Stat(filepath.Join(destDir, "SKILL.md"))
 	assert.True(t, os.IsNotExist(err))
-}
-
-func TestClassifySource(t *testing.T) {
-	tempDir := t.TempDir()
-
-	// Change dir to temp root for relative path testing
-	oldWd, _ := os.Getwd()
-	_ = os.Chdir(tempDir)
-	defer func() {
-		_ = os.Chdir(oldWd)
-	}()
-	_ = os.MkdirAll("skills/example", 0755)
-
-	tests := []struct {
-		name          string
-		source        string
-		wantLocal     bool
-		wantOfficial  bool
-		wantOwnerRepo string
-		wantErr       bool
-	}{
-		{"official", "official", false, true, "", false},
-		{"rntocase", "rntocase", false, true, "", false},
-		{"owner/repo", "owner/repo", false, false, "owner/repo", false},
-		{"invalid remote", "owner-repo", false, false, "", true},
-		{"existing relative dir", "skills/example", true, false, "", false},
-		{"explicit missing relative", "./missing-dir", false, false, "", true},
-		{"explicit missing parent", "../missing-dir", false, false, "", true},
-		{"explicit missing absolute", "/missing-dir-123", false, false, "", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			isLocal, isOfficial, ownerRepo, err := ClassifySource(tt.source)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ClassifySource() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			assert.Equal(t, tt.wantLocal, isLocal)
-			assert.Equal(t, tt.wantOfficial, isOfficial)
-			assert.Equal(t, tt.wantOwnerRepo, ownerRepo)
-		})
-	}
 }
