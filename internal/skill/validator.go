@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,8 +19,8 @@ type AgentSkillManifest struct {
 // ParseAndValidateManifest parses a SKILL.md file content and validates its YAML frontmatter.
 func ParseAndValidateManifest(mdContent []byte) (*AgentSkillManifest, error) {
 	parts := bytes.SplitN(mdContent, []byte("---"), 3)
-	if len(parts) < 3 {
-		return nil, fmt.Errorf("SKILL.md must contain YAML frontmatter enclosed in '---'")
+	if len(parts) < 3 || len(bytes.TrimSpace(parts[0])) != 0 {
+		return nil, fmt.Errorf("SKILL.md must contain YAML frontmatter enclosed in '---' at the start of the file")
 	}
 
 	frontmatter := parts[1]
@@ -29,20 +30,29 @@ func ParseAndValidateManifest(mdContent []byte) (*AgentSkillManifest, error) {
 		return nil, fmt.Errorf("failed to parse YAML frontmatter: %w", err)
 	}
 
-	if manifest.Name == "" {
-		return nil, fmt.Errorf("manifest must define 'name'")
-	}
-	if len(manifest.Name) > 64 {
-		return nil, fmt.Errorf("manifest 'name' must be 1-64 characters")
-	}
-	if !validNameRegex.MatchString(manifest.Name) {
-		return nil, fmt.Errorf("manifest 'name' must contain only lowercase ASCII letters, digits, and hyphens, with no consecutive, leading, or trailing hyphens")
+	if err := ValidateSkillName(manifest.Name); err != nil {
+		return nil, fmt.Errorf("manifest 'name' validation failed: %w", err)
 	}
 
-	if manifest.Description == "" {
-		return nil, fmt.Errorf("manifest must define 'description'")
+	manifest.Description = strings.TrimSpace(manifest.Description)
+	descLen := len([]rune(manifest.Description))
+	if descLen < 1 || descLen > 1024 {
+		return nil, fmt.Errorf("manifest 'description' must be 1-1024 characters")
 	}
-	// The problem asks to validate description length, but doesn't specify it, though standard might be 150. We'll leave it as non-empty as instructed initially or up to a reasonable limit.
 
 	return &manifest, nil
+}
+
+// ValidateSkillName explicitly validates an Agent Skills name
+func ValidateSkillName(name string) error {
+	if name == "" {
+		return fmt.Errorf("name cannot be empty")
+	}
+	if len(name) > 64 {
+		return fmt.Errorf("name must be 1-64 characters")
+	}
+	if !validNameRegex.MatchString(name) {
+		return fmt.Errorf("name must contain only lowercase ASCII letters, digits, and hyphens, with no consecutive, leading, or trailing hyphens")
+	}
+	return nil
 }

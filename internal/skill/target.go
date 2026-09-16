@@ -50,9 +50,9 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		case "cursor":
 			basePath = filepath.Join(homeDir, ".cursor", "skills")
 		case "codex":
-			basePath = filepath.Join(homeDir, ".agents", "skills")
+			basePath = filepath.Join(homeDir, ".codex", "skills")
 		case "claude":
-			basePath = filepath.Join(homeDir, ".agents", "skills")
+			basePath = filepath.Join(homeDir, ".claude", "skills")
 		case "common":
 			basePath = filepath.Join(homeDir, ".agents", "skills")
 		default:
@@ -73,9 +73,9 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		case "cursor":
 			basePath = filepath.Join(projectRoot, ".cursor", "skills")
 		case "codex":
-			basePath = filepath.Join(projectRoot, ".agents", "skills")
+			basePath = filepath.Join(projectRoot, ".codex", "skills")
 		case "claude":
-			basePath = filepath.Join(projectRoot, ".agents", "skills")
+			basePath = filepath.Join(projectRoot, ".claude", "skills")
 		case "common":
 			basePath = filepath.Join(projectRoot, ".agents", "skills")
 		default:

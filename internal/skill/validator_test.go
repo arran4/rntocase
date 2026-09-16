@@ -1,6 +1,7 @@
 package skill
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -39,6 +40,26 @@ func TestParseAndValidateManifest(t *testing.T) {
 			name:    "no frontmatter",
 			content: "# My Skill\n",
 			wantErr: true,
+		},
+		{
+			name:    "frontmatter not at start",
+			content: "# Title\n---\nname: my-skill\ndescription: desc\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "whitespace description",
+			content: "---\nname: my-skill\ndescription: \"   \"\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "too long description",
+			content: "---\nname: my-skill\ndescription: " + strings.Repeat("a", 1025) + "\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "max length description",
+			content: "---\nname: my-skill\ndescription: " + strings.Repeat("a", 1024) + "\n---\n",
+			wantErr: false,
 		},
 	}
 

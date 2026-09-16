@@ -18,8 +18,8 @@ func TestResolveTarget_UserScope(t *testing.T) {
 	}{
 		{"copilot", filepath.Join(homeDir, ".copilot", "skills")},
 		{"cursor", filepath.Join(homeDir, ".cursor", "skills")},
-		{"codex", filepath.Join(homeDir, ".agents", "skills")},
-		{"claude", filepath.Join(homeDir, ".agents", "skills")},
+		{"codex", filepath.Join(homeDir, ".codex", "skills")},
+		{"claude", filepath.Join(homeDir, ".claude", "skills")},
 		{"common", filepath.Join(homeDir, ".agents", "skills")},
 		{"", filepath.Join(homeDir, ".agents", "skills")},
 	}
@@ -47,8 +47,8 @@ func TestResolveTarget_ProjectScope(t *testing.T) {
 	}{
 		{"copilot", ".github/skills"},
 		{"cursor", ".cursor/skills"},
-		{"codex", ".agents/skills"},
-		{"claude", ".agents/skills"},
+		{"codex", ".codex/skills"},
+		{"claude", ".claude/skills"},
 		{"common", ".agents/skills"},
 		{"", ".agents/skills"},
 	}

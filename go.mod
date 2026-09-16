@@ -3,6 +3,7 @@ module github.com/arran4/rntocase
 go 1.25.3
 
 require (
+	github.com/arran4/go-subcommand v0.0.28
 	github.com/arran4/strings2 v0.0.18
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/iancoleman/strcase v0.3.0
@@ -21,7 +22,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/tools v0.48.0 // indirect
 )

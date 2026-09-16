@@ -337,6 +337,12 @@ func TestExtractTarGz_MissingSKILLmd(t *testing.T) {
 func TestClassifySource(t *testing.T) {
 	tempDir := t.TempDir()
 
+	// Change dir to temp root for relative path testing
+	oldWd, _ := os.Getwd()
+	os.Chdir(tempDir)
+	defer os.Chdir(oldWd)
+	os.MkdirAll("skills/example", 0755)
+
 	tests := []struct {
 		name          string
 		source        string
@@ -349,7 +355,7 @@ func TestClassifySource(t *testing.T) {
 		{"rntocase", "rntocase", false, true, "", false},
 		{"owner/repo", "owner/repo", false, false, "owner/repo", false},
 		{"invalid remote", "owner-repo", false, false, "", true},
-		{"existing relative dir", tempDir, true, false, "", false},
+		{"existing relative dir", "skills/example", true, false, "", false},
 		{"explicit missing relative", "./missing-dir", false, false, "", true},
 		{"explicit missing parent", "../missing-dir", false, false, "", true},
 		{"explicit missing absolute", "/missing-dir-123", false, false, "", true},
