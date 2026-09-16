@@ -320,3 +320,28 @@ func replaceSafelyWithFS(destDir string, populateFunc func(stagingDir string) er
 
 	return nil
 }
+
+// ClassifySource determines the type of source for installation.
+func ClassifySource(source string) (isLocal bool, isOfficial bool, ownerRepo string, err error) {
+	if source == "official" || source == "rntocase" {
+		return false, true, "", nil
+	}
+
+	// Try to stat the path to see if it's an existing directory (local)
+	info, statErr := os.Stat(source)
+	if statErr == nil && info.IsDir() {
+		return true, false, "", nil
+	}
+
+	// If it explicitly looks like a local path but stat failed, return error
+	if filepath.IsAbs(source) || strings.HasPrefix(source, "./") || strings.HasPrefix(source, "../") {
+		return false, false, "", fmt.Errorf("local source directory does not exist or is not a directory: %s", source)
+	}
+
+	// Treat as remote owner/repo format
+	if !strings.Contains(source, "/") {
+		return false, false, "", fmt.Errorf("remote source must be in owner/repo format (e.g. arran4/rntocase) or 'official'")
+	}
+
+	return false, false, source, nil
+}

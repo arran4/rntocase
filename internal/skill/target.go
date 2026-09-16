@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // SupportedAgents defines the list of AI agents we know how to install skills for.
@@ -45,13 +46,13 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		// by the agents. Here we simulate a convention.
 		switch agent {
 		case "copilot":
-			basePath = filepath.Join(homeDir, ".github", "copilot", "skills")
+			basePath = filepath.Join(homeDir, ".copilot", "skills")
 		case "cursor":
 			basePath = filepath.Join(homeDir, ".cursor", "skills")
 		case "codex":
-			basePath = filepath.Join(homeDir, ".codex", "skills")
+			basePath = filepath.Join(homeDir, ".agents", "skills")
 		case "claude":
-			basePath = filepath.Join(homeDir, ".claude", "skills")
+			basePath = filepath.Join(homeDir, ".agents", "skills")
 		case "common":
 			basePath = filepath.Join(homeDir, ".agents", "skills")
 		default:
@@ -68,13 +69,13 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		// Project scope usually uses a `.agents` or `.skills` folder in the repo root
 		switch agent {
 		case "copilot":
-			basePath = filepath.Join(projectRoot, ".github", "copilot", "skills")
+			basePath = filepath.Join(projectRoot, ".github", "skills")
 		case "cursor":
 			basePath = filepath.Join(projectRoot, ".cursor", "skills")
 		case "codex":
-			basePath = filepath.Join(projectRoot, ".codex", "skills")
+			basePath = filepath.Join(projectRoot, ".agents", "skills")
 		case "claude":
-			basePath = filepath.Join(projectRoot, ".claude", "skills")
+			basePath = filepath.Join(projectRoot, ".agents", "skills")
 		case "common":
 			basePath = filepath.Join(projectRoot, ".agents", "skills")
 		default:
@@ -89,6 +90,29 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		Scope: scope,
 		Path:  basePath,
 	}, nil
+}
+
+// ResolveSkillPath verifies that combining a target with a user-supplied name results
+// in a path strictly beneath the target's configured directory, preventing traversal.
+func ResolveSkillPath(target *Target, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("skill name cannot be empty")
+	}
+
+	// Also catch absolute paths up front
+	if filepath.IsAbs(name) {
+		return "", fmt.Errorf("invalid skill name prevents absolute paths: %s", name)
+	}
+
+	destPath := filepath.Join(target.Path, name)
+	cleanedDest := filepath.Clean(destPath)
+	cleanedTarget := filepath.Clean(target.Path)
+
+	if !strings.HasPrefix(cleanedDest, cleanedTarget+string(filepath.Separator)) || cleanedDest == cleanedTarget {
+		return "", fmt.Errorf("invalid skill name prevents traversal or root installation: %s", name)
+	}
+
+	return cleanedDest, nil
 }
 
 // findProjectRoot attempts to find the root of the project (e.g., where .git is).

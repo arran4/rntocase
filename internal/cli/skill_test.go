@@ -31,7 +31,7 @@ func TestRunSkill_UnknownSubcommand(t *testing.T) {
 func TestRunSkillInstall_RequiresSource(t *testing.T) {
 	err := RunSkillInstall("", "", false, "", "", "", "", "")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "could not determine skill name automatically")
+	assert.Contains(t, err.Error(), "remote source must be in owner/repo format")
 }
 
 func TestRunSkillUpdate_RequiresName(t *testing.T) {
@@ -56,7 +56,7 @@ func TestRunSkillUpdate_LocalSkillError(t *testing.T) {
 	homeDir := setupMockHome(t)
 	destDir := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
 	require.NoError(t, os.MkdirAll(destDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 
 	require.NoError(t, skill.SaveMetadata(destDir, &skill.Metadata{
 		Name:           "local-skill1",
@@ -80,14 +80,14 @@ func TestRunSkillUpdate_All_InspectionFailure(t *testing.T) {
 	// Valid skill
 	destDir1 := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
 	require.NoError(t, os.MkdirAll(destDir1, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(destDir1, &skill.Metadata{Name: "local-skill1", OriginalSource: "local"}))
 
 	// Second skill that ListInstalledSkills can find, but InspectSkill will fail on.
 	// This happens if the directory name doesn't match the inner skill name.
 	destDir2 := filepath.Join(homeDir, ".agents", "skills", "mismatched-dir")
 	require.NoError(t, os.MkdirAll(destDir2, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(destDir2, &skill.Metadata{Name: "inner-name", OriginalSource: "local"}))
 
 	err := RunSkillUpdate("user", "", false, true, "")
@@ -104,13 +104,13 @@ func TestRunSkillUpdate_PartialFailure(t *testing.T) {
 	// Lexically-first failing remote skill
 	destDir1 := filepath.Join(homeDir, ".agents", "skills", "a-broken")
 	require.NoError(t, os.MkdirAll(destDir1, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(destDir1, &skill.Metadata{Name: "a-broken", OwnerRepo: "invalid/repo"}))
 
 	// Lexically-later valid remote skill
 	destDir2 := filepath.Join(homeDir, ".agents", "skills", "z-current")
 	require.NoError(t, os.MkdirAll(destDir2, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(destDir2, &skill.Metadata{Name: "z-current", OwnerRepo: "valid/repo", SourceRevision: "sha-123"}))
 
 	var validRepoCalled bool
@@ -149,7 +149,7 @@ func TestRunSkillUpdate_AlreadyCurrent(t *testing.T) {
 
 	destDir1 := filepath.Join(homeDir, ".agents", "skills", "current-skill")
 	require.NoError(t, os.MkdirAll(destDir1, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(destDir1, &skill.Metadata{Name: "current-skill", OwnerRepo: "dummy/repo", SourceRevision: "sha-123"}))
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -171,12 +171,12 @@ func TestRunSkillUpdate_MultipleFailures(t *testing.T) {
 
 	destDir1 := filepath.Join(homeDir, ".agents", "skills", "bad1")
 	require.NoError(t, os.MkdirAll(destDir1, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir1, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(destDir1, &skill.Metadata{Name: "bad1", OwnerRepo: "invalid/repo1"}))
 
 	destDir2 := filepath.Join(homeDir, ".agents", "skills", "bad2")
 	require.NoError(t, os.MkdirAll(destDir2, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir2, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(destDir2, &skill.Metadata{Name: "bad2", OwnerRepo: "invalid/repo2"}))
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -200,14 +200,14 @@ func TestRunSkillInstall_WithFlags(t *testing.T) {
 
 	// Create a mock local source with a SKILL.md
 	sourceDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 
 	err := RunSkillInstall("user", "", false, "", "", "custom-skill-name", sourceDir, "")
 	assert.NoError(t, err)
 
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "ok", string(content))
+	assert.Equal(t, "---\nname: custom-skill-name\ndescription: test skill\n---", string(content))
 }
 
 func TestRunSkillInstall_WithFlags_PathTraversal(t *testing.T) {
@@ -216,7 +216,7 @@ func TestRunSkillInstall_WithFlags_PathTraversal(t *testing.T) {
 
 	err := RunSkillInstall("user", "", false, "", "", "../escaped", sourceDir, "")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid skill name: ../escaped")
+	assert.Contains(t, err.Error(), "invalid skill name prevents traversal or root installation: ../escaped")
 }
 func TestRunSkillInstall_DotName(t *testing.T) {
 	_ = setupMockHome(t)
@@ -224,7 +224,7 @@ func TestRunSkillInstall_DotName(t *testing.T) {
 
 	err := RunSkillInstall("user", "", false, "", "", ".", sourceDir, "")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid skill name: .")
+	assert.Contains(t, err.Error(), "invalid skill name prevents traversal or root installation: .")
 }
 
 func TestRunSkillInstall_PathTraversal(t *testing.T) {
@@ -233,14 +233,14 @@ func TestRunSkillInstall_PathTraversal(t *testing.T) {
 
 	err := RunSkillInstall("user", "", false, "", "", "..", sourceDir, "")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid skill name: ..")
+	assert.Contains(t, err.Error(), "invalid skill name prevents traversal or root installation: ..")
 }
 
 func TestRunSkillUpdate_PinnedRef(t *testing.T) {
 	homeDir := setupMockHome(t)
 	destDir := filepath.Join(homeDir, ".agents", "skills", "pinned-skill")
 	require.NoError(t, os.MkdirAll(destDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 
 	require.NoError(t, skill.SaveMetadata(destDir, &skill.Metadata{
 		Name:           "pinned-skill",
@@ -284,7 +284,7 @@ func TestRunSkillUpdate_TrackingRef(t *testing.T) {
 	homeDir := setupMockHome(t)
 	destDir := filepath.Join(homeDir, ".agents", "skills", "tracking-skill")
 	require.NoError(t, os.MkdirAll(destDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("ok"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: custom-skill-name\ndescription: test skill\n---"), 0644))
 
 	require.NoError(t, skill.SaveMetadata(destDir, &skill.Metadata{
 		Name:           "tracking-skill",
@@ -305,11 +305,19 @@ func TestRunSkillUpdate_TrackingRef(t *testing.T) {
 			// Return dummy tarball with SKILL.md
 			gw := gzip.NewWriter(w)
 			tw := tar.NewWriter(gw)
-			hdr := &tar.Header{Name: "repo-sha/SKILL.md", Mode: 0600, Size: 2}
-			if err := tw.WriteHeader(hdr); err != nil { panic(err) }
-			if _, err := tw.Write([]byte("ok")); err != nil { panic(err) }
-			if err := tw.Close(); err != nil { panic(err) }
-			if err := gw.Close(); err != nil { panic(err) }
+			hdr := &tar.Header{Name: "repo-sha/SKILL.md", Mode: 0600, Size: 52}
+			if err := tw.WriteHeader(hdr); err != nil {
+				panic(err)
+			}
+			if _, err := tw.Write([]byte("---\nname: tracking-skill\ndescription: test skill\n---")); err != nil {
+				panic(err)
+			}
+			if err := tw.Close(); err != nil {
+				panic(err)
+			}
+			if err := gw.Close(); err != nil {
+				panic(err)
+			}
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -326,4 +334,29 @@ func TestRunSkillUpdate_TrackingRef(t *testing.T) {
 	meta, err := skill.LoadMetadata(destDir)
 	assert.NoError(t, err)
 	assert.Equal(t, "new-sha", meta.SourceRevision)
+}
+
+func TestRunSkillInstall_NameValidation(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "good-name")
+
+	sourceDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), []byte("---\nname: good-name\ndescription: desc\n---"), 0644))
+
+	// Valid match
+	err := RunSkillInstall("user", "", false, "", "", "good-name", sourceDir, "")
+	assert.NoError(t, err)
+	assert.FileExists(t, filepath.Join(destDir, "SKILL.md"))
+
+	// Valid manifest but user requests mismatch name via --name
+	sourceDirMismatch := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDirMismatch, "SKILL.md"), []byte("---\nname: other-name\ndescription: desc\n---"), 0644))
+	err = RunSkillInstall("user", "", false, "", "", "mismatch-name", sourceDirMismatch, "")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "skill name in manifest ('other-name') does not match installed directory name ('mismatch-name')")
+
+	// Invalid name via --name
+	err = RunSkillInstall("user", "", false, "", "", "Bad-Name", sourceDir, "")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "installation failed: skill name in manifest ('good-name') does not match installed directory name ('Bad-Name')")
 }

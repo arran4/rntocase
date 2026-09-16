@@ -28,7 +28,7 @@ func TestRunSkillInstall_ReplaceFlagFailureLeavesPriorIntact(t *testing.T) {
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	// Save valid metadata so it's "managed"
@@ -57,7 +57,7 @@ func TestRunSkillInstall_ReplaceFlagFailureLeavesPriorIntact(t *testing.T) {
 	// Ensure prior working installation is entirely intact
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "original working version", string(content))
+	assert.Equal(t, "---\nname: original-skill\ndescription: test skill\n---", string(content))
 }
 
 func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing.T) {
@@ -68,7 +68,7 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	meta := &skill.Metadata{
@@ -99,7 +99,7 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	// Ensure prior working installation is entirely intact
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "original working version", string(content))
+	assert.Equal(t, "---\nname: original-skill\ndescription: test skill\n---", string(content))
 }
 
 func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing.T) {
@@ -110,7 +110,7 @@ func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	meta := &skill.Metadata{
@@ -139,7 +139,7 @@ func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing
 	// Ensure prior working installation is entirely intact
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "original working version", string(content))
+	assert.Equal(t, "---\nname: original-skill\ndescription: test skill\n---", string(content))
 }
 
 // Regression test for #38: official skill installed under a custom name still targets "rntocase" asset
@@ -151,7 +151,7 @@ func TestUpdateSingleSkill_CustomDestNamePreservesOfficialAsset(t *testing.T) {
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	meta := &skill.Metadata{
@@ -169,7 +169,7 @@ func TestUpdateSingleSkill_CustomDestNamePreservesOfficialAsset(t *testing.T) {
 		capturedExtractedName = assetName
 
 		// Create SKILL.md to pass validation
-		return os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("new version"), 0644)
+		return os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: my-custom-skill-name\ndescription: test skill\n---"), 0644)
 	}
 
 	_, err = updateSingleSkillWithExtractor("my-custom-skill-name", meta, destDir, true, mockExtract)
