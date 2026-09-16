@@ -93,27 +93,6 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 }
 
 // ResolveSkillPath verifies that combining a target with a user-supplied name results
-// in a path strictly beneath the target's configured directory, preventing traversal.
-func ResolveSkillPath(target *Target, name string) (string, error) {
-	if name == "" {
-		return "", fmt.Errorf("skill name cannot be empty")
-	}
-
-	// Also catch absolute paths up front
-	if filepath.IsAbs(name) {
-		return "", fmt.Errorf("invalid skill name prevents absolute paths: %s", name)
-	}
-
-	destPath := filepath.Join(target.Path, name)
-	cleanedDest := filepath.Clean(destPath)
-	cleanedTarget := filepath.Clean(target.Path)
-
-	if !strings.HasPrefix(cleanedDest, cleanedTarget+string(filepath.Separator)) || cleanedDest == cleanedTarget {
-		return "", fmt.Errorf("invalid skill name prevents traversal or root installation: %s", name)
-	}
-
-	return cleanedDest, nil
-}
 
 // findProjectRoot attempts to find the root of the project (e.g., where .git is).
 // If not found, it returns the original directory.
@@ -131,4 +110,33 @@ func findProjectRoot(dir string) string {
 		currentDir = parentDir
 	}
 	return dir
+}
+
+// ResolveSkillPath verifies that combining a target with a user-supplied name results
+// in a path strictly beneath the target's configured directory, preventing traversal.
+func ResolveSkillPath(target *Target, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("skill name cannot be empty")
+	}
+
+	if name == "." || name == ".." {
+		return "", fmt.Errorf("invalid skill name prevents traversal or root installation: %s", name)
+	}
+	if strings.ContainsRune(name, filepath.Separator) || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+		return "", fmt.Errorf("invalid skill name must be a single component without separators: %s", name)
+	}
+	if filepath.IsAbs(name) || filepath.VolumeName(name) != "" {
+		return "", fmt.Errorf("invalid skill name prevents absolute or volume paths: %s", name)
+	}
+
+	destPath := filepath.Join(target.Path, name)
+	cleanedDest := filepath.Clean(destPath)
+	cleanedTarget := filepath.Clean(target.Path)
+
+	rel, err := filepath.Rel(cleanedTarget, cleanedDest)
+	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
+		return "", fmt.Errorf("invalid skill name prevents traversal or root installation: %s", name)
+	}
+
+	return cleanedDest, nil
 }
