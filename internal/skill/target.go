@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // SupportedAgents defines the list of AI agents we know how to install skills for.
@@ -45,7 +46,7 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		// by the agents. Here we simulate a convention.
 		switch agent {
 		case "copilot":
-			basePath = filepath.Join(homeDir, ".github", "copilot", "skills")
+			basePath = filepath.Join(homeDir, ".copilot", "skills")
 		case "cursor":
 			basePath = filepath.Join(homeDir, ".cursor", "skills")
 		case "codex":
@@ -68,7 +69,7 @@ func ResolveTarget(scope string, agent string) (*Target, error) {
 		// Project scope usually uses a `.agents` or `.skills` folder in the repo root
 		switch agent {
 		case "copilot":
-			basePath = filepath.Join(projectRoot, ".github", "copilot", "skills")
+			basePath = filepath.Join(projectRoot, ".github", "skills")
 		case "cursor":
 			basePath = filepath.Join(projectRoot, ".cursor", "skills")
 		case "codex":
@@ -107,4 +108,33 @@ func findProjectRoot(dir string) string {
 		currentDir = parentDir
 	}
 	return dir
+}
+
+// ResolveSkillPath verifies that combining a target with a user-supplied name results
+// in a path strictly beneath the target's configured directory, preventing traversal.
+func ResolveSkillPath(target *Target, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("skill name cannot be empty")
+	}
+
+	if name == "." || name == ".." {
+		return "", fmt.Errorf("invalid skill name prevents traversal or root installation: %s", name)
+	}
+	if strings.ContainsRune(name, filepath.Separator) || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+		return "", fmt.Errorf("invalid skill name must be a single component without separators: %s", name)
+	}
+	if filepath.IsAbs(name) || filepath.VolumeName(name) != "" {
+		return "", fmt.Errorf("invalid skill name prevents absolute or volume paths: %s", name)
+	}
+
+	destPath := filepath.Join(target.Path, name)
+	cleanedDest := filepath.Clean(destPath)
+	cleanedTarget := filepath.Clean(target.Path)
+
+	rel, err := filepath.Rel(cleanedTarget, cleanedDest)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("invalid skill name prevents traversal or root installation: %s", name)
+	}
+
+	return cleanedDest, nil
 }

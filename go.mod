@@ -3,15 +3,16 @@ module github.com/arran4/rntocase
 go 1.25.3
 
 require (
+	github.com/arran4/go-subcommand v0.0.28
 	github.com/arran4/strings2 v0.0.18
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/stretchr/testify v1.9.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
-	github.com/arran4/go-subcommand v0.0.28 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-openapi/errors v0.22.8 // indirect
@@ -26,5 +27,4 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

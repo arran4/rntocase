@@ -23,10 +23,15 @@ type InstalledSkillInfo struct {
 }
 
 // ListInstalledSkills searches the known agent paths for installed skills and returns their info.
-func ListInstalledSkills(scope string) ([]*InstalledSkillInfo, error) {
+func ListInstalledSkills(scope string, agentFilter string) ([]*InstalledSkillInfo, error) {
 	var results []*InstalledSkillInfo
 
-	for _, agent := range SupportedAgents {
+	agentsToSearch := SupportedAgents
+	if agentFilter != "" && agentFilter != "all" {
+		agentsToSearch = []string{agentFilter}
+	}
+
+	for _, agent := range agentsToSearch {
 		target, err := ResolveTarget(scope, agent)
 		if err != nil {
 			continue // Skip if not supported or error
@@ -67,7 +72,11 @@ func InspectSkill(name string, scope string, agent string) (*Metadata, string, e
 		return nil, "", err
 	}
 
-	skillDir := filepath.Join(target.Path, name)
+	skillDir, err := ResolveSkillPath(target, name)
+	if err != nil {
+		return nil, "", fmt.Errorf("skill '%s' not found or invalid: %w", name, err)
+	}
+
 	meta, err := LoadMetadata(skillDir)
 	if err != nil {
 		return nil, "", fmt.Errorf("skill '%s' not found or invalid: %w", name, err)
@@ -83,7 +92,10 @@ func RemoveSkill(name string, scope string, agent string) error {
 		return err
 	}
 
-	skillDir := filepath.Join(target.Path, name)
+	skillDir, err := ResolveSkillPath(target, name)
+	if err != nil {
+		return fmt.Errorf("skill '%s' not found or invalid: %w", name, err)
+	}
 
 	// Safety check: only remove if it has our metadata file
 	if _, err := LoadMetadata(skillDir); err != nil {
