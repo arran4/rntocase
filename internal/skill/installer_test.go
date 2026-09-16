@@ -339,9 +339,11 @@ func TestClassifySource(t *testing.T) {
 
 	// Change dir to temp root for relative path testing
 	oldWd, _ := os.Getwd()
-	os.Chdir(tempDir)
-	defer os.Chdir(oldWd)
-	os.MkdirAll("skills/example", 0755)
+	_ = os.Chdir(tempDir)
+	defer func() {
+		_ = os.Chdir(oldWd)
+	}()
+	_ = os.MkdirAll("skills/example", 0755)
 
 	tests := []struct {
 		name          string
