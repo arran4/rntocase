@@ -187,6 +187,7 @@ func RunSkillInstall(
 
 // RunSkillUpdate is a subcommand `rntocase skill update` -- Update a skill
 // Flags:
+//
 //	scope: --scope (default: "project") Installation scope
 //	agent: --agent (default: "common") Target agent
 //	force: --force Force update and overwrite local changes
@@ -430,7 +431,7 @@ func RunSkillRemove(scope string, agent string, name string) error {
 	}
 
 	if name == "" {
-	    return fmt.Errorf("usage: skill remove <name>")
+		return fmt.Errorf("usage: skill remove <name>")
 	}
 
 	if err := skill.RemoveSkill(name, scope, agent); err != nil {
@@ -485,7 +486,7 @@ func RunSkillInspect(scope string, agent string, outputJSON bool, name string) e
 	}
 
 	if name == "" {
-	    return fmt.Errorf("usage: skill inspect <name>")
+		return fmt.Errorf("usage: skill inspect <name>")
 	}
 
 	meta, destDir, err := skill.InspectSkill(name, scope, agent)
