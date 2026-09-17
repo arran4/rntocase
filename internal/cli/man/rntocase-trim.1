@@ -4,32 +4,49 @@
 rntocase-trim \- Trim whitespace or specific characters from file names
 .SH SYNOPSIS
 .B rntocase trim
-[algorithm] [trimChars] [dryRun] [interactive] [files]
+[trimChars] [outputJSON] [dryRun] [interactive] [recursive] [include] [exclude] [files]
 .SH DESCRIPTION
 Trim whitespace or specific characters from file names
+
+Examples:
+
+rntocase trim --trim-chars "_" --dry-run "_hello_world_"
+rntocase trim -interactive *
 
 
 .SH OPTIONS
 
 .TP
-.BR \-algorithm
-(string)
+.BR \-trim-chars
+(string) The characters to trim
 
 .TP
-.BR \-trim-chars
-(string)
+.BR \-json
+(bool) Output in JSON format
 
 .TP
 .BR \-dry-run
-(bool)
+(bool) Print the rename operations to be performed without executing them
 
 .TP
 .BR \-interactive
-(bool)
+(bool) Prompt for confirmation before executing each rename operation
+
+.TP
+.BR \-recursive, \-R
+(bool) Recursively traverse directories
+
+.TP
+.BR \-include
+([]string) (type: []string) Include files matching pattern
+
+.TP
+.BR \-exclude
+([]string) (type: []string) Exclude files matching pattern
 
 .TP
 .BR \-files
-(string)
+(string) (min: 1) The files to rename
 
 
 .SH SEE ALSO

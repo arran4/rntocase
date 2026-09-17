@@ -4,16 +4,48 @@
 rntocase-skill-install \- Install a skill
 .SH SYNOPSIS
 .B rntocase skill install
-[args]
+[scope] [agent] [replace] [ref] [path] [name] [source] [nameOrPath]
 .SH DESCRIPTION
 Install a skill
+
+Examples:
+
+rntocase skill install --ref v1.2.0 --path skills/example --name example owner/repo
 
 
 .SH OPTIONS
 
 .TP
-.BR \-args
-([]string)
+.BR \-scope
+(string) Installation scope: user or project (default: project)
+
+.TP
+.BR \-agent
+(string) Target agent (default: common)
+
+.TP
+.BR \-replace
+(bool) Replace existing skill
+
+.TP
+.BR \-ref
+(string) Specific Git ref
+
+.TP
+.BR \-path
+(string) Repository subdirectory
+
+.TP
+.BR \-name
+(string) Local skill name
+
+.TP
+.BR \-source
+(string) (min: 1) Source repository/path
+
+.TP
+.BR \-name-or-path
+(string) Optional fallback name/path
 
 
 .SH SEE ALSO

@@ -4,7 +4,7 @@
 rntocase-skill-update \- Update a skill
 .SH SYNOPSIS
 .B rntocase skill update
-[args]
+[scope] [agent] [force] [all] [name]
 .SH DESCRIPTION
 Update a skill
 
@@ -12,8 +12,24 @@ Update a skill
 .SH OPTIONS
 
 .TP
-.BR \-args
-([]string)
+.BR \-scope
+(string) Installation scope (default: project)
+
+.TP
+.BR \-agent
+(string) Target agent (default: common)
+
+.TP
+.BR \-force
+(bool) Force update and overwrite local changes
+
+.TP
+.BR \-all
+(bool) Update all installed skills in the given scope
+
+.TP
+.BR \-name
+(string) The name of the skill to update
 
 
 .SH SEE ALSO

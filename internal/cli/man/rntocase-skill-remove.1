@@ -4,7 +4,7 @@
 rntocase-skill-remove \- Remove a skill
 .SH SYNOPSIS
 .B rntocase skill remove
-[args]
+[scope] [agent] [name]
 .SH DESCRIPTION
 Remove a skill
 
@@ -12,8 +12,16 @@ Remove a skill
 .SH OPTIONS
 
 .TP
-.BR \-args
-([]string)
+.BR \-scope
+(string) Installation scope (default: project)
+
+.TP
+.BR \-agent
+(string) Target agent (default: common)
+
+.TP
+.BR \-name
+(string) (min: 1) The name of the skill to remove
 
 
 .SH SEE ALSO
