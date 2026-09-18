@@ -11,8 +11,9 @@ on:
     inputs:
       mode:
         type: choice
-        default: lint-fix
-        options: [lint-fix, build, release-major, release-minor, release-patch, release-test, release-rc, release-alpha, monthly-maintenance, publish-tag]
+        required: true
+        default: build
+        options: [build, lint-fix, monthly-maintenance, release-major, release-minor, release-patch, release-test, release-rc, release-alpha, publish-tag]
       release_version_override:
         type: string
         default: ''
@@ -47,48 +48,72 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_MODE: ${{ github.event.inputs.mode }}
           REF_TYPE: ${{ github.ref_type }}
-          GITHUB_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
-          run_code_checks=true
-          run_build=true
+          run_code_checks=false
+          run_build=false
           run_release=false
           run_autofix=false
           run_publisher=false
           run_maintenance=false
-          mode="build"
+          mode="${INPUT_MODE:-}"
 
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            # PRs just validate
-            :
-          elif [[ "$EVENT_NAME" == "schedule" ]]; then
-            run_maintenance=true
-            run_code_checks=true
-            run_build=true
-            mode="monthly-maintenance"
-          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            mode="${INPUT_MODE:-build}"
-            if [[ "$mode" == "lint-fix" ]]; then
-               run_autofix=true
-            elif [[ "$mode" == "publish-tag" ]]; then
-               if [[ "$REF_TYPE" == "tag" && "$GITHUB_REF" == refs/tags/v* ]]; then
-                  run_code_checks=false
-                  run_build=false
+          case "$EVENT_NAME" in
+            pull_request)
+              run_code_checks=true
+              run_build=true
+              ;;
+            push)
+              run_code_checks=true
+              run_build=true
+              if [[ "$REF_TYPE" == "tag" && "$GITHUB_REF" == refs/tags/v* ]]; then
+                run_publisher=true
+              fi
+              ;;
+            schedule)
+              run_code_checks=true
+              run_build=true
+              run_maintenance=true
+              ;;
+            workflow_dispatch)
+              case "$mode" in
+                build)
+                  run_code_checks=true
+                  run_build=true
+                  ;;
+                lint-fix)
+                  run_autofix=true
+                  ;;
+                monthly-maintenance)
+                  run_code_checks=true
+                  run_build=true
+                  run_maintenance=true
+                  ;;
+                release-major|release-minor|release-patch|release-test|release-rc|release-alpha)
+                  run_code_checks=true
+                  run_build=true
+                  run_release=true
+                  ;;
+                publish-tag)
+                  if [[ "$REF_TYPE" != "tag" || "$GITHUB_REF" != refs/tags/v* ]]; then
+                    echo "publish-tag requires a v* tag ref; got $GITHUB_REF" >&2
+                    sh -c "exit 1"
+                  fi
+                  run_code_checks=true
+                  run_build=true
                   run_publisher=true
-               else
-                  echo "Error: publish-tag mode requires a v* tag context. Found: $GITHUB_REF" >&2
+                  ;;
+                *)
+                  echo "Unsupported manual mode: $mode" >&2
                   sh -c "exit 1"
-               fi
-            elif [[ "$mode" == release-* ]]; then
-               run_release=true
-            elif [[ "$mode" == "monthly-maintenance" ]]; then
-               run_maintenance=true
-               run_code_checks=true
-               run_build=true
-            fi
-          elif [[ "$EVENT_NAME" == "push" && "$REF_TYPE" == "tag" && "$GITHUB_REF" == refs/tags/v* ]]; then
-             run_publisher=true
-          fi
+                  ;;
+              esac
+              ;;
+            *)
+              echo "Unsupported event: $EVENT_NAME" >&2
+              sh -c "exit 1"
+              ;;
+          esac
 
           echo "run_code_checks=$run_code_checks" >> "$GITHUB_OUTPUT"
           echo "run_build=$run_build" >> "$GITHUB_OUTPUT"
