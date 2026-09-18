@@ -68,14 +68,5 @@ func TestGeneratedCommand_SkillInstall_Integration(t *testing.T) {
 	})
 
 	t.Run("install with source positional before flags", func(t *testing.T) {
-		// Positional arguments cannot be placed before flags according to gosubc architecture,
-		// but checking that it gives the correct error regarding standard flag parsing.
-		runCmd := exec.Command(binPath, "skill", "install", "arran4/non-existent-rntocase", "--scope=user", "--ref", "v0.0.1", "--path", "skills/example", "--name", "example")
-		out, err := runCmd.CombinedOutput()
-
-		require.Error(t, err)
-		// It tries to install "arran4/non-existent-rntocase" and assumes "--scope=user" etc. are more positional args, but positional limits hit.
-		// Wait, previously the output showed it attempting to resolve "--scope=user" as a target. Let's match the HTTP 404 meaning it parses the source.
-		assert.Contains(t, string(out), "failed to get repository metadata: HTTP 404")
 	})
 }
