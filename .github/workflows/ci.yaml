@@ -108,8 +108,10 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.13.2
-      - run: golangci-lint run
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
       - run: go test -v ./...
       - run: go vet ./...
 
@@ -145,8 +147,11 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go fmt ./...
-      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.13.2
-      - run: golangci-lint run --fix
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          args: --fix
       - name: Create Pull Request
         if: ${{ inputs.allow_prs != false }}
         uses: peter-evans/create-pull-request@v8
