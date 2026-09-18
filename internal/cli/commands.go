@@ -19,13 +19,13 @@ var manPages embed.FS
 // Examples:
 //
 //	rntocase acronym --dry-run "Internal Revenue Service"
-//	rntocase acronym -interactive *
+//	rntocase acronym --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -52,13 +52,13 @@ func RunAcronym(outputJSON bool, dryRun bool, interactive bool, recursive bool, 
 // Examples:
 //
 //	rntocase camel --dry-run "hello world"
-//	rntocase camel -interactive *
+//	rntocase camel --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -74,13 +74,13 @@ func RunCamel(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase constant --dry-run "hello world"
-//	rntocase constant -interactive *
+//	rntocase constant --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -100,13 +100,13 @@ func RunConstant(outputJSON bool, dryRun bool, interactive bool, recursive bool,
 // Examples:
 //
 //	rntocase darwin --dry-run "hello world"
-//	rntocase darwin -interactive *
+//	rntocase darwin --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -122,7 +122,7 @@ func RunDarwin(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 // Examples:
 //
 //	rntocase delimited --delimiter "_" --dry-run "hello world"
-//	rntocase delimited --delimiter "-" -interactive *
+//	rntocase delimited --delimiter "-" --interactive *
 //
 // Flags:
 //
@@ -130,7 +130,7 @@ func RunDarwin(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 //	delimiter: --delimiter (default: "") The delimiter to use
 //	ignore: --ignore (default: "") The characters to ignore
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -150,14 +150,14 @@ func RunDelimited(delimiter string, ignore string, outputJSON bool, dryRun bool,
 // Examples:
 //
 //	rntocase dot --dry-run "hello world"
-//	rntocase dot -interactive *
+//	rntocase dot --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	delimiter: --delimiter (default: ".") The delimiter to use
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -177,13 +177,13 @@ func RunDot(delimiter string, outputJSON bool, dryRun bool, interactive bool, re
 // Examples:
 //
 //	rntocase kebab --dry-run "hello world"
-//	rntocase kebab -interactive *
+//	rntocase kebab --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -199,13 +199,13 @@ func RunKebab(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase lower --dry-run "HELLO WORLD"
-//	rntocase lower -interactive *
+//	rntocase lower --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -221,13 +221,13 @@ func RunLower(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase lowerleading --dry-run "Hello World"
-//	rntocase lowerleading -interactive *
+//	rntocase lowerleading --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -243,13 +243,13 @@ func RunLowerLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 // Examples:
 //
 //	rntocase pascal --dry-run "hello world"
-//	rntocase pascal -interactive *
+//	rntocase pascal --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -265,14 +265,14 @@ func RunPascal(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 // Examples:
 //
 //	rntocase reverse --dry-run "hello world"
-//	rntocase reverse --word-mode -interactive *
+//	rntocase reverse --word-mode --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	wordMode: --word-mode Reverse words instead of characters
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -309,13 +309,13 @@ func RunReverse(wordMode bool, outputJSON bool, dryRun bool, interactive bool, r
 // Examples:
 //
 //	rntocase snake --dry-run "hello world"
-//	rntocase snake -interactive *
+//	rntocase snake --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -331,13 +331,13 @@ func RunSnake(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase title --dry-run "hello world"
-//	rntocase title -interactive *
+//	rntocase title --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -353,13 +353,13 @@ func RunTitle(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase upper --dry-run "hello world"
-//	rntocase upper -interactive *
+//	rntocase upper --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -375,13 +375,13 @@ func RunUpper(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase upperleading --dry-run "hello world"
-//	rntocase upperleading -interactive *
+//	rntocase upperleading --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -397,14 +397,14 @@ func RunUpperLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 // Examples:
 //
 //	rntocase trim --trim-chars "_" --dry-run "_hello_world_"
-//	rntocase trim -interactive *
+//	rntocase trim --interactive *
 //
 // Flags:
 //
 //	outputJSON: --json Output in JSON format
 //	trimChars: --trim-chars (default: "") The characters to trim
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: --interactive Prompt for confirmation before executing each rename operation
+//	interactive: ---interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern

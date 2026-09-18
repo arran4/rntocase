@@ -6,7 +6,7 @@ Rename files to kebab case
 Examples:
 
 rntocase kebab --dry-run "hello world"
-rntocase kebab -interactive *
+rntocase kebab --interactive *
 
 Subcommands:
     help         Print this help message

@@ -6,7 +6,7 @@ Rename files to dot case
 Examples:
 
 rntocase dot --dry-run "hello world"
-rntocase dot -interactive *
+rntocase dot --interactive *
 
 Subcommands:
     help         Print this help message

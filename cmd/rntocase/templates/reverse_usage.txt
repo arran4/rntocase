@@ -6,7 +6,7 @@ Reverse characters or words in file names
 Examples:
 
 rntocase reverse --dry-run "hello world"
-rntocase reverse --word-mode -interactive *
+rntocase reverse --word-mode --interactive *
 
 Subcommands:
     help         Print this help message

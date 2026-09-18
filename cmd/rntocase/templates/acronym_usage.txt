@@ -6,7 +6,7 @@ Rename files by acronym
 Examples:
 
 rntocase acronym --dry-run "Internal Revenue Service"
-rntocase acronym -interactive *
+rntocase acronym --interactive *
 
 Subcommands:
     help         Print this help message

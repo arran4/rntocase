@@ -6,7 +6,7 @@ Rename files to camel case
 Examples:
 
 rntocase camel --dry-run "hello world"
-rntocase camel -interactive *
+rntocase camel --interactive *
 
 Subcommands:
     help         Print this help message
