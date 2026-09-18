@@ -5,7 +5,7 @@ on:
     branches: [main, master]
     tags: ['v*']
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, closed]
+    types: [opened, synchronize]
     branches: [main, master]
   workflow_dispatch:
     inputs:
@@ -104,8 +104,8 @@ jobs:
     if: ${{ needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
       - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.6
@@ -122,19 +122,18 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
-      - run: go get -u ./... && go mod tidy
-      - name: Create Pull Request
-        if: ${{ github.event_name == 'schedule' || inputs.allow_prs != false }}
-        uses: peter-evans/create-pull-request@v8
-        with:
-          commit-message: "chore: monthly dependency update"
-          title: "chore: monthly dependency update"
-          branch: automation/maintenance
-          delete-branch: true
+      - name: Validate dependencies are up to date
+        run: |
+          go get -u ./...
+          go mod tidy
+          if ! git diff --quiet; then
+            echo "Dependencies are outdated. Run 'go get -u ./... && go mod tidy' locally."
+            sh -c "exit 1"
+          fi
 
   autofix:
     name: Autofix Formatting
@@ -145,8 +144,8 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
       - run: go fmt ./...
@@ -161,19 +160,6 @@ jobs:
           branch: automation/lint-fix
           delete-branch: true
 
-  cleanup-autofix-prs:
-    name: Cleanup Autofix PRs
-    needs: [route]
-    if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Delete branch
-        if: ${{ startsWith(github.head_ref, 'automation/') }}
-        run: |
-          GH_TOKEN=${{ secrets.GITHUB_TOKEN }} gh api -X DELETE /repos/${{ github.repository }}/git/refs/heads/${{ github.head_ref }} || true
 
   build:
     name: Build Artifacts
@@ -181,8 +167,8 @@ jobs:
     if: ${{ always() && needs.route.outputs.run_build == 'true' && (needs.validation.result == 'success' || needs.validation.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
       - run: go build -o rntocase ./cmd/rntocase
@@ -195,7 +181,7 @@ jobs:
   release-ready:
     name: Release Quality Gates Passed
     needs: [route, validation, build]
-    if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    if: ${{ (needs.route.outputs.run_release == 'true' || needs.route.outputs.run_publisher == 'true') && needs.validation.result == 'success' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - run: echo "All release quality gates passed."
@@ -205,14 +191,17 @@ jobs:
     needs: [route, release-ready]
     if: ${{ needs.route.outputs.run_release == 'true' }}
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-release-preparation
+      cancel-in-progress: false
     permissions:
       contents: write
       actions: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
       - name: Install git-tag-inc
@@ -220,19 +209,17 @@ jobs:
         with:
           mode: install
       - name: Verify Exact Origin/Main
-        env:
-          GITHUB_REF_NAME: ${{ github.ref }}
-          GITHUB_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF_NAME" != "refs/heads/main" ]]; then
-            echo "Error: Manual release preparation must run on refs/heads/main, got $GITHUB_REF_NAME"
+          AUTHORITATIVE_BRANCH="${GITHUB_REF#refs/heads/}"
+          if [[ "$AUTHORITATIVE_BRANCH" != "main" ]]; then
+            echo "Error: Manual release preparation must run on refs/heads/main, got $AUTHORITATIVE_BRANCH"
             sh -c "exit 1"
           fi
-          git fetch origin main
-          MAIN_SHA=$(git rev-parse origin/main)
+          git fetch origin "$AUTHORITATIVE_BRANCH"
+          MAIN_SHA=$(git rev-parse "origin/$AUTHORITATIVE_BRANCH")
           if [[ "$MAIN_SHA" != "$GITHUB_SHA" ]]; then
-            echo "Error: Requested release against $GITHUB_SHA but origin/main is at $MAIN_SHA"
+            echo "Error: Requested release against $GITHUB_SHA but origin/$AUTHORITATIVE_BRANCH is at $MAIN_SHA"
             sh -c "exit 1"
           fi
       - name: Calculate or explicitly set version
@@ -246,7 +233,7 @@ jobs:
              TAG="${RELEASE_VERSION_OVERRIDE#v}"
              TAG="v${TAG}"
              echo "Using manual version override: $TAG"
-             if ! [[ "$TAG" =~ ^v[0-9]+.[0-9]+.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+             if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
                 echo "Error: Override $TAG is not a valid release tag shape."
                 sh -c "exit 1"
              fi
@@ -316,14 +303,17 @@ jobs:
     needs: [route, release-ready]
     if: ${{ needs.route.outputs.run_publisher == 'true' }}
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-publish-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
       packages: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
       - name: Login to GHCR
@@ -338,7 +328,7 @@ jobs:
           GITHUB_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" == refs/tags/*-test* || "$GITHUB_REF" == refs/tags/test-* ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/*-test* || "$GITHUB_REF" == refs/tags/test-* || "$GITHUB_REF" == refs/tags/*-rc* || "$GITHUB_REF" == refs/tags/*-alpha* ]]; then
              echo "args=release --snapshot --clean" >> "$GITHUB_OUTPUT"
           else
              echo "args=release --clean" >> "$GITHUB_OUTPUT"
@@ -347,7 +337,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
-          version: latest
+          version: '~> v2'
           args: ${{ steps.args.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
