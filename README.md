@@ -1305,7 +1305,7 @@ $ emerge -va app-misc/rntocase-bin
 You can install a skill into your user profile or the current project directory using the `skill install` command.
 
 ```bash
-# Install from a remote GitHub repository
+# Install the bundled official skill
 $ rntocase skill install --scope user rntocase
 
 # Install a specific ref and path

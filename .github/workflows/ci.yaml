@@ -322,6 +322,19 @@ jobs:
     - name: Test
       run: go test ./... -v
 
+  check-generation:
+    name: Check Generation Drift
+    needs: [route]
+    if: ${{ needs.route.outputs.run_code_checks == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: go.mod
+    - name: Verify generated CLI and documentation
+      run: bash ./scripts/check-generation.sh
+
   go-vet:
     name: Go vet
     needs: [route]
