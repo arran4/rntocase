@@ -25,7 +25,7 @@ var manPages embed.FS
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -58,7 +58,7 @@ func RunAcronym(outputJSON bool, dryRun bool, interactive bool, recursive bool, 
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -80,7 +80,7 @@ func RunCamel(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -106,7 +106,7 @@ func RunConstant(outputJSON bool, dryRun bool, interactive bool, recursive bool,
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -130,7 +130,7 @@ func RunDarwin(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 //	delimiter: --delimiter (default: "") The delimiter to use
 //	ignore: --ignore (default: "") The characters to ignore
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -157,7 +157,7 @@ func RunDelimited(delimiter string, ignore string, outputJSON bool, dryRun bool,
 //	outputJSON: --json Output in JSON format
 //	delimiter: --delimiter (default: ".") The delimiter to use
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -183,7 +183,7 @@ func RunDot(delimiter string, outputJSON bool, dryRun bool, interactive bool, re
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -205,7 +205,7 @@ func RunKebab(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -227,7 +227,7 @@ func RunLower(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -249,7 +249,7 @@ func RunLowerLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -272,7 +272,7 @@ func RunPascal(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 //	outputJSON: --json Output in JSON format
 //	wordMode: --word-mode Reverse words instead of characters
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -315,7 +315,7 @@ func RunReverse(wordMode bool, outputJSON bool, dryRun bool, interactive bool, r
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -337,7 +337,7 @@ func RunSnake(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -359,7 +359,7 @@ func RunTitle(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -381,7 +381,7 @@ func RunUpper(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //
 //	outputJSON: --json Output in JSON format
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
@@ -404,7 +404,7 @@ func RunUpperLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 //	outputJSON: --json Output in JSON format
 //	trimChars: --trim-chars (default: "") The characters to trim
 //	dryRun: --dry-run Print the rename operations to be performed without executing them
-//	interactive: ---interactive Prompt for confirmation before executing each rename operation
+//	interactive: --interactive Prompt for confirmation before executing each rename operation
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
