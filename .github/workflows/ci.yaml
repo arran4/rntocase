@@ -347,21 +347,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Determine GoReleaser Args
-        id: args
-        run: |
-          set -euo pipefail
-          if [[ "$GITHUB_REF" == refs/tags/*-test* || "$GITHUB_REF" == refs/tags/test-* || "$GITHUB_REF" == refs/tags/*-rc* || "$GITHUB_REF" == refs/tags/*-alpha* ]]; then
-             echo "args=release --snapshot --clean" >> "$GITHUB_OUTPUT"
-          else
-             echo "args=release --clean" >> "$GITHUB_OUTPUT"
-          fi
       - name: Run GoReleaser (Sole Release Owner)
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: ${{ steps.args.outputs.args }}
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
