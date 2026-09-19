@@ -6,7 +6,7 @@ Rename files with an upper leading character
 Examples:
 
 rntocase upperleading --dry-run "hello world"
-rntocase upperleading -interactive *
+rntocase upperleading --interactive *
 
 Subcommands:
     help         Print this help message

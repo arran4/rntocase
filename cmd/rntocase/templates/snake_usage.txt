@@ -6,7 +6,7 @@ Rename files to snake case
 Examples:
 
 rntocase snake --dry-run "hello world"
-rntocase snake -interactive *
+rntocase snake --interactive *
 
 Subcommands:
     help         Print this help message

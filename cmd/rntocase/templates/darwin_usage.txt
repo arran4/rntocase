@@ -6,7 +6,7 @@ Rename files to darwin case
 Examples:
 
 rntocase darwin --dry-run "hello world"
-rntocase darwin -interactive *
+rntocase darwin --interactive *
 
 Subcommands:
     help         Print this help message

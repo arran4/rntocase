@@ -4,7 +4,7 @@
 rntocase-skill-inspect \- Inspect a skill
 .SH SYNOPSIS
 .B rntocase skill inspect
-[args]
+[scope] [agent] [outputJSON] [name] 
 .SH DESCRIPTION
 Inspect a skill
 
@@ -12,8 +12,20 @@ Inspect a skill
 .SH OPTIONS
 
 .TP
-.BR \-args
-([]string)
+.BR \-scope
+(string) Installation scope (default: project)
+
+.TP
+.BR \-agent
+(string) Target agent (default: common)
+
+.TP
+.BR \-json
+(bool) Output in JSON format 
+
+.TP
+.BR \-name
+(string) (min: 1) The name of the skill to inspect 
 
 
 .SH SEE ALSO

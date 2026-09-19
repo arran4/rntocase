@@ -4,24 +4,45 @@
 rntocase-camel \- Rename files to camel case
 .SH SYNOPSIS
 .B rntocase camel
-[dryRun] [interactive] [files]
+[outputJSON] [dryRun] [interactive] [recursive] [include] [exclude] [files] 
 .SH DESCRIPTION
 Rename files to camel case
+
+Examples:
+
+rntocase camel --dry-run "hello world"
+rntocase camel --interactive *
 
 
 .SH OPTIONS
 
 .TP
+.BR \-json
+(bool) Output in JSON format 
+
+.TP
 .BR \-dry-run
-(bool)
+(bool) Print the rename operations to be performed without executing them 
 
 .TP
 .BR \-interactive
-(bool)
+(bool) Prompt for confirmation before executing each rename operation 
+
+.TP
+.BR \-recursive, \-R
+(bool) Recursively traverse directories 
+
+.TP
+.BR \-include
+([]string) (type: []string) Include files matching pattern 
+
+.TP
+.BR \-exclude
+([]string) (type: []string) Exclude files matching pattern 
 
 .TP
 .BR \-files
-(string)
+(string) (min: 1) The files to rename 
 
 
 .SH SEE ALSO
