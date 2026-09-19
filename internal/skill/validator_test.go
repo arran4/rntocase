@@ -61,6 +61,36 @@ func TestParseAndValidateManifest(t *testing.T) {
 			content: "---\nname: my-skill\ndescription: " + strings.Repeat("a", 1024) + "\n---\n",
 			wantErr: false,
 		},
+		{
+			name:    "malformed start delimiter",
+			content: " --- \nname: my-skill\ndescription: valid\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "malformed end delimiter not alone",
+			content: "---\nname: my-skill\ndescription: valid\n---not-a-delimiter\n",
+			wantErr: true,
+		},
+		{
+			name:    "malformed end delimiter missing newline",
+			content: "---\nname: my-skill\ndescription: valid\n---",
+			wantErr: false, // EOF termination is allowed
+		},
+		{
+			name:    "CRLF endings",
+			content: "---\r\nname: my-skill\r\ndescription: valid\r\n---\r\n# body",
+			wantErr: false,
+		},
+		{
+			name:    "malformed start delimiter",
+			content: " --- \nname: my-skill\ndescription: valid\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "malformed end delimiter not alone",
+			content: "---\nname: my-skill\ndescription: valid\n---not-a-delimiter\n",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -18,12 +18,25 @@ type AgentSkillManifest struct {
 
 // ParseAndValidateManifest parses a SKILL.md file content and validates its YAML frontmatter.
 func ParseAndValidateManifest(mdContent []byte) (*AgentSkillManifest, error) {
-	parts := bytes.SplitN(mdContent, []byte("---"), 3)
-	if len(parts) < 3 || len(bytes.TrimSpace(parts[0])) != 0 {
-		return nil, fmt.Errorf("SKILL.md must contain YAML frontmatter enclosed in '---' at the start of the file")
+	normalized := bytes.ReplaceAll(mdContent, []byte("\r\n"), []byte("\n"))
+
+	if !bytes.HasPrefix(normalized, []byte("---\n")) {
+		return nil, fmt.Errorf("SKILL.md must start with exactly '---' on the first line")
 	}
 
-	frontmatter := parts[1]
+	endIdx := bytes.Index(normalized[4:], []byte("\n---\n"))
+	var frontmatter []byte
+	if endIdx == -1 {
+		if string(normalized) == "---\n---" || string(normalized) == "---\n---\n" {
+			frontmatter = []byte{}
+		} else if bytes.HasSuffix(normalized, []byte("\n---")) {
+			frontmatter = normalized[4 : len(normalized)-4]
+		} else {
+			return nil, fmt.Errorf("SKILL.md missing closing '---' on a standalone line")
+		}
+	} else {
+		frontmatter = normalized[4 : 4+endIdx]
+	}
 
 	var manifest AgentSkillManifest
 	if err := yaml.Unmarshal(frontmatter, &manifest); err != nil {
