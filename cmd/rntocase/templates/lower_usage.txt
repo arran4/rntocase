@@ -6,7 +6,7 @@ Rename files to lower case
 Examples:
 
 rntocase lower --dry-run "HELLO WORLD"
-rntocase lower -interactive *
+rntocase lower --interactive *
 
 Subcommands:
     help         Print this help message

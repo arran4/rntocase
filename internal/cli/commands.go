@@ -19,7 +19,7 @@ var manPages embed.FS
 // Examples:
 //
 //	rntocase acronym --dry-run "Internal Revenue Service"
-//	rntocase acronym -interactive *
+//	rntocase acronym --interactive *
 //
 // Flags:
 //
@@ -52,7 +52,7 @@ func RunAcronym(outputJSON bool, dryRun bool, interactive bool, recursive bool, 
 // Examples:
 //
 //	rntocase camel --dry-run "hello world"
-//	rntocase camel -interactive *
+//	rntocase camel --interactive *
 //
 // Flags:
 //
@@ -74,7 +74,7 @@ func RunCamel(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase constant --dry-run "hello world"
-//	rntocase constant -interactive *
+//	rntocase constant --interactive *
 //
 // Flags:
 //
@@ -100,7 +100,7 @@ func RunConstant(outputJSON bool, dryRun bool, interactive bool, recursive bool,
 // Examples:
 //
 //	rntocase darwin --dry-run "hello world"
-//	rntocase darwin -interactive *
+//	rntocase darwin --interactive *
 //
 // Flags:
 //
@@ -122,7 +122,7 @@ func RunDarwin(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 // Examples:
 //
 //	rntocase delimited --delimiter "_" --dry-run "hello world"
-//	rntocase delimited --delimiter "-" -interactive *
+//	rntocase delimited --delimiter "-" --interactive *
 //
 // Flags:
 //
@@ -150,7 +150,7 @@ func RunDelimited(delimiter string, ignore string, outputJSON bool, dryRun bool,
 // Examples:
 //
 //	rntocase dot --dry-run "hello world"
-//	rntocase dot -interactive *
+//	rntocase dot --interactive *
 //
 // Flags:
 //
@@ -177,7 +177,7 @@ func RunDot(delimiter string, outputJSON bool, dryRun bool, interactive bool, re
 // Examples:
 //
 //	rntocase kebab --dry-run "hello world"
-//	rntocase kebab -interactive *
+//	rntocase kebab --interactive *
 //
 // Flags:
 //
@@ -199,7 +199,7 @@ func RunKebab(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase lower --dry-run "HELLO WORLD"
-//	rntocase lower -interactive *
+//	rntocase lower --interactive *
 //
 // Flags:
 //
@@ -221,7 +221,7 @@ func RunLower(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase lowerleading --dry-run "Hello World"
-//	rntocase lowerleading -interactive *
+//	rntocase lowerleading --interactive *
 //
 // Flags:
 //
@@ -243,7 +243,7 @@ func RunLowerLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 // Examples:
 //
 //	rntocase pascal --dry-run "hello world"
-//	rntocase pascal -interactive *
+//	rntocase pascal --interactive *
 //
 // Flags:
 //
@@ -265,7 +265,7 @@ func RunPascal(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 // Examples:
 //
 //	rntocase reverse --dry-run "hello world"
-//	rntocase reverse --word-mode -interactive *
+//	rntocase reverse --word-mode --interactive *
 //
 // Flags:
 //
@@ -309,7 +309,7 @@ func RunReverse(wordMode bool, outputJSON bool, dryRun bool, interactive bool, r
 // Examples:
 //
 //	rntocase snake --dry-run "hello world"
-//	rntocase snake -interactive *
+//	rntocase snake --interactive *
 //
 // Flags:
 //
@@ -331,7 +331,7 @@ func RunSnake(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase title --dry-run "hello world"
-//	rntocase title -interactive *
+//	rntocase title --interactive *
 //
 // Flags:
 //
@@ -353,7 +353,7 @@ func RunTitle(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase upper --dry-run "hello world"
-//	rntocase upper -interactive *
+//	rntocase upper --interactive *
 //
 // Flags:
 //
@@ -375,7 +375,7 @@ func RunUpper(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 // Examples:
 //
 //	rntocase upperleading --dry-run "hello world"
-//	rntocase upperleading -interactive *
+//	rntocase upperleading --interactive *
 //
 // Flags:
 //
@@ -397,7 +397,7 @@ func RunUpperLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 // Examples:
 //
 //	rntocase trim --trim-chars "_" --dry-run "_hello_world_"
-//	rntocase trim -interactive *
+//	rntocase trim --interactive *
 //
 // Flags:
 //

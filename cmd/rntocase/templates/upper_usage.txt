@@ -6,7 +6,7 @@ Rename files to upper case
 Examples:
 
 rntocase upper --dry-run "hello world"
-rntocase upper -interactive *
+rntocase upper --interactive *
 
 Subcommands:
     help         Print this help message

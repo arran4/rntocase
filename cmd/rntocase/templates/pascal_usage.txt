@@ -6,7 +6,7 @@ Rename files to pascal case
 Examples:
 
 rntocase pascal --dry-run "hello world"
-rntocase pascal -interactive *
+rntocase pascal --interactive *
 
 Subcommands:
     help         Print this help message

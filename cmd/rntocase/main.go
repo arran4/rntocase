@@ -21,7 +21,7 @@ var (
 var (
 	GeneratorVersion = "v0.0.28"
 	GeneratedAt      = "2026-09-15T03:48:28Z"
-	ProjectCommit    = "52bd17a09c730e1c81226c0b66692321bd2c19df"
+	ProjectCommit    = "930e736c899fc96965853ef66d67c1df1d6896a8"
 )
 
 func main() {
