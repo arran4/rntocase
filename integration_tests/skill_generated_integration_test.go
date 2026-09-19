@@ -67,6 +67,4 @@ func TestGeneratedCommand_SkillInstall_Integration(t *testing.T) {
 		assert.Contains(t, string(out), "failed to get repository metadata: HTTP 404")
 	})
 
-	t.Run("install with source positional before flags", func(t *testing.T) {
-	})
 }
