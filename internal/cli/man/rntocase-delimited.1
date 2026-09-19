@@ -4,32 +4,53 @@
 rntocase-delimited \- Rename files with a custom delimiter
 .SH SYNOPSIS
 .B rntocase delimited
-[delimiter] [ignore] [dryRun] [interactive] [files]
+[delimiter] [ignore] [outputJSON] [dryRun] [interactive] [recursive] [include] [exclude] [files] 
 .SH DESCRIPTION
 Rename files with a custom delimiter
+
+Examples:
+
+rntocase delimited --delimiter "_" --dry-run "hello world"
+rntocase delimited --delimiter "-" --interactive *
 
 
 .SH OPTIONS
 
 .TP
 .BR \-delimiter
-(string)
+(string) The delimiter to use 
 
 .TP
 .BR \-ignore
-(string)
+(string) The characters to ignore 
+
+.TP
+.BR \-json
+(bool) Output in JSON format 
 
 .TP
 .BR \-dry-run
-(bool)
+(bool) Print the rename operations to be performed without executing them 
 
 .TP
 .BR \-interactive
-(bool)
+(bool) Prompt for confirmation before executing each rename operation 
+
+.TP
+.BR \-recursive, \-R
+(bool) Recursively traverse directories 
+
+.TP
+.BR \-include
+([]string) (type: []string) Include files matching pattern 
+
+.TP
+.BR \-exclude
+([]string) (type: []string) Exclude files matching pattern 
 
 .TP
 .BR \-files
-(string)
+(string) (min: 1) The files to rename 
 
 
 .SH SEE ALSO
