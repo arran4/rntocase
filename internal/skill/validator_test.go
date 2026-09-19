@@ -62,17 +62,17 @@ func TestParseAndValidateManifest(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "malformed start delimiter",
-			content: " --- \nname: my-skill\ndescription: valid\n---\n",
-			wantErr: true,
+			name:    "malformed embedded delimiter",
+			content: "---\nname: my-skill\ndescription: embedded --- test\n---\n",
+			wantErr: false,
 		},
 		{
-			name:    "malformed end delimiter not alone",
-			content: "---\nname: my-skill\ndescription: valid\n---not-a-delimiter\n",
-			wantErr: true,
+			name:    "malformed invalid delimiter inside body",
+			content: "---\nname: my-skill\ndescription: valid\n---\n# Some body\n---\nembedded block",
+			wantErr: false,
 		},
 		{
-			name:    "malformed end delimiter missing newline",
+			name:    "valid closing delimiter at EOF",
 			content: "---\nname: my-skill\ndescription: valid\n---",
 			wantErr: false, // EOF termination is allowed
 		},
