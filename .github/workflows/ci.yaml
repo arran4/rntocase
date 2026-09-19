@@ -139,6 +139,52 @@ jobs:
           version: latest
       - run: go test -v ./...
       - run: go vet ./...
+      - name: Verify generated CLI and documentation
+        run: bash ./scripts/check-generation.sh
+
+
+  generation-sync:
+    name: Regenerate Canonical Generated Files
+    needs: [route]
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'recovery/55-58-generation' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Regenerate and push canonical generated output
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          bash ./scripts/check-generation.sh
+          status=$?
+          set -e
+
+          if [[ "$status" -eq 0 ]]; then
+            echo "Generated output is already canonical."
+            exit 0
+          fi
+
+          if git diff --quiet -- cmd/rntocase/ internal/cli/man/; then
+            echo "Generation check failed without generated-file changes." >&2
+            exit "$status"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cmd/rntocase/ internal/cli/man/
+          git commit -m "docs: regenerate canonical CLI and man output"
+          git push origin "HEAD:$HEAD_REF"
+
 
   maintenance:
     name: Monthly Maintenance
