@@ -28,6 +28,7 @@ if git diff --exit-code -- cmd/rntocase/ internal/cli/man/ > /dev/null; then
 else
     echo "ERROR: Generated documentation or files drift detected!"
     echo "The following files differ from their authoritative source:"
+    git diff -- cmd/rntocase/ internal/cli/man/
     git diff --name-status -- cmd/rntocase/ internal/cli/man/
     echo "Run generation steps and commit the changes."
     bash -c "exit 1"
