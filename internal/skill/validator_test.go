@@ -62,12 +62,12 @@ func TestParseAndValidateManifest(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "malformed embedded delimiter",
+			name:    "valid delimiter within YAML scalar",
 			content: "---\nname: my-skill\ndescription: embedded --- test\n---\n",
 			wantErr: false,
 		},
 		{
-			name:    "malformed invalid delimiter inside body",
+			name:    "valid delimiter within Markdown body",
 			content: "---\nname: my-skill\ndescription: valid\n---\n# Some body\n---\nembedded block",
 			wantErr: false,
 		},

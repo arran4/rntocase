@@ -9,6 +9,7 @@ import (
 
 	"github.com/arran4/rntocase/internal/skill"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Because skill target paths are complex, we override HOME for the test duration
@@ -58,6 +59,59 @@ func TestRunSkillInstall_ReplaceFlagFailureLeavesPriorIntact(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
 	assert.Equal(t, "---\nname: original-skill\ndescription: test skill\n---", string(content))
+}
+
+func TestRunSkillInstall_RejectsMalformedFrontmatterBeforeReplacingManagedSkill(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "my-skill")
+	require.NoError(t, os.MkdirAll(destDir, 0755))
+	previousSkill := []byte("---\nname: my-skill\ndescription: previous\n---\n")
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), previousSkill, 0644))
+	previousMetadata := &skill.Metadata{Name: "my-skill", OriginalSource: "local/mock", InstallerApp: "rntocase"}
+	require.NoError(t, skill.SaveMetadata(destDir, previousMetadata))
+	previousMetadataBytes, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+
+	sourceDir := t.TempDir()
+	malformedSkill := []byte("---\nname: my-skill\ndescription: invalid\n---not-a-delimiter\n")
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), malformedSkill, 0644))
+
+	err = RunSkillInstall("user", "common", true, "", "", "my-skill", sourceDir, "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing closing '---' on a standalone line")
+
+	actualSkill, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, previousSkill, actualSkill)
+	actualMetadata, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+	assert.Equal(t, previousMetadataBytes, actualMetadata)
+}
+
+func TestUpdateSingleSkill_RejectsMalformedFrontmatterBeforeReplacingManagedSkill(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "official-skill")
+	require.NoError(t, os.MkdirAll(destDir, 0755))
+	previousSkill := []byte("---\nname: official-skill\ndescription: previous\n---\n")
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), previousSkill, 0644))
+	meta := &skill.Metadata{Name: "official-skill", OriginalSource: "official", InstallerApp: "rntocase", ContentDigest: "old-digest"}
+	require.NoError(t, skill.SaveMetadata(destDir, meta))
+	previousMetadata, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+
+	malformedExtractor := func(_ string, stagingDir string) error {
+		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("---\nname: official-skill\ndescription: invalid\n---not-a-delimiter\n"), 0644)
+	}
+	_, err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, malformedExtractor)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing closing '---' on a standalone line")
+
+	actualSkill, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, previousSkill, actualSkill)
+	actualMetadata, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+	assert.Equal(t, previousMetadata, actualMetadata)
 }
 
 func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing.T) {

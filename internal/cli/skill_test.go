@@ -373,6 +373,12 @@ func TestRunSkillInstall_NameValidation(t *testing.T) {
 
 func TestRunSkillUpdate_AllCrossAgentRegression(t *testing.T) {
 	homeDir := setupMockHome(t)
+	expectedDir := t.TempDir()
+	require.NoError(t, skill.ExtractEmbeddedSkill("rntocase", expectedDir))
+	expectedSkill, err := os.ReadFile(filepath.Join(expectedDir, "SKILL.md"))
+	require.NoError(t, err)
+	expectedDigest, err := skill.ComputeDirectoryDigest(expectedDir)
+	require.NoError(t, err)
 
 	// Setup same skill name under both copilot and cursor roots
 	copilotDir := filepath.Join(homeDir, ".copilot", "skills", "rntocase")
@@ -392,18 +398,41 @@ func TestRunSkillUpdate_AllCrossAgentRegression(t *testing.T) {
 		OriginalSource: "official",
 		ContentDigest:  "old-digest-cursor",
 	}))
+	require.NoError(t, os.WriteFile(filepath.Join(cursorDir, "cursor-sentinel.txt"), []byte("cursor must remain untouched"), 0644))
+
+	// Capture the entire non-target installation before updating Copilot.
+	cursorSkillBefore, err := os.ReadFile(filepath.Join(cursorDir, "SKILL.md"))
+	require.NoError(t, err)
+	cursorMetadataBefore, err := os.ReadFile(filepath.Join(cursorDir, skill.MetadataFileName))
+	require.NoError(t, err)
+	cursorSentinelBefore, err := os.ReadFile(filepath.Join(cursorDir, "cursor-sentinel.txt"))
+	require.NoError(t, err)
 
 	// Run update --all for copilot agent only
-	err := RunSkillUpdate("user", "copilot", true, true, "")
+	err = RunSkillUpdate("user", "copilot", true, true, "")
 	assert.NoError(t, err)
 
 	// Verify copilot was updated (ContentDigest changed)
-	copilotMeta, _ := skill.LoadMetadata(copilotDir)
+	copilotSkill, err := os.ReadFile(filepath.Join(copilotDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, expectedSkill, copilotSkill)
+	copilotMeta, err := skill.LoadMetadata(copilotDir)
+	require.NoError(t, err)
 	assert.NotEqual(t, "old-digest-copilot", copilotMeta.ContentDigest)
+	assert.Equal(t, "rntocase", copilotMeta.Name)
+	assert.Equal(t, "official", copilotMeta.OriginalSource)
+	assert.Equal(t, expectedDigest, copilotMeta.ContentDigest)
 
-	// Verify cursor was NOT updated (ContentDigest remains unchanged)
-	cursorMeta, _ := skill.LoadMetadata(cursorDir)
-	assert.Equal(t, "old-digest-cursor", cursorMeta.ContentDigest)
+	// Verify the Cursor installation was not updated in any way.
+	cursorSkillAfter, err := os.ReadFile(filepath.Join(cursorDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, cursorSkillBefore, cursorSkillAfter)
+	cursorMetadataAfter, err := os.ReadFile(filepath.Join(cursorDir, skill.MetadataFileName))
+	require.NoError(t, err)
+	assert.Equal(t, cursorMetadataBefore, cursorMetadataAfter)
+	cursorSentinelAfter, err := os.ReadFile(filepath.Join(cursorDir, "cursor-sentinel.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, cursorSentinelBefore, cursorSentinelAfter)
 }
 
 func TestResolveSkillPath_TraversalRegression(t *testing.T) {
@@ -413,21 +442,43 @@ func TestResolveSkillPath_TraversalRegression(t *testing.T) {
 	require.NoError(t, os.MkdirAll(externalDir, 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(externalDir, "SKILL.md"), []byte("---\nname: malicious\ndescription: desc\n---"), 0644))
 	require.NoError(t, skill.SaveMetadata(externalDir, &skill.Metadata{Name: "malicious"}))
+	require.NoError(t, os.WriteFile(filepath.Join(externalDir, "external-sentinel.txt"), []byte("do not modify"), 0644))
+
+	externalSkillBefore, err := os.ReadFile(filepath.Join(externalDir, "SKILL.md"))
+	require.NoError(t, err)
+	externalMetadataBefore, err := os.ReadFile(filepath.Join(externalDir, skill.MetadataFileName))
+	require.NoError(t, err)
+	externalSentinelBefore, err := os.ReadFile(filepath.Join(externalDir, "external-sentinel.txt"))
+	require.NoError(t, err)
+	assertExternalUnchanged := func() {
+		externalSkillAfter, readErr := os.ReadFile(filepath.Join(externalDir, "SKILL.md"))
+		require.NoError(t, readErr)
+		assert.Equal(t, externalSkillBefore, externalSkillAfter)
+		externalMetadataAfter, readErr := os.ReadFile(filepath.Join(externalDir, skill.MetadataFileName))
+		require.NoError(t, readErr)
+		assert.Equal(t, externalMetadataBefore, externalMetadataAfter)
+		externalSentinelAfter, readErr := os.ReadFile(filepath.Join(externalDir, "external-sentinel.txt"))
+		require.NoError(t, readErr)
+		assert.Equal(t, externalSentinelBefore, externalSentinelAfter)
+	}
 
 	// Attempt RemoveSkill with traversal: we are at `~/.agents/skills/`, so `../../external-malicious` should escape.
-	err := RunSkillRemove("user", "common", "../../external-malicious")
+	err = RunSkillRemove("user", "common", "../../external-malicious")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid skill name must be a single component without separators")
 
 	// Ensure the external directory still exists
 	_, err = os.Stat(externalDir)
 	assert.NoError(t, err, "external directory should not be removed by traversal attack")
+	assertExternalUnchanged()
 
 	err = RunSkillInspect("user", "common", false, "../../external-malicious")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid skill name must be a single component without separators")
+	assertExternalUnchanged()
 
 	err = RunSkillUpdate("user", "common", false, false, "../../external-malicious")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid skill name must be a single component without separators")
+	assertExternalUnchanged()
 }
