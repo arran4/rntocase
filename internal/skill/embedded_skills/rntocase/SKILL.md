@@ -1,6 +1,6 @@
 ---
 name: rntocase
-description: rntocase Agent Skill
+description: batch-rename files by changing their casing
 ---
 # rntocase Agent Skill
 
@@ -34,7 +34,7 @@ As an automated agent, you should follow these rules when using `rntocase`:
           --exclude '.git/**' \
           ./photos
         ```
-3.  **Avoid Interactive Mode:** Do not use the `--interactive` flag. Interactive prompts will block your execution in headless or scripted environments, requiring human intervention. If you must be sure, use `--dry-run` to check, then run the command normally.
+3.  **Avoid Interactive Mode:** Do not use the `-interactive` flag. Interactive prompts will block your execution in headless or scripted environments, requiring human intervention. If you must be sure, use `--dry-run` to check, then run the command normally.
 4.  **No In-Place Modification Tracking:** The tool modifies the filesystem directly. There is no internal "undo" command.
 5.  **Handling Spaces:** Ensure paths and filenames containing spaces or special characters are properly quoted when invoking the tool via shell (e.g., `rntocase camel "My File.txt"`).
 
@@ -44,7 +44,7 @@ As an automated agent, you should follow these rules when using `rntocase`:
 *   **Expecting directories to be renamed in recursive mode:** Recursive mode selects regular files only; directories are never renamed.
 *   **Using regex instead of glob patterns:** `--include` and `--exclude` accept doublestar glob patterns (such as `*.jpg` or `.git/**`), not regular expressions.
 *   **Assuming symlinks are followed recursively:** Directory symlinks are not followed and symlink files are skipped in recursive mode.
-*   **Using `--interactive`:** As mentioned, this blocks execution.
+*   **Using `-interactive`:** As mentioned, this blocks execution.
 *   **Misunderstanding delimitations:** When using `rntocase delimited`, you may need to provide an additional flag like `-delimiter "_"`. Use `rntocase <subcommand> -h` to see available flags for a specific operation.
 
 ## Available Subcommands (Examples)

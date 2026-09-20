@@ -9,6 +9,7 @@ import (
 
 	"github.com/arran4/rntocase/internal/skill"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Because skill target paths are complex, we override HOME for the test duration
@@ -28,7 +29,7 @@ func TestRunSkillInstall_ReplaceFlagFailureLeavesPriorIntact(t *testing.T) {
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	// Save valid metadata so it's "managed"
@@ -57,7 +58,60 @@ func TestRunSkillInstall_ReplaceFlagFailureLeavesPriorIntact(t *testing.T) {
 	// Ensure prior working installation is entirely intact
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "original working version", string(content))
+	assert.Equal(t, "---\nname: original-skill\ndescription: test skill\n---", string(content))
+}
+
+func TestRunSkillInstall_RejectsMalformedFrontmatterBeforeReplacingManagedSkill(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "my-skill")
+	require.NoError(t, os.MkdirAll(destDir, 0755))
+	previousSkill := []byte("---\nname: my-skill\ndescription: previous\n---\n")
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), previousSkill, 0644))
+	previousMetadata := &skill.Metadata{Name: "my-skill", OriginalSource: "local/mock", InstallerApp: "rntocase"}
+	require.NoError(t, skill.SaveMetadata(destDir, previousMetadata))
+	previousMetadataBytes, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+
+	sourceDir := t.TempDir()
+	malformedSkill := []byte("---\nname: my-skill\ndescription: invalid\n---not-a-delimiter\n")
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), malformedSkill, 0644))
+
+	err = RunSkillInstall("user", "common", true, "", "", "my-skill", sourceDir, "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing closing '---' on a standalone line")
+
+	actualSkill, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, previousSkill, actualSkill)
+	actualMetadata, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+	assert.Equal(t, previousMetadataBytes, actualMetadata)
+}
+
+func TestUpdateSingleSkill_RejectsMalformedFrontmatterBeforeReplacingManagedSkill(t *testing.T) {
+	homeDir := setupMockHome(t)
+	destDir := filepath.Join(homeDir, ".agents", "skills", "official-skill")
+	require.NoError(t, os.MkdirAll(destDir, 0755))
+	previousSkill := []byte("---\nname: official-skill\ndescription: previous\n---\n")
+	require.NoError(t, os.WriteFile(filepath.Join(destDir, "SKILL.md"), previousSkill, 0644))
+	meta := &skill.Metadata{Name: "official-skill", OriginalSource: "official", InstallerApp: "rntocase", ContentDigest: "old-digest"}
+	require.NoError(t, skill.SaveMetadata(destDir, meta))
+	previousMetadata, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+
+	malformedExtractor := func(_ string, stagingDir string) error {
+		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("---\nname: official-skill\ndescription: invalid\n---not-a-delimiter\n"), 0644)
+	}
+	_, err = updateSingleSkillWithExtractor("official-skill", meta, destDir, true, malformedExtractor)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing closing '---' on a standalone line")
+
+	actualSkill, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, previousSkill, actualSkill)
+	actualMetadata, err := os.ReadFile(filepath.Join(destDir, skill.MetadataFileName))
+	require.NoError(t, err)
+	assert.Equal(t, previousMetadata, actualMetadata)
 }
 
 func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing.T) {
@@ -68,7 +122,7 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	meta := &skill.Metadata{
@@ -99,7 +153,7 @@ func TestUpdateSingleSkill_EmbeddedValidationFailureLeavesPriorIntact(t *testing
 	// Ensure prior working installation is entirely intact
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "original working version", string(content))
+	assert.Equal(t, "---\nname: original-skill\ndescription: test skill\n---", string(content))
 }
 
 func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing.T) {
@@ -110,7 +164,7 @@ func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	meta := &skill.Metadata{
@@ -139,7 +193,7 @@ func TestUpdateSingleSkill_EmbeddedExtractionFailureLeavesPriorIntact(t *testing
 	// Ensure prior working installation is entirely intact
 	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
 	assert.NoError(t, err)
-	assert.Equal(t, "original working version", string(content))
+	assert.Equal(t, "---\nname: original-skill\ndescription: test skill\n---", string(content))
 }
 
 // Regression test for #38: official skill installed under a custom name still targets "rntocase" asset
@@ -151,7 +205,7 @@ func TestUpdateSingleSkill_CustomDestNamePreservesOfficialAsset(t *testing.T) {
 	err := os.MkdirAll(destDir, 0755)
 	assert.NoError(t, err)
 
-	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("original working version"), 0644)
+	err = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: original-skill\ndescription: test skill\n---"), 0644)
 	assert.NoError(t, err)
 
 	meta := &skill.Metadata{
@@ -169,7 +223,7 @@ func TestUpdateSingleSkill_CustomDestNamePreservesOfficialAsset(t *testing.T) {
 		capturedExtractedName = assetName
 
 		// Create SKILL.md to pass validation
-		return os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("new version"), 0644)
+		return os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("---\nname: my-custom-skill-name\ndescription: test skill\n---"), 0644)
 	}
 
 	_, err = updateSingleSkillWithExtractor("my-custom-skill-name", meta, destDir, true, mockExtract)
