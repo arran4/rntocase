@@ -16,6 +16,12 @@ var (
 	HTTPClient = &http.Client{Timeout: 15 * time.Second}
 )
 
+func init() {
+	if url := os.Getenv("RNTOCASE_GITHUB_API_URL"); url != "" {
+		GitHubAPIURL = url
+	}
+}
+
 // InstalledSkillInfo holds metadata and the agent it was found under.
 type InstalledSkillInfo struct {
 	Meta  *Metadata
