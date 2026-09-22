@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,14 +62,17 @@ func TestGeneratedCommand_SkillInstall_Integration(t *testing.T) {
 		require.Error(t, err, "expected error")
 	})
 
+	var requestedCommitsPath, requestedTarballPath string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/commits/v0.0.1") {
+		if r.URL.Path == "/repos/arran4/mock-rntocase/commits/v0.0.1" {
+			requestedCommitsPath = r.URL.Path
 			w.WriteHeader(http.StatusOK)
 			// Return a minimal JSON response mimicking a commit payload
 			_, _ = w.Write([]byte(`{"sha": "mock-sha-12345"}`))
 			return
 		}
-		if strings.HasSuffix(r.URL.Path, "/tarball/mock-sha-12345") {
+		if r.URL.Path == "/repos/arran4/mock-rntocase/tarball/mock-sha-12345" {
+			requestedTarballPath = r.URL.Path
 			w.WriteHeader(http.StatusOK)
 			gw := gzip.NewWriter(w)
 			tw := tar.NewWriter(gw)
@@ -130,10 +132,42 @@ func TestGeneratedCommand_SkillInstall_Integration(t *testing.T) {
 		assert.Contains(t, string(metaContent), `"requested_ref": "v0.0.1"`)
 		assert.Contains(t, string(metaContent), `"source_revision": "mock-sha-12345"`)
 		assert.Contains(t, string(metaContent), `"path_within": "skills/example"`)
+
+		// Assert strict route hits
+		assert.Equal(t, "/repos/arran4/mock-rntocase/commits/v0.0.1", requestedCommitsPath)
+		assert.Equal(t, "/repos/arran4/mock-rntocase/tarball/mock-sha-12345", requestedTarballPath)
+	})
+
+	t.Run("install with ref positional after flags (documented form)", func(t *testing.T) {
+		// Documented form includes flags explicitly before positional:
+		// rntocase skill install --ref v1.2.0 --path skills/example --name example owner/repo
+		// Wait, the prior run tested `skill install --scope=user --ref v0.0.1 ... arran4/mock-rntocase` which IS flags before positional.
+		// The manager asked to keep "the documented supported flag/positional ordering explicitly exercised".
+		// We will test `install --ref v0.0.1 --path skills/example --name example arran4/mock-rntocase` to explicitly match documentation.
+
+		// The previous mock `requestedCommitsPath` state is preserved in the singleton test server, we reset it or just make a new call
+		requestedCommitsPath = ""
+		requestedTarballPath = ""
+
+		// Passing --replace to overwrite the existing "example" directory installed in the previous step
+		runCmd := exec.Command(binPath, "skill", "install", "--scope=user", "--replace", "--ref", "v0.0.1", "--path", "skills/example", "--name", "example", "arran4/mock-rntocase")
+		runCmd.Env = append(os.Environ(), "RNTOCASE_GITHUB_API_URL="+ts.URL)
+
+		out, err := runCmd.CombinedOutput()
+		require.NoError(t, err, "failed to run command with flags before positional (documented form): %s", string(out))
+
+		destDir := filepath.Join(homeDir, ".agents", "skills", "example")
+		content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+		require.NoError(t, err, "could not read installed SKILL.md")
+		assert.Equal(t, "---\nname: example\ndescription: mock skill desc\n---\n", string(content))
+
+		assert.Equal(t, "/repos/arran4/mock-rntocase/commits/v0.0.1", requestedCommitsPath)
+		assert.Equal(t, "/repos/arran4/mock-rntocase/tarball/mock-sha-12345", requestedTarballPath)
 	})
 
 	t.Run("install with ref returns 404 from mock network", func(t *testing.T) {
-		runCmd := exec.Command(binPath, "skill", "install", "--scope=user", "--ref", "v0.0.2", "--path", "skills/example", "--name", "example2", "arran4/mock-rntocase-notfound")
+		// Use a specific path check that will explicitly hit the 404 case.
+		runCmd := exec.Command(binPath, "skill", "install", "--scope=user", "--ref", "v0.0.2", "--path", "skills/example", "--name", "example3", "arran4/mock-rntocase-notfound")
 		runCmd.Env = append(os.Environ(), "RNTOCASE_GITHUB_API_URL="+ts.URL)
 
 		out, err := runCmd.CombinedOutput()

@@ -1,6 +1,6 @@
 module github.com/arran4/rntocase
 
-go 1.25.0
+go 1.25.3
 
 require (
 	github.com/arran4/go-subcommand v0.0.28
