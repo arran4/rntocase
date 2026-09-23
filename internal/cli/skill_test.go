@@ -52,6 +52,41 @@ func TestRunSkillInspect_RequiresName(t *testing.T) {
 	assert.Contains(t, err.Error(), "usage: skill inspect <name>")
 }
 
+func TestRunSkillInstall_BasicLocal(t *testing.T) {
+	homeDir := setupMockHome(t)
+	sourceDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), []byte("---\nname: generated-skill\ndescription: desc\n---"), 0644))
+
+	err := RunSkillInstall("user", "", false, "", "", "generated-skill", sourceDir, "")
+	require.NoError(t, err)
+
+	destDir := filepath.Join(homeDir, ".agents", "skills", "generated-skill")
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, "---\nname: generated-skill\ndescription: desc\n---", string(content))
+}
+
+func TestRunSkillInstall_BundledOfficial(t *testing.T) {
+	homeDir := setupMockHome(t)
+
+	err := RunSkillInstall("user", "", false, "", "", "", "rntocase", "")
+	require.NoError(t, err)
+
+	destDir := filepath.Join(homeDir, ".agents", "skills", "rntocase")
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "name: rntocase")
+}
+
+func TestRunSkillUpdate_ExplicitForm(t *testing.T) {
+	_ = setupMockHome(t)
+	err := RunSkillInstall("user", "", false, "", "", "", "rntocase", "")
+	require.NoError(t, err)
+
+	err = RunSkillUpdate("user", "", false, false, "rntocase")
+	require.NoError(t, err)
+}
+
 func TestRunSkillUpdate_LocalSkillError(t *testing.T) {
 	homeDir := setupMockHome(t)
 	destDir := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
@@ -264,18 +299,47 @@ func TestRunSkillUpdate_PinnedRef(t *testing.T) {
 	assert.NoError(t, err) // Already current, should not error
 }
 
-func TestRunSkillInstall_RefNotFound(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer ts.Close()
+// RouteAssertingTransport is a mock http.RoundTripper that returns a specific status code
+// while enforcing exact HTTP method and URL paths.
+type RouteAssertingTransport struct {
+	ExpectedMethod string
+	ExpectedURL    string
+	StatusCode     int
+	t              *testing.T
+}
 
-	originalAPIURL := skill.GitHubAPIURL
-	skill.GitHubAPIURL = ts.URL
-	defer func() { skill.GitHubAPIURL = originalAPIURL }()
+func (t *RouteAssertingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method != t.ExpectedMethod {
+		t.t.Errorf("expected HTTP method %s, got %s", t.ExpectedMethod, req.Method)
+	}
+	actualURL := req.URL.String()
+	if actualURL != t.ExpectedURL {
+		t.t.Errorf("expected URL %s, got %s", t.ExpectedURL, actualURL)
+	}
+
+	return &http.Response{
+		StatusCode: t.StatusCode,
+		Body:       http.NoBody,
+		Header:     make(http.Header),
+	}, nil
+}
+
+func TestRunSkillInstall_RefNotFound(t *testing.T) {
+	expectedAPIURL := skill.GitHubAPIURL + "/repos/arran4/mock-rntocase-notfound/commits/does-not-exist"
+
+	originalClient := skill.HTTPClient
+	skill.HTTPClient = &http.Client{
+		Transport: &RouteAssertingTransport{
+			ExpectedMethod: "GET",
+			ExpectedURL:    expectedAPIURL,
+			StatusCode:     http.StatusNotFound,
+			t:              t,
+		},
+	}
+	defer func() { skill.HTTPClient = originalClient }()
 
 	_ = setupMockHome(t)
-	err := RunSkillInstall("user", "", false, "does-not-exist", "", "", "dummy/repo", "")
+	err := RunSkillInstall("user", "", false, "does-not-exist", "", "", "arran4/mock-rntocase-notfound", "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get repository metadata: HTTP 404")
 }
