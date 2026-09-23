@@ -89,14 +89,4 @@ func TestGeneratedCommand_SkillInstall_Integration(t *testing.T) {
 		assert.Contains(t, string(metaContent), `"path_within": "skills/example"`)
 	})
 
-	t.Run("install with ref returns 404 from mock network", func(t *testing.T) {
-		// Use a specific path check that will explicitly hit the 404 case.
-		runCmd := exec.Command(binPath, "skill", "install", "--scope=user", "--ref", "v0.0.2", "--path", "skills/example", "--name", "example3", "arran4/mock-rntocase-notfound")
-		runCmd.Env = append(os.Environ(), "RNTOCASE_GITHUB_API_URL="+ts.URL)
-
-		out, err := runCmd.CombinedOutput()
-		require.Error(t, err, "expected error when github returns 404")
-		assert.Contains(t, string(out), "failed to get repository metadata: HTTP 404")
-	})
-
 }

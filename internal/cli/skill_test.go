@@ -52,6 +52,47 @@ func TestRunSkillInspect_RequiresName(t *testing.T) {
 	assert.Contains(t, err.Error(), "usage: skill inspect <name>")
 }
 
+func TestRunSkillInstall_BasicLocal(t *testing.T) {
+	homeDir := setupMockHome(t)
+	sourceDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "SKILL.md"), []byte("---\nname: generated-skill\ndescription: desc\n---"), 0644))
+
+	err := RunSkillInstall("user", "", false, "", "", "generated-skill", sourceDir, "")
+	require.NoError(t, err)
+
+	destDir := filepath.Join(homeDir, ".agents", "skills", "generated-skill")
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, "---\nname: generated-skill\ndescription: desc\n---", string(content))
+}
+
+func TestRunSkillInstall_BundledOfficial(t *testing.T) {
+	homeDir := setupMockHome(t)
+
+	err := RunSkillInstall("user", "", false, "", "", "", "rntocase", "")
+	require.NoError(t, err)
+
+	destDir := filepath.Join(homeDir, ".agents", "skills", "rntocase")
+	content, err := os.ReadFile(filepath.Join(destDir, "SKILL.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "name: rntocase")
+}
+
+func TestRunSkillUpdate_ExplicitForm(t *testing.T) {
+	_ = setupMockHome(t)
+	err := RunSkillInstall("user", "", false, "", "", "", "rntocase", "")
+	require.NoError(t, err)
+
+	err = RunSkillUpdate("user", "", false, false, "rntocase")
+	require.NoError(t, err)
+}
+
+func TestRunSkillUpdate_NonExistingForm(t *testing.T) {
+	_ = setupMockHome(t)
+	err := RunSkillUpdate("user", "", false, false, "non-existent")
+	require.Error(t, err)
+}
+
 func TestRunSkillUpdate_LocalSkillError(t *testing.T) {
 	homeDir := setupMockHome(t)
 	destDir := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
@@ -264,18 +305,28 @@ func TestRunSkillUpdate_PinnedRef(t *testing.T) {
 	assert.NoError(t, err) // Already current, should not error
 }
 
-func TestRunSkillInstall_RefNotFound(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer ts.Close()
+// ErrorTransport is a mock http.RoundTripper that always returns a fixed status code
+type ErrorTransport struct {
+	StatusCode int
+}
 
-	originalAPIURL := skill.GitHubAPIURL
-	skill.GitHubAPIURL = ts.URL
-	defer func() { skill.GitHubAPIURL = originalAPIURL }()
+func (t *ErrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: t.StatusCode,
+		Body:       http.NoBody,
+		Header:     make(http.Header),
+	}, nil
+}
+
+func TestRunSkillInstall_RefNotFound(t *testing.T) {
+	originalClient := skill.HTTPClient
+	skill.HTTPClient = &http.Client{
+		Transport: &ErrorTransport{StatusCode: http.StatusNotFound},
+	}
+	defer func() { skill.HTTPClient = originalClient }()
 
 	_ = setupMockHome(t)
-	err := RunSkillInstall("user", "", false, "does-not-exist", "", "", "dummy/repo", "")
+	err := RunSkillInstall("user", "", false, "does-not-exist", "", "", "arran4/mock-rntocase-notfound", "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get repository metadata: HTTP 404")
 }
