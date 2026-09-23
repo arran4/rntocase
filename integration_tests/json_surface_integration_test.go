@@ -39,9 +39,7 @@ func runCLI(t *testing.T, binPath string, args ...string) (string, string, error
 }
 
 func TestCommandJSONSurface(t *testing.T) {
-	binPath := filepath.Join(t.TempDir(), "rntocase")
-	cmd := exec.Command("go", "build", "-o", binPath, "github.com/arran4/rntocase/cmd/rntocase")
-	require.NoError(t, cmd.Run(), "failed to build CLI")
+	binPath := sharedBinPath
 
 	t.Run("basic json output structure", func(t *testing.T) {
 		tempDir := t.TempDir()
