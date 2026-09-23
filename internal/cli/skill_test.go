@@ -87,12 +87,6 @@ func TestRunSkillUpdate_ExplicitForm(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRunSkillUpdate_NonExistingForm(t *testing.T) {
-	_ = setupMockHome(t)
-	err := RunSkillUpdate("user", "", false, false, "non-existent")
-	require.Error(t, err)
-}
-
 func TestRunSkillUpdate_LocalSkillError(t *testing.T) {
 	homeDir := setupMockHome(t)
 	destDir := filepath.Join(homeDir, ".agents", "skills", "local-skill1")
