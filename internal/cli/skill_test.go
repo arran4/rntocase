@@ -305,12 +305,24 @@ func TestRunSkillUpdate_PinnedRef(t *testing.T) {
 	assert.NoError(t, err) // Already current, should not error
 }
 
-// ErrorTransport is a mock http.RoundTripper that always returns a fixed status code
-type ErrorTransport struct {
-	StatusCode int
+// RouteAssertingTransport is a mock http.RoundTripper that returns a specific status code
+// while enforcing exact HTTP method and URL paths.
+type RouteAssertingTransport struct {
+	ExpectedMethod string
+	ExpectedURL    string
+	StatusCode     int
+	t              *testing.T
 }
 
-func (t *ErrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *RouteAssertingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method != t.ExpectedMethod {
+		t.t.Errorf("expected HTTP method %s, got %s", t.ExpectedMethod, req.Method)
+	}
+	actualURL := req.URL.String()
+	if actualURL != t.ExpectedURL {
+		t.t.Errorf("expected URL %s, got %s", t.ExpectedURL, actualURL)
+	}
+
 	return &http.Response{
 		StatusCode: t.StatusCode,
 		Body:       http.NoBody,
@@ -319,9 +331,16 @@ func (t *ErrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestRunSkillInstall_RefNotFound(t *testing.T) {
+	expectedAPIURL := skill.GitHubAPIURL + "/repos/arran4/mock-rntocase-notfound/commits/does-not-exist"
+
 	originalClient := skill.HTTPClient
 	skill.HTTPClient = &http.Client{
-		Transport: &ErrorTransport{StatusCode: http.StatusNotFound},
+		Transport: &RouteAssertingTransport{
+			ExpectedMethod: "GET",
+			ExpectedURL:    expectedAPIURL,
+			StatusCode:     http.StatusNotFound,
+			t:              t,
+		},
 	}
 	defer func() { skill.HTTPClient = originalClient }()
 
