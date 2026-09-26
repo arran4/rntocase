@@ -152,7 +152,9 @@ func ExtractTarGz(tarballPath, destDir, pathWithin string) error {
 func extractAndProtect(tr *tar.Reader, header *tar.Header, destDir string, relativePath string) error {
 	// SECURITY: Path traversal protection
 	targetPath := filepath.Join(destDir, relativePath)
-	if !strings.HasPrefix(filepath.Clean(targetPath), filepath.Clean(destDir)+string(os.PathSeparator)) {
+	cleanTarget := filepath.Clean(targetPath)
+	cleanDest := filepath.Clean(destDir)
+	if cleanTarget != cleanDest && !strings.HasPrefix(cleanTarget, cleanDest+string(os.PathSeparator)) {
 		return fmt.Errorf("invalid file path in tarball (path traversal detected): %s", header.Name)
 	}
 
@@ -183,7 +185,8 @@ func extractAndProtect(tr *tar.Reader, header *tar.Header, destDir string, relat
 		}
 
 		resolvedSymlink := filepath.Join(filepath.Dir(absSymlinkTarget), symlinkTarget)
-		if !strings.HasPrefix(filepath.Clean(resolvedSymlink), filepath.Clean(destDir)+string(os.PathSeparator)) {
+		cleanSymlink := filepath.Clean(resolvedSymlink)
+		if cleanSymlink != cleanDest && !strings.HasPrefix(cleanSymlink, cleanDest+string(os.PathSeparator)) {
 			return fmt.Errorf("symlink points outside destination directory: %s", header.Name)
 		}
 
@@ -217,7 +220,8 @@ func CopyLocalDirectory(src, dest string) error {
 		destPath := filepath.Join(dest, relPath)
 
 		// Basic path traversal protection for local copies too
-		if !strings.HasPrefix(destPath, dest+string(os.PathSeparator)) {
+		cleanDestPath := filepath.Clean(destPath)
+		if cleanDestPath != dest && !strings.HasPrefix(cleanDestPath, dest+string(os.PathSeparator)) {
 			return fmt.Errorf("path traversal detected during local copy: %s", destPath)
 		}
 

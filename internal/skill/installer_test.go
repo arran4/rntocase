@@ -120,6 +120,24 @@ func TestExtractTarGz_PathTraversal(t *testing.T) {
 	assert.Contains(t, err.Error(), "path traversal detected")
 }
 
+func TestExtractTarGz_PathTraversalTricky(t *testing.T) {
+	destDir := t.TempDir()
+
+	// Use a path that starts with destDir but doesn't have a trailing slash
+	// For instance, if destDir is `/tmp/dest`, the tricky path is `/tmp/dest-evil/file.txt`
+	trickyPath := filepath.Base(destDir) + "-evil/file.txt"
+	files := map[string]string{
+		"repo-sha/../../" + trickyPath: "evil content",
+	}
+
+	tarPath := createTestTarball(t, files)
+	defer func() { _ = os.Remove(tarPath) }()
+
+	err := ExtractTarGz(tarPath, destDir, "")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "path traversal detected")
+}
+
 func TestExtractTarGz_Success(t *testing.T) {
 	destDir := t.TempDir()
 
