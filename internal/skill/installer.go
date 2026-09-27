@@ -190,10 +190,6 @@ func extractAndProtect(tr *tar.Reader, header *tar.Header, destDir string, relat
 			return fmt.Errorf("symlink points outside destination directory: %s", header.Name)
 		}
 
-		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-			return fmt.Errorf("failed to create parent directory for symlink: %w", err)
-		}
-
 		if err := os.Symlink(symlinkTarget, targetPath); err != nil {
 			return fmt.Errorf("failed to create symlink: %w", err)
 		}
