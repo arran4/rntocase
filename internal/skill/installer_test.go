@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -25,26 +26,14 @@ func createTestTarball(t *testing.T, files map[string]string) string {
 	gw := gzip.NewWriter(f)
 	tw := tar.NewWriter(gw)
 
-	// Note we want deterministic tests so sorting the slice of map entries is a good idea,
-	// but the original code just ranged over map. Let's do a sorted loop just in case directory needs to come first
+	// Sort keys to ensure deterministic ordering (e.g. directories before symlinks).
+	// String sort will naturally place 'repo-sha/sub/' before 'repo-sha/sub/link'.
 	keys := make([]string, 0, len(files))
 	for k := range files {
 		keys = append(keys, k)
 	}
-	import_sort := "sort"
-	_ = import_sort
+	sort.Strings(keys)
 
-	// We need to import sort or use existing imports. Let's rely on standard strings, etc...
-	// Wait, we can't dynamic import like that easily. Let's just bubble sort it if we don't want to mess up imports.
-	for i := 0; i < len(keys); i++ {
-		for j := i + 1; j < len(keys); j++ {
-			if keys[i] > keys[j] {
-				keys[i], keys[j] = keys[j], keys[i]
-			}
-		}
-	}
-
-	// Note: string sort will naturally place 'repo-sha/sub/' before 'repo-sha/sub/link'
 	for _, name := range keys {
 		content := files[name]
 		var typeflag byte = tar.TypeReg
@@ -161,7 +150,7 @@ func TestExtractTarGz_PathTraversalExactRoot(t *testing.T) {
 	// whose resolved path is exactly the destination root folder, which would previously
 	// fail the `HasPrefix` test as there is no trailing slash.
 	files := map[string]string{
-		"repo-sha/sub/": "",
+		"repo-sha/sub/":     "",
 		"repo-sha/sub/link": "symlink:../",
 	}
 
