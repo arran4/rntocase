@@ -1,0 +1,50 @@
+<<<<<<< SEARCH
+func TestExtractTarGz_PathTraversalExactRoot(t *testing.T) {
+	destDir := t.TempDir()
+
+	// Test extraction that directly creates a symlink within the destination folder
+	// whose resolved path is exactly the destination root folder, which would previously
+	// fail the `HasPrefix` test as there is no trailing slash.
+	files := map[string]string{
+		"repo-sha/sub/link": "symlink:../",
+	}
+
+	tarPath := createTestTarball(t, files)
+	defer func() { _ = os.Remove(tarPath) }()
+
+	// Should extract successfully since the symlink points safely within destDir.
+	err := ExtractTarGz(tarPath, destDir, "")
+	assert.NoError(t, err)
+
+	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "link"))
+	assert.NoError(t, err)
+	assert.Equal(t, "../", linkTarget)
+}
+=======
+func TestExtractTarGz_PathTraversalExactRoot(t *testing.T) {
+	destDir := t.TempDir()
+
+	// Test extraction that directly creates a symlink within the destination folder
+	// whose resolved path is exactly the destination root folder, which would previously
+	// fail the `HasPrefix` test as there is no trailing slash.
+	files := map[string]string{
+		"repo-sha/sub/link": "symlink:../",
+	}
+
+	tarPath := createTestTarball(t, files)
+	defer func() { _ = os.Remove(tarPath) }()
+
+	// Should extract successfully since the symlink points safely within destDir.
+	err := ExtractTarGz(tarPath, destDir, "")
+	assert.NoError(t, err)
+
+	// Since we are creating a symlink in testing environment, let's verify if the file was created as a symlink
+	info, err := os.Lstat(filepath.Join(destDir, "sub", "link"))
+	assert.NoError(t, err)
+	assert.True(t, info.Mode()&os.ModeSymlink != 0, "file is not a symlink")
+
+	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "link"))
+	assert.NoError(t, err)
+	assert.Equal(t, "../", linkTarget)
+}
+>>>>>>> REPLACE

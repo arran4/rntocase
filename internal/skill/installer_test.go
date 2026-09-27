@@ -26,16 +26,27 @@ func createTestTarball(t *testing.T, files map[string]string) string {
 	tw := tar.NewWriter(gw)
 
 	for name, content := range files {
+		var typeflag byte = tar.TypeReg
+		linkname := ""
+		if strings.HasPrefix(content, "symlink:") {
+			typeflag = tar.TypeSymlink
+			linkname = strings.TrimPrefix(content, "symlink:")
+			content = ""
+		}
 		hdr := &tar.Header{
-			Name: name,
-			Mode: 0600,
-			Size: int64(len(content)),
+			Name:     name,
+			Mode:     0600,
+			Size:     int64(len(content)),
+			Typeflag: typeflag,
+			Linkname: linkname,
 		}
 		if err := tw.WriteHeader(hdr); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := tw.Write([]byte(content)); err != nil {
-			t.Fatal(err)
+		if content != "" {
+			if _, err := tw.Write([]byte(content)); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
@@ -118,6 +129,33 @@ func TestExtractTarGz_PathTraversal(t *testing.T) {
 	err := ExtractTarGz(tarPath, destDir, "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "path traversal detected")
+}
+
+func TestExtractTarGz_PathTraversalExactRoot(t *testing.T) {
+	destDir := t.TempDir()
+
+	// Test extraction that directly creates a symlink within the destination folder
+	// whose resolved path is exactly the destination root folder, which would previously
+	// fail the `HasPrefix` test as there is no trailing slash.
+	files := map[string]string{
+		"repo-sha/sub/link": "symlink:../",
+	}
+
+	tarPath := createTestTarball(t, files)
+	defer func() { _ = os.Remove(tarPath) }()
+
+	// Should extract successfully since the symlink points safely within destDir.
+	err := ExtractTarGz(tarPath, destDir, "")
+	assert.NoError(t, err)
+
+	// Since we are creating a symlink in testing environment, let's verify if the file was created as a symlink
+	info, err := os.Lstat(filepath.Join(destDir, "sub", "link"))
+	assert.NoError(t, err)
+	assert.True(t, info.Mode()&os.ModeSymlink != 0, "file is not a symlink")
+
+	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "link"))
+	assert.NoError(t, err)
+	assert.Equal(t, "../", linkTarget)
 }
 
 func TestExtractTarGz_PathTraversalTricky(t *testing.T) {

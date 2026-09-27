@@ -190,6 +190,10 @@ func extractAndProtect(tr *tar.Reader, header *tar.Header, destDir string, relat
 			return fmt.Errorf("symlink points outside destination directory: %s", header.Name)
 		}
 
+		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+			return fmt.Errorf("failed to create parent directory for symlink: %w", err)
+		}
+
 		if err := os.Symlink(symlinkTarget, targetPath); err != nil {
 			return fmt.Errorf("failed to create symlink: %w", err)
 		}
@@ -220,8 +224,7 @@ func CopyLocalDirectory(src, dest string) error {
 		destPath := filepath.Join(dest, relPath)
 
 		// Basic path traversal protection for local copies too
-		cleanDestPath := filepath.Clean(destPath)
-		if cleanDestPath != dest && !strings.HasPrefix(cleanDestPath, dest+string(os.PathSeparator)) {
+		if !strings.HasPrefix(destPath, dest+string(os.PathSeparator)) {
 			return fmt.Errorf("path traversal detected during local copy: %s", destPath)
 		}
 

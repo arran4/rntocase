@@ -1,0 +1,12 @@
+<<<<<<< SEARCH
+		// Basic path traversal protection for local copies too
+		cleanDestPath := filepath.Clean(destPath)
+		if cleanDestPath != dest && !strings.HasPrefix(cleanDestPath, dest+string(os.PathSeparator)) {
+			return fmt.Errorf("path traversal detected during local copy: %s", destPath)
+		}
+=======
+		// Basic path traversal protection for local copies too
+		if !strings.HasPrefix(destPath, dest+string(os.PathSeparator)) {
+			return fmt.Errorf("path traversal detected during local copy: %s", destPath)
+		}
+>>>>>>> REPLACE
