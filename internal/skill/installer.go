@@ -233,6 +233,20 @@ func CopyLocalDirectory(src, dest string) error {
 			if err != nil {
 				return err
 			}
+
+			// SECURITY: Prevent malicious symlinks outside the destination
+			if filepath.IsAbs(symlinkTarget) {
+				return fmt.Errorf("absolute symlinks are not allowed during local copy: %s", path)
+			}
+
+			resolvedSymlink := filepath.Join(filepath.Dir(destPath), symlinkTarget)
+			cleanSymlink := filepath.Clean(resolvedSymlink)
+			cleanDest := filepath.Clean(dest)
+
+			if cleanSymlink != cleanDest && !strings.HasPrefix(cleanSymlink, cleanDest+string(os.PathSeparator)) {
+				return fmt.Errorf("symlink points outside destination directory during local copy: %s", path)
+			}
+
 			return os.Symlink(symlinkTarget, destPath)
 		}
 

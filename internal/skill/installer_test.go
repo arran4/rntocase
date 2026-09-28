@@ -427,3 +427,83 @@ func TestClassifySource(t *testing.T) {
 		})
 	}
 }
+
+func TestCopyLocalDirectory_Symlinks(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(srcDir, "sub", "target.txt"), []byte("hello"), 0644)
+	require.NoError(t, err)
+
+	// Test case 1: Valid symlink contained within the copied skill
+	err = os.Symlink("target.txt", filepath.Join(srcDir, "sub", "valid_link"))
+	require.NoError(t, err)
+
+	// Test case 2: Relative symlink escaping the destination
+	err = os.Symlink("../../outside", filepath.Join(srcDir, "sub", "escaping_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "symlink points outside destination directory during local copy")
+}
+
+func TestCopyLocalDirectory_AbsoluteSymlinks(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+
+	// Test case 3: Absolute outside symlink
+	err = os.Symlink("/etc/passwd", filepath.Join(srcDir, "sub", "abs_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "absolute symlinks are not allowed during local copy")
+}
+
+func TestCopyLocalDirectory_ValidSymlinkOnly(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(srcDir, "sub", "target.txt"), []byte("hello"), 0644)
+	require.NoError(t, err)
+
+	// Valid symlink contained within the copied skill
+	err = os.Symlink("target.txt", filepath.Join(srcDir, "sub", "valid_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.NoError(t, err)
+
+	// Verify the symlink was created correctly
+	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "valid_link"))
+	assert.NoError(t, err)
+	assert.Equal(t, "target.txt", linkTarget)
+}
+
+func TestCopyLocalDirectory_ExactRootSymlink(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+
+	// Test case 4: Valid exact-root symlink
+	err = os.Symlink("../", filepath.Join(srcDir, "sub", "exact_root_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.NoError(t, err)
+
+	// Verify the symlink was created correctly
+	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "exact_root_link"))
+	assert.NoError(t, err)
+	assert.Equal(t, "../", linkTarget)
+}
