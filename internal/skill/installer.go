@@ -201,20 +201,23 @@ func ValidateSymlinkTarget(symlinkTarget, targetPath, destDir string) error {
 		return fmt.Errorf("absolute symlinks are not allowed: %s", targetPath)
 	}
 
-	// Check for Windows volume-qualified or rooted paths (e.g. \outside, C:..\outside).
-	// Because this can be evaluated on POSIX, we need to manually check for volume letters
-	// instead of relying entirely on filepath.VolumeName which is OS-dependent.
-	if len(symlinkTarget) >= 2 && symlinkTarget[1] == ':' &&
-		((symlinkTarget[0] >= 'a' && symlinkTarget[0] <= 'z') || (symlinkTarget[0] >= 'A' && symlinkTarget[0] <= 'Z')) {
-		return fmt.Errorf("volume-qualified symlinks are not allowed: %s", targetPath)
-	}
-	if strings.HasPrefix(symlinkTarget, "/") || strings.HasPrefix(symlinkTarget, "\\") {
-		return fmt.Errorf("rooted symlinks are not allowed: %s", targetPath)
-	}
-
 	normalizedSymlinkTarget := symlinkTarget
+
 	if runtime.GOOS == "windows" {
+		// On Windows, explicitly reject volume-qualified (drive-relative) and current-volume-rooted forms.
+		if filepath.VolumeName(symlinkTarget) != "" || (len(symlinkTarget) >= 2 && symlinkTarget[1] == ':') {
+			return fmt.Errorf("volume-qualified symlinks are not allowed: %s", targetPath)
+		}
+		if strings.HasPrefix(symlinkTarget, "\\") || strings.HasPrefix(symlinkTarget, "/") {
+			return fmt.Errorf("rooted symlinks are not allowed: %s", targetPath)
+		}
 		normalizedSymlinkTarget = strings.ReplaceAll(symlinkTarget, "\\", "/")
+	} else {
+		// On POSIX, only reject native POSIX absolute paths (which start with '/').
+		// Native filepath.IsAbs already covers this, but for clarity:
+		if strings.HasPrefix(symlinkTarget, "/") {
+			return fmt.Errorf("rooted symlinks are not allowed: %s", targetPath)
+		}
 	}
 
 	resolvedSymlink := filepath.Join(filepath.Dir(targetPath), normalizedSymlinkTarget)

@@ -178,9 +178,9 @@ func TestValidateSymlinkTarget_WindowsCases(t *testing.T) {
 		errContains   string
 	}{
 		{"POSIX absolute", "/etc/passwd", true, "symlinks"},
-		{"Windows volume absolute", "C:\\Windows", true, "symlinks"},
-		{"Windows volume qualified relative", "C:..\\outside", true, "volume-qualified symlinks"},
-		{"Windows rooted path", "\\outside", true, "rooted symlinks"},
+		{"Windows volume absolute (POSIX context)", "C:\\Windows", false, ""}, // Valid literal filename on POSIX
+		{"Windows volume qualified relative (POSIX context)", "C:..\\outside", false, ""}, // Valid literal filename on POSIX
+		{"Windows rooted path (POSIX context)", "\\outside", false, ""}, // Valid literal filename on POSIX
 		{"POSIX rooted path equivalent", "/outside", true, "symlinks"}, // Will hit IsAbs first on POSIX usually
 		{"Valid POSIX relative", "target.txt", false, ""},
 		{"Valid exact root", "../", false, ""},
@@ -190,12 +190,23 @@ func TestValidateSymlinkTarget_WindowsCases(t *testing.T) {
 	}
 
 	if runtime.GOOS == "windows" {
-		// On Windows, the backslashes are path separators and this escapes.
 		for i, tt := range tests {
 			if tt.name == "Escaping Windows relative (POSIX context)" {
 				tests[i].name = "Escaping Windows relative"
 				tests[i].wantErr = true
 				tests[i].errContains = "symlink points outside"
+			} else if tt.name == "Windows volume absolute (POSIX context)" {
+				tests[i].name = "Windows volume absolute"
+				tests[i].wantErr = true
+				tests[i].errContains = "symlinks"
+			} else if tt.name == "Windows volume qualified relative (POSIX context)" {
+				tests[i].name = "Windows volume qualified relative"
+				tests[i].wantErr = true
+				tests[i].errContains = "volume-qualified symlinks"
+			} else if tt.name == "Windows rooted path (POSIX context)" {
+				tests[i].name = "Windows rooted path"
+				tests[i].wantErr = true
+				tests[i].errContains = "rooted symlinks"
 			}
 		}
 	}
