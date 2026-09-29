@@ -179,20 +179,48 @@ func extractAndProtect(tr *tar.Reader, header *tar.Header, destDir string, relat
 	case tar.TypeSymlink:
 		// SECURITY: Prevent malicious symlinks outside the destination
 		symlinkTarget := header.Linkname
-		absSymlinkTarget := targetPath
-		if filepath.IsAbs(symlinkTarget) {
-			return fmt.Errorf("absolute symlinks are not allowed: %s", header.Name)
-		}
 
-		resolvedSymlink := filepath.Join(filepath.Dir(absSymlinkTarget), symlinkTarget)
-		cleanSymlink := filepath.Clean(resolvedSymlink)
-		if cleanSymlink != cleanDest && !strings.HasPrefix(cleanSymlink, cleanDest+string(os.PathSeparator)) {
-			return fmt.Errorf("symlink points outside destination directory: %s", header.Name)
+		if err := ValidateSymlinkTarget(symlinkTarget, targetPath, destDir); err != nil {
+			return err
 		}
 
 		if err := os.Symlink(symlinkTarget, targetPath); err != nil {
 			return fmt.Errorf("failed to create symlink: %w", err)
 		}
+	}
+
+	return nil
+}
+
+// ValidateSymlinkTarget checks if a symlink target is allowed.
+// It rejects absolute paths, volume-qualified paths, and root-anchored paths,
+// and ensures the resolved path remains within the destination directory.
+func ValidateSymlinkTarget(symlinkTarget, targetPath, destDir string) error {
+	if filepath.IsAbs(symlinkTarget) {
+		return fmt.Errorf("absolute symlinks are not allowed: %s", targetPath)
+	}
+
+	// Check for Windows volume-qualified or rooted paths (e.g. \outside, C:..\outside).
+	// Because this can be evaluated on POSIX, we need to manually check for volume letters
+	// instead of relying entirely on filepath.VolumeName which is OS-dependent.
+	if len(symlinkTarget) >= 2 && symlinkTarget[1] == ':' &&
+		((symlinkTarget[0] >= 'a' && symlinkTarget[0] <= 'z') || (symlinkTarget[0] >= 'A' && symlinkTarget[0] <= 'Z')) {
+		return fmt.Errorf("volume-qualified symlinks are not allowed: %s", targetPath)
+	}
+	if strings.HasPrefix(symlinkTarget, "/") || strings.HasPrefix(symlinkTarget, "\\") {
+		return fmt.Errorf("rooted symlinks are not allowed: %s", targetPath)
+	}
+
+	// filepath.Clean won't resolve Windows backslashes correctly on POSIX systems.
+	// Convert Windows path separators to Unix ones strictly for traversal checks.
+	normalizedSymlinkTarget := strings.ReplaceAll(symlinkTarget, "\\", "/")
+
+	resolvedSymlink := filepath.Join(filepath.Dir(targetPath), normalizedSymlinkTarget)
+	cleanSymlink := filepath.Clean(resolvedSymlink)
+	cleanDest := filepath.Clean(destDir)
+
+	if cleanSymlink != cleanDest && !strings.HasPrefix(cleanSymlink, cleanDest+string(os.PathSeparator)) {
+		return fmt.Errorf("symlink points outside destination directory: %s", targetPath)
 	}
 
 	return nil
@@ -235,16 +263,8 @@ func CopyLocalDirectory(src, dest string) error {
 			}
 
 			// SECURITY: Prevent malicious symlinks outside the destination
-			if filepath.IsAbs(symlinkTarget) {
-				return fmt.Errorf("absolute symlinks are not allowed during local copy: %s", path)
-			}
-
-			resolvedSymlink := filepath.Join(filepath.Dir(destPath), symlinkTarget)
-			cleanSymlink := filepath.Clean(resolvedSymlink)
-			cleanDest := filepath.Clean(dest)
-
-			if cleanSymlink != cleanDest && !strings.HasPrefix(cleanSymlink, cleanDest+string(os.PathSeparator)) {
-				return fmt.Errorf("symlink points outside destination directory during local copy: %s", path)
+			if err := ValidateSymlinkTarget(symlinkTarget, destPath, dest); err != nil {
+				return err
 			}
 
 			return os.Symlink(symlinkTarget, destPath)

@@ -166,6 +166,41 @@ func TestExtractTarGz_PathTraversalExactRoot(t *testing.T) {
 	assert.Equal(t, "../", linkTarget)
 }
 
+func TestValidateSymlinkTarget_WindowsCases(t *testing.T) {
+	destDir := "/opt/dest"
+	targetPath := "/opt/dest/sub/link"
+
+	tests := []struct {
+		name          string
+		symlinkTarget string
+		wantErr       bool
+		errContains   string
+	}{
+		{"POSIX absolute", "/etc/passwd", true, "absolute symlinks"},
+		{"Windows volume absolute", "C:\\Windows", true, "volume-qualified symlinks"},
+		{"Windows volume qualified relative", "C:..\\outside", true, "volume-qualified symlinks"},
+		{"Windows rooted path", "\\outside", true, "rooted symlinks"},
+		{"POSIX rooted path equivalent", "/outside", true, "absolute symlinks"}, // Will hit IsAbs first on POSIX usually
+		{"Valid POSIX relative", "target.txt", false, ""},
+		{"Valid exact root", "../", false, ""},
+		{"Valid Windows exact root", "..\\", false, ""},
+		{"Escaping POSIX relative", "../../outside", true, "symlink points outside"},
+		{"Escaping Windows relative", "..\\..\\outside", true, "symlink points outside"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSymlinkTarget(tt.symlinkTarget, targetPath, destDir)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestExtractTarGz_Success(t *testing.T) {
 	destDir := t.TempDir()
 
@@ -447,7 +482,7 @@ func TestCopyLocalDirectory_Symlinks(t *testing.T) {
 
 	err = CopyLocalDirectory(srcDir, destDir)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "symlink points outside destination directory during local copy")
+	assert.Contains(t, err.Error(), "symlink points outside destination directory")
 }
 
 func TestCopyLocalDirectory_AbsoluteSymlinks(t *testing.T) {
@@ -463,7 +498,7 @@ func TestCopyLocalDirectory_AbsoluteSymlinks(t *testing.T) {
 
 	err = CopyLocalDirectory(srcDir, destDir)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "absolute symlinks are not allowed during local copy")
+	assert.Contains(t, err.Error(), "absolute symlinks are not allowed")
 }
 
 func TestCopyLocalDirectory_ValidSymlinkOnly(t *testing.T) {
