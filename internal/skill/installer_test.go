@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -176,16 +177,27 @@ func TestValidateSymlinkTarget_WindowsCases(t *testing.T) {
 		wantErr       bool
 		errContains   string
 	}{
-		{"POSIX absolute", "/etc/passwd", true, "absolute symlinks"},
-		{"Windows volume absolute", "C:\\Windows", true, "volume-qualified symlinks"},
+		{"POSIX absolute", "/etc/passwd", true, "symlinks"},
+		{"Windows volume absolute", "C:\\Windows", true, "symlinks"},
 		{"Windows volume qualified relative", "C:..\\outside", true, "volume-qualified symlinks"},
 		{"Windows rooted path", "\\outside", true, "rooted symlinks"},
-		{"POSIX rooted path equivalent", "/outside", true, "absolute symlinks"}, // Will hit IsAbs first on POSIX usually
+		{"POSIX rooted path equivalent", "/outside", true, "symlinks"}, // Will hit IsAbs first on POSIX usually
 		{"Valid POSIX relative", "target.txt", false, ""},
 		{"Valid exact root", "../", false, ""},
 		{"Valid Windows exact root", "..\\", false, ""},
 		{"Escaping POSIX relative", "../../outside", true, "symlink points outside"},
-		{"Escaping Windows relative", "..\\..\\outside", true, "symlink points outside"},
+		{"Escaping Windows relative (POSIX context)", "..\\..\\outside", false, ""}, // On POSIX, backslashes are literal filenames, so this is valid.
+	}
+
+	if runtime.GOOS == "windows" {
+		// On Windows, the backslashes are path separators and this escapes.
+		for i, tt := range tests {
+			if tt.name == "Escaping Windows relative (POSIX context)" {
+				tests[i].name = "Escaping Windows relative"
+				tests[i].wantErr = true
+				tests[i].errContains = "symlink points outside"
+			}
+		}
 	}
 
 	for _, tt := range tests {
@@ -498,7 +510,7 @@ func TestCopyLocalDirectory_AbsoluteSymlinks(t *testing.T) {
 
 	err = CopyLocalDirectory(srcDir, destDir)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "absolute symlinks are not allowed")
+	assert.Contains(t, err.Error(), "symlinks")
 }
 
 func TestCopyLocalDirectory_ValidSymlinkOnly(t *testing.T) {

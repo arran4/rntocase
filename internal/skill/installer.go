@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -211,9 +212,10 @@ func ValidateSymlinkTarget(symlinkTarget, targetPath, destDir string) error {
 		return fmt.Errorf("rooted symlinks are not allowed: %s", targetPath)
 	}
 
-	// filepath.Clean won't resolve Windows backslashes correctly on POSIX systems.
-	// Convert Windows path separators to Unix ones strictly for traversal checks.
-	normalizedSymlinkTarget := strings.ReplaceAll(symlinkTarget, "\\", "/")
+	normalizedSymlinkTarget := symlinkTarget
+	if runtime.GOOS == "windows" {
+		normalizedSymlinkTarget = strings.ReplaceAll(symlinkTarget, "\\", "/")
+	}
 
 	resolvedSymlink := filepath.Join(filepath.Dir(targetPath), normalizedSymlinkTarget)
 	cleanSymlink := filepath.Clean(resolvedSymlink)
