@@ -191,19 +191,20 @@ func TestValidateSymlinkTarget_WindowsCases(t *testing.T) {
 
 	if runtime.GOOS == "windows" {
 		for i, tt := range tests {
-			if tt.name == "Escaping Windows relative (POSIX context)" {
+			switch tt.name {
+			case "Escaping Windows relative (POSIX context)":
 				tests[i].name = "Escaping Windows relative"
 				tests[i].wantErr = true
 				tests[i].errContains = "symlink points outside"
-			} else if tt.name == "Windows volume absolute (POSIX context)" {
+			case "Windows volume absolute (POSIX context)":
 				tests[i].name = "Windows volume absolute"
 				tests[i].wantErr = true
 				tests[i].errContains = "symlinks"
-			} else if tt.name == "Windows volume qualified relative (POSIX context)" {
+			case "Windows volume qualified relative (POSIX context)":
 				tests[i].name = "Windows volume qualified relative"
 				tests[i].wantErr = true
 				tests[i].errContains = "volume-qualified symlinks"
-			} else if tt.name == "Windows rooted path (POSIX context)" {
+			case "Windows rooted path (POSIX context)":
 				tests[i].name = "Windows rooted path"
 				tests[i].wantErr = true
 				tests[i].errContains = "rooted symlinks"
