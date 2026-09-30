@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -179,20 +180,52 @@ func extractAndProtect(tr *tar.Reader, header *tar.Header, destDir string, relat
 	case tar.TypeSymlink:
 		// SECURITY: Prevent malicious symlinks outside the destination
 		symlinkTarget := header.Linkname
-		absSymlinkTarget := targetPath
-		if filepath.IsAbs(symlinkTarget) {
-			return fmt.Errorf("absolute symlinks are not allowed: %s", header.Name)
-		}
 
-		resolvedSymlink := filepath.Join(filepath.Dir(absSymlinkTarget), symlinkTarget)
-		cleanSymlink := filepath.Clean(resolvedSymlink)
-		if cleanSymlink != cleanDest && !strings.HasPrefix(cleanSymlink, cleanDest+string(os.PathSeparator)) {
-			return fmt.Errorf("symlink points outside destination directory: %s", header.Name)
+		if err := ValidateSymlinkTarget(symlinkTarget, targetPath, destDir); err != nil {
+			return err
 		}
 
 		if err := os.Symlink(symlinkTarget, targetPath); err != nil {
 			return fmt.Errorf("failed to create symlink: %w", err)
 		}
+	}
+
+	return nil
+}
+
+// ValidateSymlinkTarget checks if a symlink target is allowed.
+// It rejects absolute paths, volume-qualified paths, and root-anchored paths,
+// and ensures the resolved path remains within the destination directory.
+func ValidateSymlinkTarget(symlinkTarget, targetPath, destDir string) error {
+	if filepath.IsAbs(symlinkTarget) {
+		return fmt.Errorf("absolute symlinks are not allowed: %s", targetPath)
+	}
+
+	normalizedSymlinkTarget := symlinkTarget
+
+	if runtime.GOOS == "windows" {
+		// On Windows, explicitly reject volume-qualified (drive-relative) and current-volume-rooted forms.
+		if filepath.VolumeName(symlinkTarget) != "" || (len(symlinkTarget) >= 2 && symlinkTarget[1] == ':') {
+			return fmt.Errorf("volume-qualified symlinks are not allowed: %s", targetPath)
+		}
+		if strings.HasPrefix(symlinkTarget, "\\") || strings.HasPrefix(symlinkTarget, "/") {
+			return fmt.Errorf("rooted symlinks are not allowed: %s", targetPath)
+		}
+		normalizedSymlinkTarget = strings.ReplaceAll(symlinkTarget, "\\", "/")
+	} else {
+		// On POSIX, only reject native POSIX absolute paths (which start with '/').
+		// Native filepath.IsAbs already covers this, but for clarity:
+		if strings.HasPrefix(symlinkTarget, "/") {
+			return fmt.Errorf("rooted symlinks are not allowed: %s", targetPath)
+		}
+	}
+
+	resolvedSymlink := filepath.Join(filepath.Dir(targetPath), normalizedSymlinkTarget)
+	cleanSymlink := filepath.Clean(resolvedSymlink)
+	cleanDest := filepath.Clean(destDir)
+
+	if cleanSymlink != cleanDest && !strings.HasPrefix(cleanSymlink, cleanDest+string(os.PathSeparator)) {
+		return fmt.Errorf("symlink points outside destination directory: %s", targetPath)
 	}
 
 	return nil
@@ -233,6 +266,12 @@ func CopyLocalDirectory(src, dest string) error {
 			if err != nil {
 				return err
 			}
+
+			// SECURITY: Prevent malicious symlinks outside the destination
+			if err := ValidateSymlinkTarget(symlinkTarget, destPath, dest); err != nil {
+				return err
+			}
+
 			return os.Symlink(symlinkTarget, destPath)
 		}
 

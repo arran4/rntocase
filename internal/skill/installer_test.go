@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -164,6 +165,64 @@ func TestExtractTarGz_PathTraversalExactRoot(t *testing.T) {
 	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "link"))
 	assert.NoError(t, err)
 	assert.Equal(t, "../", linkTarget)
+}
+
+func TestValidateSymlinkTarget_WindowsCases(t *testing.T) {
+	destDir := "/opt/dest"
+	targetPath := "/opt/dest/sub/link"
+
+	tests := []struct {
+		name          string
+		symlinkTarget string
+		wantErr       bool
+		errContains   string
+	}{
+		{"POSIX absolute", "/etc/passwd", true, "symlinks"},
+		{"Windows volume absolute (POSIX context)", "C:\\Windows", false, ""}, // Valid literal filename on POSIX
+		{"Windows volume qualified relative (POSIX context)", "C:..\\outside", false, ""}, // Valid literal filename on POSIX
+		{"Windows rooted path (POSIX context)", "\\outside", false, ""}, // Valid literal filename on POSIX
+		{"POSIX rooted path equivalent", "/outside", true, "symlinks"}, // Will hit IsAbs first on POSIX usually
+		{"Valid POSIX relative", "target.txt", false, ""},
+		{"Valid exact root", "../", false, ""},
+		{"Valid Windows exact root", "..\\", false, ""},
+		{"Escaping POSIX relative", "../../outside", true, "symlink points outside"},
+		{"Escaping Windows relative (POSIX context)", "..\\..\\outside", false, ""}, // On POSIX, backslashes are literal filenames, so this is valid.
+	}
+
+	if runtime.GOOS == "windows" {
+		for i, tt := range tests {
+			switch tt.name {
+			case "Escaping Windows relative (POSIX context)":
+				tests[i].name = "Escaping Windows relative"
+				tests[i].wantErr = true
+				tests[i].errContains = "symlink points outside"
+			case "Windows volume absolute (POSIX context)":
+				tests[i].name = "Windows volume absolute"
+				tests[i].wantErr = true
+				tests[i].errContains = "symlinks"
+			case "Windows volume qualified relative (POSIX context)":
+				tests[i].name = "Windows volume qualified relative"
+				tests[i].wantErr = true
+				tests[i].errContains = "volume-qualified symlinks"
+			case "Windows rooted path (POSIX context)":
+				tests[i].name = "Windows rooted path"
+				tests[i].wantErr = true
+				tests[i].errContains = "rooted symlinks"
+			}
+		}
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSymlinkTarget(tt.symlinkTarget, targetPath, destDir)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestExtractTarGz_Success(t *testing.T) {
@@ -426,4 +485,84 @@ func TestClassifySource(t *testing.T) {
 			assert.Equal(t, tt.wantOwnerRepo, ownerRepo)
 		})
 	}
+}
+
+func TestCopyLocalDirectory_Symlinks(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(srcDir, "sub", "target.txt"), []byte("hello"), 0644)
+	require.NoError(t, err)
+
+	// Test case 1: Valid symlink contained within the copied skill
+	err = os.Symlink("target.txt", filepath.Join(srcDir, "sub", "valid_link"))
+	require.NoError(t, err)
+
+	// Test case 2: Relative symlink escaping the destination
+	err = os.Symlink("../../outside", filepath.Join(srcDir, "sub", "escaping_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "symlink points outside destination directory")
+}
+
+func TestCopyLocalDirectory_AbsoluteSymlinks(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+
+	// Test case 3: Absolute outside symlink
+	err = os.Symlink("/etc/passwd", filepath.Join(srcDir, "sub", "abs_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "symlinks")
+}
+
+func TestCopyLocalDirectory_ValidSymlinkOnly(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(srcDir, "sub", "target.txt"), []byte("hello"), 0644)
+	require.NoError(t, err)
+
+	// Valid symlink contained within the copied skill
+	err = os.Symlink("target.txt", filepath.Join(srcDir, "sub", "valid_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.NoError(t, err)
+
+	// Verify the symlink was created correctly
+	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "valid_link"))
+	assert.NoError(t, err)
+	assert.Equal(t, "target.txt", linkTarget)
+}
+
+func TestCopyLocalDirectory_ExactRootSymlink(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
+	require.NoError(t, err)
+
+	// Test case 4: Valid exact-root symlink
+	err = os.Symlink("../", filepath.Join(srcDir, "sub", "exact_root_link"))
+	require.NoError(t, err)
+
+	err = CopyLocalDirectory(srcDir, destDir)
+	assert.NoError(t, err)
+
+	// Verify the symlink was created correctly
+	linkTarget, err := os.Readlink(filepath.Join(destDir, "sub", "exact_root_link"))
+	assert.NoError(t, err)
+	assert.Equal(t, "../", linkTarget)
 }
