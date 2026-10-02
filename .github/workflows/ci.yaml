@@ -142,6 +142,19 @@ jobs:
       - run: go test -v ./...
       - run: go vet ./...
 
+  validation-windows:
+    name: Windows Symlink Policy Regression
+    needs: [route]
+    if: ${{ needs.route.outputs.run_code_checks == 'true' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Test Windows symlink target policy
+        run: go test ./internal/skill -run '^TestValidateSymlinkTarget_WindowsCases$' -count=1
+
   maintenance:
     name: Monthly Maintenance
     needs: [route]
@@ -191,8 +204,8 @@ jobs:
 
   build:
     name: Build Artifacts
-    needs: [route, validation]
-    if: ${{ always() && needs.route.outputs.run_build == 'true' && needs.validation.result == 'success' }}
+    needs: [route, validation, validation-windows]
+    if: ${{ always() && needs.route.outputs.run_build == 'true' && needs.validation.result == 'success' && needs.validation-windows.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
