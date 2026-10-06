@@ -19,10 +19,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func mustMkdirAll(t *testing.T, path string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(path, 0755))
+}
+
+func mustWriteFile(t *testing.T, filename, content string) {
+	t.Helper()
+	require.NoError(t, os.WriteFile(filename, []byte(content), 0644))
+}
+
+func mustSymlink(t *testing.T, oldname, newname string) {
+	t.Helper()
+	require.NoError(t, os.Symlink(oldname, newname))
+}
+
 func createTestTarball(t *testing.T, files map[string]string) string {
 	t.Helper()
-	f, err := os.CreateTemp("", "test-*.tar.gz")
-	assert.NoError(t, err)
+	f, err := os.Create(filepath.Join(t.TempDir(), "test.tar.gz"))
+	require.NoError(t, err)
 
 	gw := gzip.NewWriter(f)
 	tw := tar.NewWriter(gw)
@@ -53,41 +68,49 @@ func createTestTarball(t *testing.T, files map[string]string) string {
 			Typeflag: typeflag,
 			Linkname: linkname,
 		}
-		if err := tw.WriteHeader(hdr); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, tw.WriteHeader(hdr))
 		if content != "" {
-			if _, err := tw.Write([]byte(content)); err != nil {
-				t.Fatal(err)
-			}
+			_, err := tw.Write([]byte(content))
+			require.NoError(t, err)
 		}
 	}
 
-	assert.NoError(t, tw.Close())
-	assert.NoError(t, gw.Close())
-	assert.NoError(t, f.Close())
+	require.NoError(t, tw.Close())
+	require.NoError(t, gw.Close())
+	require.NoError(t, f.Close())
 
 	return f.Name()
 }
 
+func mockGitHubAPI(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewServer(handler)
+	originalAPIURL := GitHubAPIURL
+	GitHubAPIURL = ts.URL
+	t.Cleanup(func() {
+		ts.Close()
+		GitHubAPIURL = originalAPIURL
+	})
+	return ts
+}
+
+func mockHTTPClientTimeout(t *testing.T, timeout time.Duration) {
+	t.Helper()
+	originalTimeout := HTTPClient.Timeout
+	HTTPClient.Timeout = timeout
+	t.Cleanup(func() {
+		HTTPClient.Timeout = originalTimeout
+	})
+}
+
 func TestNetwork_Timeout(t *testing.T) {
 	// Setup a slow mock server that hangs for 100ms
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockGitHubAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
+	})
 
-	// Override API URL and timeout
-	originalAPIURL := GitHubAPIURL
-	originalTimeout := HTTPClient.Timeout
-	defer func() {
-		GitHubAPIURL = originalAPIURL
-		HTTPClient.Timeout = originalTimeout
-	}()
-
-	GitHubAPIURL = ts.URL
-	HTTPClient.Timeout = 10 * time.Millisecond // Shorter than the server sleep
+	mockHTTPClientTimeout(t, 10*time.Millisecond) // Shorter than the server sleep
 
 	// Test DownloadGitHubRepository timeout
 	_, _, err := DownloadGitHubRepository("dummy/repo", "")
@@ -103,18 +126,9 @@ func TestNetwork_Timeout(t *testing.T) {
 
 func TestNetwork_Non200(t *testing.T) {
 	// Setup a mock server that returns 500
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockGitHubAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer ts.Close()
-
-	// Override API URL
-	originalAPIURL := GitHubAPIURL
-	defer func() {
-		GitHubAPIURL = originalAPIURL
-	}()
-
-	GitHubAPIURL = ts.URL
+	})
 
 	// Test DownloadGitHubRepository non-200
 	_, _, err := DownloadGitHubRepository("dummy/repo", "")
@@ -137,7 +151,6 @@ func TestExtractTarGz_PathTraversal(t *testing.T) {
 	}
 
 	tarPath := createTestTarball(t, files)
-	defer func() { _ = os.Remove(tarPath) }()
 
 	err := ExtractTarGz(tarPath, destDir, "")
 	assert.Error(t, err)
@@ -156,7 +169,6 @@ func TestExtractTarGz_PathTraversalExactRoot(t *testing.T) {
 	}
 
 	tarPath := createTestTarball(t, files)
-	defer func() { _ = os.Remove(tarPath) }()
 
 	// Should extract successfully since the symlink points safely within destDir.
 	err := ExtractTarGz(tarPath, destDir, "")
@@ -178,10 +190,10 @@ func TestValidateSymlinkTarget_WindowsCases(t *testing.T) {
 		errContains   string
 	}{
 		{"POSIX absolute", "/etc/passwd", true, "symlinks"},
-		{"Windows volume absolute (POSIX context)", "C:\\Windows", false, ""}, // Valid literal filename on POSIX
+		{"Windows volume absolute (POSIX context)", "C:\\Windows", false, ""},             // Valid literal filename on POSIX
 		{"Windows volume qualified relative (POSIX context)", "C:..\\outside", false, ""}, // Valid literal filename on POSIX
-		{"Windows rooted path (POSIX context)", "\\outside", false, ""}, // Valid literal filename on POSIX
-		{"POSIX rooted path equivalent", "/outside", true, "symlinks"}, // Will hit IsAbs first on POSIX usually
+		{"Windows rooted path (POSIX context)", "\\outside", false, ""},                   // Valid literal filename on POSIX
+		{"POSIX rooted path equivalent", "/outside", true, "symlinks"},                    // Will hit IsAbs first on POSIX usually
 		{"Valid POSIX relative", "target.txt", false, ""},
 		{"Valid exact root", "../", false, ""},
 		{"Valid Windows exact root", "..\\", false, ""},
@@ -234,7 +246,6 @@ func TestExtractTarGz_Success(t *testing.T) {
 	}
 
 	tarPath := createTestTarball(t, files)
-	defer func() { _ = os.Remove(tarPath) }()
 
 	err := ExtractTarGz(tarPath, destDir, "")
 	assert.NoError(t, err)
@@ -341,13 +352,10 @@ func TestReplaceSafelyWithFS_CommitRenameFailureRollback(t *testing.T) {
 func TestReplaceSafely_Integration(t *testing.T) {
 	parentDir := t.TempDir()
 	destDir := filepath.Join(parentDir, "my-skill")
-	err := os.MkdirAll(destDir, 0755)
-	assert.NoError(t, err)
+	mustMkdirAll(t, destDir)
+	mustWriteFile(t, filepath.Join(destDir, "stale.txt"), "stale")
 
-	err = os.WriteFile(filepath.Join(destDir, "stale.txt"), []byte("stale"), 0644)
-	assert.NoError(t, err)
-
-	err = ReplaceSafely(destDir, func(stagingDir string) error {
+	err := ReplaceSafely(destDir, func(stagingDir string) error {
 		return os.WriteFile(filepath.Join(stagingDir, "SKILL.md"), []byte("v2"), 0644)
 	})
 	assert.NoError(t, err)
@@ -399,7 +407,7 @@ func (f *failAllDestRenameFS) Rename(oldpath, newpath string) error {
 
 func TestDownloadGitHubRepository_CustomRef(t *testing.T) {
 	var capturedURL string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockGitHubAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.Path
 		if strings.HasSuffix(r.URL.Path, "tarball/sha-456") {
 			w.WriteHeader(http.StatusOK)
@@ -410,12 +418,7 @@ func TestDownloadGitHubRepository_CustomRef(t *testing.T) {
 
 		commit := GitHubCommit{Sha: "sha-456"}
 		_ = json.NewEncoder(w).Encode(commit)
-	}))
-	defer ts.Close()
-
-	originalAPIURL := GitHubAPIURL
-	GitHubAPIURL = ts.URL
-	defer func() { GitHubAPIURL = originalAPIURL }()
+	})
 
 	// Even if it fails creating/writing tarball due to empty response body, we just check if it queried the right path
 	_, _, err := DownloadGitHubRepository("dummy/repo", "v1.0")
@@ -431,7 +434,6 @@ func TestExtractTarGz_MissingSKILLmd(t *testing.T) {
 	}
 
 	tarPath := createTestTarball(t, files)
-	defer func() { _ = os.Remove(tarPath) }()
 
 	err := ExtractTarGz(tarPath, destDir, "")
 	assert.NoError(t, err)
@@ -491,20 +493,16 @@ func TestCopyLocalDirectory_Symlinks(t *testing.T) {
 	srcDir := t.TempDir()
 	destDir := t.TempDir()
 
-	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
-	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(srcDir, "sub", "target.txt"), []byte("hello"), 0644)
-	require.NoError(t, err)
+	mustMkdirAll(t, filepath.Join(srcDir, "sub"))
+	mustWriteFile(t, filepath.Join(srcDir, "sub", "target.txt"), "hello")
 
 	// Test case 1: Valid symlink contained within the copied skill
-	err = os.Symlink("target.txt", filepath.Join(srcDir, "sub", "valid_link"))
-	require.NoError(t, err)
+	mustSymlink(t, "target.txt", filepath.Join(srcDir, "sub", "valid_link"))
 
 	// Test case 2: Relative symlink escaping the destination
-	err = os.Symlink("../../outside", filepath.Join(srcDir, "sub", "escaping_link"))
-	require.NoError(t, err)
+	mustSymlink(t, "../../outside", filepath.Join(srcDir, "sub", "escaping_link"))
 
-	err = CopyLocalDirectory(srcDir, destDir)
+	err := CopyLocalDirectory(srcDir, destDir)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "symlink points outside destination directory")
 }
@@ -513,14 +511,12 @@ func TestCopyLocalDirectory_AbsoluteSymlinks(t *testing.T) {
 	srcDir := t.TempDir()
 	destDir := t.TempDir()
 
-	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
-	require.NoError(t, err)
+	mustMkdirAll(t, filepath.Join(srcDir, "sub"))
 
 	// Test case 3: Absolute outside symlink
-	err = os.Symlink("/etc/passwd", filepath.Join(srcDir, "sub", "abs_link"))
-	require.NoError(t, err)
+	mustSymlink(t, "/etc/passwd", filepath.Join(srcDir, "sub", "abs_link"))
 
-	err = CopyLocalDirectory(srcDir, destDir)
+	err := CopyLocalDirectory(srcDir, destDir)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "symlinks")
 }
@@ -529,16 +525,13 @@ func TestCopyLocalDirectory_ValidSymlinkOnly(t *testing.T) {
 	srcDir := t.TempDir()
 	destDir := t.TempDir()
 
-	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
-	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(srcDir, "sub", "target.txt"), []byte("hello"), 0644)
-	require.NoError(t, err)
+	mustMkdirAll(t, filepath.Join(srcDir, "sub"))
+	mustWriteFile(t, filepath.Join(srcDir, "sub", "target.txt"), "hello")
 
 	// Valid symlink contained within the copied skill
-	err = os.Symlink("target.txt", filepath.Join(srcDir, "sub", "valid_link"))
-	require.NoError(t, err)
+	mustSymlink(t, "target.txt", filepath.Join(srcDir, "sub", "valid_link"))
 
-	err = CopyLocalDirectory(srcDir, destDir)
+	err := CopyLocalDirectory(srcDir, destDir)
 	assert.NoError(t, err)
 
 	// Verify the symlink was created correctly
@@ -551,14 +544,12 @@ func TestCopyLocalDirectory_ExactRootSymlink(t *testing.T) {
 	srcDir := t.TempDir()
 	destDir := t.TempDir()
 
-	err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755)
-	require.NoError(t, err)
+	mustMkdirAll(t, filepath.Join(srcDir, "sub"))
 
 	// Test case 4: Valid exact-root symlink
-	err = os.Symlink("../", filepath.Join(srcDir, "sub", "exact_root_link"))
-	require.NoError(t, err)
+	mustSymlink(t, "../", filepath.Join(srcDir, "sub", "exact_root_link"))
 
-	err = CopyLocalDirectory(srcDir, destDir)
+	err := CopyLocalDirectory(srcDir, destDir)
 	assert.NoError(t, err)
 
 	// Verify the symlink was created correctly
