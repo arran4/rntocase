@@ -1,16 +1,63 @@
 package rntocase
 
 import (
-	"os"
+	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	_ "embed"
+	"github.com/arran4/rntocase/internal/fsys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/txtar"
 )
 
+//go:embed testdata/expand/expand.txtar
+var expandTxtar []byte
+
+func getExpected(t *testing.T, ar *txtar.Archive, name string) []string {
+	for _, f := range ar.Files {
+		if f.Name == name {
+			var res []string
+			err := json.Unmarshal(f.Data, &res)
+			require.NoError(t, err)
+			return res
+		}
+	}
+	t.Fatalf("expected file %s not found in txtar", name)
+	return nil
+}
+
+func getMockFS(t *testing.T, ar *txtar.Archive) *fsys.MockFS {
+	fs := fsys.NewMockFS()
+	for _, f := range ar.Files {
+		if strings.HasPrefix(f.Name, "fs/") {
+			name := "/" + strings.TrimPrefix(f.Name, "fs/")
+			if strings.HasSuffix(name, "/") {
+				if strings.HasPrefix(string(f.Data), "SYMLINK: ") {
+					fs.AddSymlink(name[:len(name)-1], strings.TrimSpace(strings.TrimPrefix(string(f.Data), "SYMLINK: ")))
+				} else {
+					fs.AddDir(name)
+				}
+			} else {
+				if strings.HasPrefix(string(f.Data), "SYMLINK: ") {
+					fs.AddSymlink(name, strings.TrimSpace(strings.TrimPrefix(string(f.Data), "SYMLINK: ")))
+				} else {
+					fs.AddFile(name)
+				}
+			}
+		}
+	}
+	return fs
+}
+
 func TestExpandFiles(t *testing.T) {
-	tempDir := t.TempDir()
+	ar := txtar.Parse(expandTxtar)
+	fs := getMockFS(t, ar)
+	tempDir := "/testdir"
+	fs.AddDir("/space dir")
+	fs.AddFile("/space dir/space file.txt")
 
 	// Create test structure
 	// tempDir/
@@ -24,29 +71,16 @@ func TestExpandFiles(t *testing.T) {
 	//   sym_dir -> sub
 	//   sym_file -> file1.txt
 
-	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "file1.txt"), []byte("test"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "file2.jpg"), []byte("test"), 0644))
-
 	subDir := filepath.Join(tempDir, "sub")
-	require.NoError(t, os.Mkdir(subDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("test"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(subDir, "file4.jpg"), []byte("test"), 0644))
-
-	gitDir := filepath.Join(subDir, ".git")
-	require.NoError(t, os.Mkdir(gitDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(gitDir, "config"), []byte("test"), 0644))
-
-	require.NoError(t, os.Symlink("sub", filepath.Join(tempDir, "sym_dir")))
-	require.NoError(t, os.Symlink("file1.txt", filepath.Join(tempDir, "sym_file")))
 
 	t.Run("NonRecursive", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, false, nil, nil)
+		files, err := ExpandFiles([]string{tempDir}, false, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Equal(t, []string{tempDir}, files)
 	})
 
 	t.Run("Recursive No Filters", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, true, nil, nil)
+		files, err := ExpandFiles([]string{tempDir}, true, nil, nil, fs)
 		require.NoError(t, err)
 
 		expected := []string{
@@ -61,7 +95,7 @@ func TestExpandFiles(t *testing.T) {
 	})
 
 	t.Run("Recursive With Include JPG", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, true, []string{"*.jpg"}, nil)
+		files, err := ExpandFiles([]string{tempDir}, true, []string{"*.jpg"}, nil, fs)
 		require.NoError(t, err)
 
 		expected := []string{
@@ -73,7 +107,7 @@ func TestExpandFiles(t *testing.T) {
 	})
 
 	t.Run("Recursive With Exclude Git", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, true, nil, []string{".git/**"})
+		files, err := ExpandFiles([]string{tempDir}, true, nil, []string{".git/**"}, fs)
 		require.NoError(t, err)
 
 		expected := []string{
@@ -87,7 +121,7 @@ func TestExpandFiles(t *testing.T) {
 	})
 
 	t.Run("Overlapping Roots Deduplication", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir, subDir}, true, nil, []string{".git/**"})
+		files, err := ExpandFiles([]string{tempDir, subDir}, true, nil, []string{".git/**"}, fs)
 		require.NoError(t, err)
 
 		expected := []string{
@@ -102,41 +136,41 @@ func TestExpandFiles(t *testing.T) {
 
 	t.Run("NonRecursive File Exists", func(t *testing.T) {
 		f := filepath.Join(tempDir, "file1.txt")
-		files, err := ExpandFiles([]string{f}, false, nil, nil)
+		files, err := ExpandFiles([]string{f}, false, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Equal(t, []string{f}, files)
 	})
 
 	t.Run("NonRecursive Symlink File", func(t *testing.T) {
 		f := filepath.Join(tempDir, "sym_file")
-		files, err := ExpandFiles([]string{f}, false, nil, nil)
+		files, err := ExpandFiles([]string{f}, false, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Equal(t, []string{f}, files)
 	})
 
 	t.Run("Space in path", func(t *testing.T) {
-		spaceDir := filepath.Join(tempDir, "space dir")
-		require.NoError(t, os.Mkdir(spaceDir, 0755))
-		f := filepath.Join(spaceDir, "space file.txt")
-		require.NoError(t, os.WriteFile(f, []byte("test"), 0644))
+		spaceDir := "/space dir"
+		fs.AddDir("/space dir")
+		fs.AddFile("/space dir/space file.txt")
 
-		files, err := ExpandFiles([]string{spaceDir}, true, nil, nil)
+		files, err := ExpandFiles([]string{spaceDir}, true, nil, nil, fs)
 		require.NoError(t, err)
-		assert.Equal(t, []string{f}, files)
+		assert.Equal(t, []string{"/space dir/space file.txt"}, files)
 	})
 }
 
 func TestExpandFiles_ExplicitFileRoot(t *testing.T) {
-	tempDir := t.TempDir()
+	fs := fsys.NewMockFS()
+	tempDir := "/testdir"
 
 	file1 := filepath.Join(tempDir, "file1.txt")
-	require.NoError(t, os.WriteFile(file1, []byte("test"), 0644))
+	fs.AddFile(file1)
 
 	file2 := filepath.Join(tempDir, "file2.jpg")
-	require.NoError(t, os.WriteFile(file2, []byte("test"), 0644))
+	fs.AddFile(file2)
 
 	t.Run("Recursive With Include JPG", func(t *testing.T) {
-		files, err := ExpandFiles([]string{file1, file2}, true, []string{"*.jpg"}, nil)
+		files, err := ExpandFiles([]string{file1, file2}, true, []string{"*.jpg"}, nil, fs)
 		require.NoError(t, err)
 
 		expected := []string{
@@ -147,7 +181,7 @@ func TestExpandFiles_ExplicitFileRoot(t *testing.T) {
 	})
 
 	t.Run("Recursive With Exclude TXT", func(t *testing.T) {
-		files, err := ExpandFiles([]string{file1, file2}, true, nil, []string{"*.txt"})
+		files, err := ExpandFiles([]string{file1, file2}, true, nil, []string{"*.txt"}, fs)
 		require.NoError(t, err)
 
 		expected := []string{
@@ -158,47 +192,48 @@ func TestExpandFiles_ExplicitFileRoot(t *testing.T) {
 	})
 
 	t.Run("NonRecursive Preserves Missing", func(t *testing.T) {
-		files, err := ExpandFiles([]string{"missing_file"}, false, nil, nil)
+		files, err := ExpandFiles([]string{"missing_file"}, false, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Equal(t, []string{"missing_file"}, files)
 	})
 }
 
 func TestExpandFiles_SymlinkRoots(t *testing.T) {
-	tempDir := t.TempDir()
+	fs := fsys.NewMockFS()
+	tempDir := "/testdir"
 
 	file1 := filepath.Join(tempDir, "file1.txt")
-	require.NoError(t, os.WriteFile(file1, []byte("test"), 0644))
+	fs.AddFile(file1)
 
 	symFile := filepath.Join(tempDir, "sym_file.txt")
-	require.NoError(t, os.Symlink(file1, symFile))
+	fs.AddSymlink(symFile, "/testdir/file1.txt")
 
 	subDir := filepath.Join(tempDir, "sub")
-	require.NoError(t, os.Mkdir(subDir, 0755))
+	fs.AddDir(subDir)
 
 	symDir := filepath.Join(tempDir, "sym_dir")
-	require.NoError(t, os.Symlink(subDir, symDir))
+	fs.AddSymlink(symDir, "/testdir/sub")
 
 	t.Run("Recursive Skips Explicit File Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symFile}, true, nil, nil)
+		files, err := ExpandFiles([]string{symFile}, true, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Empty(t, files) // should skip completely
 	})
 
 	t.Run("Recursive Skips Explicit Dir Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symDir}, true, nil, nil)
+		files, err := ExpandFiles([]string{symDir}, true, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Empty(t, files) // should skip completely
 	})
 
 	t.Run("NonRecursive Preserves File Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symFile}, false, nil, nil)
+		files, err := ExpandFiles([]string{symFile}, false, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Equal(t, []string{symFile}, files)
 	})
 
 	t.Run("NonRecursive Preserves Dir Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symDir}, false, nil, nil)
+		files, err := ExpandFiles([]string{symDir}, false, nil, nil, fs)
 		require.NoError(t, err)
 		assert.Equal(t, []string{symDir}, files)
 	})
