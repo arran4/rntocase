@@ -65,6 +65,13 @@ func (m *MockFS) stat(name string, depth int) (os.FileInfo, error) {
 	}
 
 	name = filepath.Clean(name)
+	if name != "." && name != "/" {
+		evalDir, err := m.EvalSymlinks(filepath.Dir(name))
+		if err != nil {
+			return nil, err
+		}
+		name = filepath.Join(evalDir, filepath.Base(name))
+	}
 	fi, ok := m.Files[name]
 	if !ok {
 		return nil, os.ErrNotExist
@@ -86,6 +93,20 @@ func (m *MockFS) Stat(name string) (os.FileInfo, error) {
 
 func (m *MockFS) Lstat(name string) (os.FileInfo, error) {
 	name = filepath.Clean(name)
+	if name == "." || name == "/" {
+		fi, ok := m.Files[name]
+		if ok {
+			return fi, nil
+		}
+		return nil, os.ErrNotExist
+	}
+	// Resolve ancestor directory
+	evalDir, err := m.EvalSymlinks(filepath.Dir(name))
+	if err != nil {
+		return nil, err
+	}
+	name = filepath.Join(evalDir, filepath.Base(name))
+
 	if fi, ok := m.Files[name]; ok {
 		return fi, nil
 	}
@@ -102,7 +123,8 @@ func (m *MockFS) evalSymlinks(path string, depth int) (string, error) {
 		return path, nil
 	}
 	dir := filepath.Dir(path)
-	evalDir, err := m.evalSymlinks(dir, depth)
+	evalDir, err := m.evalSymlinks(dir, 0)
+	// we don't pass depth here because directory nesting shouldn't exhaust depth
 	if err != nil {
 		return "", err
 	}
@@ -136,16 +158,28 @@ func (m *MockFS) Rename(oldpath, newpath string) error {
 	oldpath = filepath.Clean(oldpath)
 	newpath = filepath.Clean(newpath)
 
-	fi, ok := m.Files[oldpath]
+	evalOldDir, err := m.EvalSymlinks(filepath.Dir(oldpath))
+	if err != nil {
+		return err
+	}
+	resolvedOld := filepath.Join(evalOldDir, filepath.Base(oldpath))
+
+	evalNewDir, err := m.EvalSymlinks(filepath.Dir(newpath))
+	if err != nil {
+		return err
+	}
+	resolvedNew := filepath.Join(evalNewDir, filepath.Base(newpath))
+
+	fi, ok := m.Files[resolvedOld]
 	if !ok {
 		return os.ErrNotExist
 	}
 
-	if _, destOk := m.Files[newpath]; destOk {
+	if _, destOk := m.Files[resolvedNew]; destOk {
 		return os.ErrExist
 	}
 
-	destDir := filepath.Dir(newpath)
+	destDir := evalNewDir
 	if destDir != "." && destDir != "/" {
 		destDirFi, destDirErr := m.stat(destDir, 0)
 		if destDirErr != nil {
@@ -156,9 +190,9 @@ func (m *MockFS) Rename(oldpath, newpath string) error {
 		}
 	}
 
-	delete(m.Files, oldpath)
-	fi.NameStr = filepath.Base(newpath)
-	m.Files[newpath] = fi
+	delete(m.Files, resolvedOld)
+	fi.NameStr = filepath.Base(resolvedNew)
+	m.Files[resolvedNew] = fi
 	return nil
 }
 
@@ -170,7 +204,12 @@ func (m *MockFS) SameFile(fi1, fi2 os.FileInfo) bool {
 
 func (m *MockFS) ReadDir(name string) ([]os.DirEntry, error) {
 	name = filepath.Clean(name)
-	fi, err := m.Stat(name)
+	resolvedName, err := m.EvalSymlinks(name)
+	if err != nil {
+		return nil, err
+	}
+	name = resolvedName
+	fi, err := m.Lstat(name) // it is resolved now, so Lstat is fine, and we check if it is dir
 	if err != nil {
 		return nil, err
 	}

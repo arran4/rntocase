@@ -43,3 +43,7 @@ For further context and practical examples, agents should refer to these article
 - [Go Memory FSs Everywhere in Test: Optional Dependency Injection via Type-Switched Variadic Args](https://arran4.github.io/blog/post/2026/020-optional-dependency-injection-via-type-switched-variadic-args/)
 - [Testing File Systems: How I use MockFS, MapFS, and SimpleFS in Go](https://arran4.github.io/blog/post/2026/033-testing-fs-with-mapfs-mockfs/)
 - [Txtar Patterns for Agents: Data, Scenarios, and Embedded Walkers](https://arran4.github.io/blog/post/2026/004-txtar-patterns-for-agents/)
+
+### Limitations
+
+- Memory MockFS test fixtures use UNIX-style path mappings (e.g., `/testdir`). Platform-dependent logic inside `filepath.Join` could theoretically differ on Windows, so the core `MockFS` limits full cross-platform parity. Rely on OS-integration specs (`t.TempDir()`) for strict cross-platform validations.

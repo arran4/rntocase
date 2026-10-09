@@ -159,3 +159,13 @@ func TestRenameFilesWithDiscovery_Memory_Collision(t *testing.T) {
 	_, err2 := fs.Stat("/testdir/file2.txt")
 	assert.NoError(t, err2)
 }
+
+func TestArchiveToMockFS_MetadataOnly(t *testing.T) {
+	ar := txtar.Parse([]byte("-- options.json --\n{\"key\":\"value\"}\n-- expected.json --\n[\"foo\"]"))
+	fs := fstestutil.ArchiveToMockFS(ar)
+
+	// Since there is no fs/ files, MockFS should have no files other than the root / (which it might create lazily or stay empty)
+	if len(fs.Files) > 0 {
+		t.Fatalf("Expected empty mockFS, got %d files", len(fs.Files))
+	}
+}
