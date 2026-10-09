@@ -59,7 +59,11 @@ func (m *MockFS) ensureDirs(dir string) {
 	}
 }
 
-func (m *MockFS) Stat(name string) (os.FileInfo, error) {
+func (m *MockFS) stat(name string, depth int) (os.FileInfo, error) {
+	if depth > 40 {
+		return nil, os.ErrInvalid
+	}
+
 	name = filepath.Clean(name)
 	fi, ok := m.Files[name]
 	if !ok {
@@ -67,9 +71,13 @@ func (m *MockFS) Stat(name string) (os.FileInfo, error) {
 	}
 	// naive evaluate symlinks
 	if fi.ModeVal&os.ModeSymlink != 0 {
-		return m.Stat(filepath.Join(filepath.Dir(name), fi.SymlinkTarget))
+		return m.stat(filepath.Join(filepath.Dir(name), fi.SymlinkTarget), depth+1)
 	}
 	return fi, nil
+}
+
+func (m *MockFS) Stat(name string) (os.FileInfo, error) {
+	return m.stat(name, 0)
 }
 
 func (m *MockFS) Lstat(name string) (os.FileInfo, error) {
@@ -80,19 +88,43 @@ func (m *MockFS) Lstat(name string) (os.FileInfo, error) {
 	return nil, os.ErrNotExist
 }
 
-func (m *MockFS) EvalSymlinks(path string) (string, error) {
+func (m *MockFS) evalSymlinks(path string, depth int) (string, error) {
+	if depth > 40 {
+		return "", os.ErrInvalid
+	}
+
 	path = filepath.Clean(path)
+	if path == "." || path == "/" {
+		return path, nil
+	}
+	dir := filepath.Dir(path)
+	evalDir, err := m.evalSymlinks(dir, depth+1)
+	if err != nil {
+		return "", err
+	}
+
+	path = filepath.Join(evalDir, filepath.Base(path))
 	fi, ok := m.Files[path]
 	if !ok {
 		return "", os.ErrNotExist
 	}
+
 	if fi.ModeVal&os.ModeSymlink != 0 {
-		return filepath.Clean(filepath.Join(filepath.Dir(path), fi.SymlinkTarget)), nil
+		target := filepath.Join(evalDir, fi.SymlinkTarget)
+		return m.evalSymlinks(target, depth+1)
 	}
 	return path, nil
 }
 
+func (m *MockFS) EvalSymlinks(path string) (string, error) {
+	return m.evalSymlinks(filepath.Clean(path), 0)
+}
+
 func (m *MockFS) Rename(oldpath, newpath string) error {
+	if oldpath == newpath {
+		return nil
+	}
+
 	if oldpath == newpath {
 		return nil
 	}
@@ -123,9 +155,12 @@ func (m *MockFS) SameFile(fi1, fi2 os.FileInfo) bool {
 
 func (m *MockFS) ReadDir(name string) ([]os.DirEntry, error) {
 	name = filepath.Clean(name)
-	_, err := m.Lstat(name)
+	fi, err := m.Lstat(name)
 	if err != nil {
 		return nil, err
+	}
+	if !fi.IsDir() {
+		return nil, os.ErrInvalid
 	}
 
 	var entries []os.DirEntry

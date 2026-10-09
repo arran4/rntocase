@@ -16,8 +16,12 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 	var fs fsys.FS = fsys.OSFS{}
 	for _, opt := range ops {
 		switch o := opt.(type) {
+		case fsys.WritableFS:
+			fs = o
 		case fsys.FS:
 			fs = o
+		default:
+			return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
 		}
 	}
 	if !recursive {
@@ -190,9 +194,8 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 			}
 
 			if d.IsDir() {
-				info, _ := d.Info()
 				// If it's a symlink directory, don't follow it
-				if (info.Mode() & os.ModeSymlink) != 0 {
+				if (d.Type() & os.ModeSymlink) != 0 {
 					return filepath.SkipDir
 				}
 				return nil // Don't rename dirs by default
@@ -225,8 +228,7 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 
 			if included {
 				// Don't follow symlinked files when discovered recursively
-				info, _ := d.Info()
-				if (info.Mode() & os.ModeSymlink) != 0 {
+				if (d.Type() & os.ModeSymlink) != 0 {
 					return nil
 				}
 

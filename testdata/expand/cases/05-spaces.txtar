@@ -1,0 +1,11 @@
+-- options.json --
+{
+  "roots": ["/space dir"],
+  "recursive": true
+}
+-- expected.json --
+[
+  "/space dir/space file.txt"
+]
+-- fs/space dir/space file.txt --
+test

@@ -160,6 +160,8 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		switch o := opt.(type) {
 		case fsys.WritableFS:
 			fs = o
+		default:
+			return fmt.Errorf("unsupported or read-only filesystem injected: %T", opt)
 		}
 	}
 

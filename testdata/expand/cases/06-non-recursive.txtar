@@ -1,0 +1,11 @@
+-- options.json --
+{
+  "roots": ["/testdir"],
+  "recursive": false
+}
+-- expected.json --
+[
+  "/testdir"
+]
+-- fs/testdir/file1.txt --
+test

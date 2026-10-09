@@ -1,0 +1,23 @@
+-- options.json --
+{
+  "roots": ["/testdir"],
+  "recursive": true
+}
+-- expected.json --
+[
+  "/testdir/file1.txt",
+  "/testdir/file2.jpg",
+  "/testdir/sub/.git/config",
+  "/testdir/sub/file3.txt",
+  "/testdir/sub/file4.jpg"
+]
+-- fs/testdir/file1.txt --
+test
+-- fs/testdir/file2.jpg --
+test
+-- fs/testdir/sub/file3.txt --
+test
+-- fs/testdir/sub/file4.jpg --
+test
+-- fs/testdir/sub/.git/config --
+test
