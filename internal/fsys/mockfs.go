@@ -1,11 +1,9 @@
 package fsys
 
 import (
-	"golang.org/x/tools/txtar"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -141,27 +139,4 @@ func (m *MockFS) ReadDir(name string) ([]os.DirEntry, error) {
 		return entries[i].Name() < entries[j].Name()
 	})
 	return entries, nil
-}
-
-func ArchiveToMockFS(ar *txtar.Archive) *MockFS {
-	out := NewMockFS()
-	for _, f := range ar.Files {
-		name := filepath.Clean(strings.TrimPrefix(f.Name, "/"))
-		if name == "." {
-			continue
-		}
-
-		// simple way to encode directories: name ends with /
-		if strings.HasSuffix(f.Name, "/") {
-			out.AddDir(name)
-		} else {
-			out.AddFile(name)
-			// Can be extended to support symlinks by checking comment or content
-			if strings.HasPrefix(string(f.Data), "SYMLINK:") {
-				target := strings.TrimSpace(strings.TrimPrefix(string(f.Data), "SYMLINK:"))
-				out.AddSymlink(name, target)
-			}
-		}
-	}
-	return out
 }
