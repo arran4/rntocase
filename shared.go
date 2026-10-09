@@ -161,7 +161,11 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 	for _, opt := range ops {
 		switch o := opt.(type) {
 		case fsys.WritableFS:
-			if o == nil || (reflect.ValueOf(o).Kind() == reflect.Ptr && reflect.ValueOf(o).IsNil()) {
+			if o == nil {
+				return fmt.Errorf("unsupported or read-only filesystem injected: %T", opt)
+			}
+			v := reflect.ValueOf(o)
+			if v.Kind() == reflect.Pointer && v.IsNil() {
 				return fmt.Errorf("unsupported or read-only filesystem injected: %T", opt)
 			}
 			fs = o
