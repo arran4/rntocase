@@ -1,205 +1,171 @@
 package rntocase
 
 import (
+	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"embed"
+	"github.com/arran4/rntocase/internal/fstestutil"
+	"github.com/arran4/rntocase/internal/fsys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/txtar"
 )
 
-func TestExpandFiles(t *testing.T) {
-	tempDir := t.TempDir()
+//go:embed testdata/expand/cases/*.txtar
+var expandTxtar embed.FS
 
-	// Create test structure
-	// tempDir/
-	//   file1.txt
-	//   file2.jpg
-	//   sub/
-	//     file3.txt
-	//     file4.jpg
-	//     .git/
-	//       config
-	//   sym_dir -> sub
-	//   sym_file -> file1.txt
-
-	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "file1.txt"), []byte("test"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "file2.jpg"), []byte("test"), 0644))
-
-	subDir := filepath.Join(tempDir, "sub")
-	require.NoError(t, os.Mkdir(subDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("test"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(subDir, "file4.jpg"), []byte("test"), 0644))
-
-	gitDir := filepath.Join(subDir, ".git")
-	require.NoError(t, os.Mkdir(gitDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(gitDir, "config"), []byte("test"), 0644))
-
-	require.NoError(t, os.Symlink("sub", filepath.Join(tempDir, "sym_dir")))
-	require.NoError(t, os.Symlink("file1.txt", filepath.Join(tempDir, "sym_file")))
-
-	t.Run("NonRecursive", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, false, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, []string{tempDir}, files)
-	})
-
-	t.Run("Recursive No Filters", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, true, nil, nil)
-		require.NoError(t, err)
-
-		expected := []string{
-			filepath.Join(tempDir, "file1.txt"),
-			filepath.Join(tempDir, "file2.jpg"),
-			filepath.Join(tempDir, "sub", ".git", "config"),
-			filepath.Join(tempDir, "sub", "file3.txt"),
-			filepath.Join(tempDir, "sub", "file4.jpg"),
-		}
-
-		assert.Equal(t, expected, files)
-	})
-
-	t.Run("Recursive With Include JPG", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, true, []string{"*.jpg"}, nil)
-		require.NoError(t, err)
-
-		expected := []string{
-			filepath.Join(tempDir, "file2.jpg"),
-			filepath.Join(tempDir, "sub", "file4.jpg"),
-		}
-
-		assert.Equal(t, expected, files)
-	})
-
-	t.Run("Recursive With Exclude Git", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir}, true, nil, []string{".git/**"})
-		require.NoError(t, err)
-
-		expected := []string{
-			filepath.Join(tempDir, "file1.txt"),
-			filepath.Join(tempDir, "file2.jpg"),
-			filepath.Join(tempDir, "sub", "file3.txt"),
-			filepath.Join(tempDir, "sub", "file4.jpg"),
-		}
-
-		assert.Equal(t, expected, files)
-	})
-
-	t.Run("Overlapping Roots Deduplication", func(t *testing.T) {
-		files, err := ExpandFiles([]string{tempDir, subDir}, true, nil, []string{".git/**"})
-		require.NoError(t, err)
-
-		expected := []string{
-			filepath.Join(tempDir, "file1.txt"),
-			filepath.Join(tempDir, "file2.jpg"),
-			filepath.Join(tempDir, "sub", "file3.txt"),
-			filepath.Join(tempDir, "sub", "file4.jpg"),
-		}
-
-		assert.Equal(t, expected, files)
-	})
-
-	t.Run("NonRecursive File Exists", func(t *testing.T) {
-		f := filepath.Join(tempDir, "file1.txt")
-		files, err := ExpandFiles([]string{f}, false, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, []string{f}, files)
-	})
-
-	t.Run("NonRecursive Symlink File", func(t *testing.T) {
-		f := filepath.Join(tempDir, "sym_file")
-		files, err := ExpandFiles([]string{f}, false, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, []string{f}, files)
-	})
-
-	t.Run("Space in path", func(t *testing.T) {
-		spaceDir := filepath.Join(tempDir, "space dir")
-		require.NoError(t, os.Mkdir(spaceDir, 0755))
-		f := filepath.Join(spaceDir, "space file.txt")
-		require.NoError(t, os.WriteFile(f, []byte("test"), 0644))
-
-		files, err := ExpandFiles([]string{spaceDir}, true, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, []string{f}, files)
-	})
+type txtarOptions struct {
+	Roots     []string `json:"roots"`
+	Recursive bool     `json:"recursive"`
+	Includes  []string `json:"includes"`
+	Excludes  []string `json:"excludes"`
 }
 
-func TestExpandFiles_ExplicitFileRoot(t *testing.T) {
-	tempDir := t.TempDir()
+func TestExpandFiles_Txtar(t *testing.T) {
+	entries, err := fs.Glob(expandTxtar, "testdata/expand/cases/*.txtar")
+	require.NoError(t, err)
+	require.NotEmpty(t, entries, "require at least one embedded scenario")
 
-	file1 := filepath.Join(tempDir, "file1.txt")
-	require.NoError(t, os.WriteFile(file1, []byte("test"), 0644))
+	for _, fixture := range entries {
+		fixture := fixture
+		t.Run(strings.TrimSuffix(filepath.Base(fixture), ".txtar"), func(t *testing.T) {
+			raw, err := fs.ReadFile(expandTxtar, fixture)
+			require.NoError(t, err)
 
-	file2 := filepath.Join(tempDir, "file2.jpg")
-	require.NoError(t, os.WriteFile(file2, []byte("test"), 0644))
+			ar := txtar.Parse(raw)
+			mockFs := fstestutil.ArchiveToMockFS(ar)
 
-	t.Run("Recursive With Include JPG", func(t *testing.T) {
-		files, err := ExpandFiles([]string{file1, file2}, true, []string{"*.jpg"}, nil)
-		require.NoError(t, err)
+			var opts txtarOptions
+			var expected []string
 
-		expected := []string{
-			file2,
-		}
+			for _, f := range ar.Files {
+				switch f.Name {
+				case "options.json":
+					err = json.Unmarshal(f.Data, &opts)
+					require.NoError(t, err)
+				case "expected.json":
+					err = json.Unmarshal(f.Data, &expected)
+					require.NoError(t, err)
+				}
+			}
 
-		assert.Equal(t, expected, files)
-	})
+			if expected == nil {
+				t.Fatalf("missing expected.json in %s", fixture)
+			}
+			// require options.json to have been parsed, but we don't have a direct check except maybe we can verify it was in the archive
+			var hasOptions bool
+			for _, f := range ar.Files {
+				if f.Name == "options.json" {
+					hasOptions = true
+				}
+			}
+			if !hasOptions {
+				t.Fatalf("missing options.json in %s", fixture)
+			}
 
-	t.Run("Recursive With Exclude TXT", func(t *testing.T) {
-		files, err := ExpandFiles([]string{file1, file2}, true, nil, []string{"*.txt"})
-		require.NoError(t, err)
+			files, err := ExpandFiles(opts.Roots, opts.Recursive, opts.Includes, opts.Excludes, mockFs)
+			require.NoError(t, err)
 
-		expected := []string{
-			file2,
-		}
-
-		assert.Equal(t, expected, files)
-	})
-
-	t.Run("NonRecursive Preserves Missing", func(t *testing.T) {
-		files, err := ExpandFiles([]string{"missing_file"}, false, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, []string{"missing_file"}, files)
-	})
+			if len(expected) == 0 && len(files) == 0 {
+				// both empty, ok
+			} else {
+				assert.Equal(t, expected, files)
+			}
+		})
+	}
 }
 
-func TestExpandFiles_SymlinkRoots(t *testing.T) {
-	tempDir := t.TempDir()
+type errorFS struct {
+	fsys.MockFS
+}
 
-	file1 := filepath.Join(tempDir, "file1.txt")
-	require.NoError(t, os.WriteFile(file1, []byte("test"), 0644))
+func (e *errorFS) Lstat(name string) (os.FileInfo, error) {
+	if name == "/testdir" {
+		return nil, os.ErrPermission
+	}
+	return e.MockFS.Lstat(name)
+}
 
-	symFile := filepath.Join(tempDir, "sym_file.txt")
-	require.NoError(t, os.Symlink(file1, symFile))
+func TestExpandFiles_InfoError(t *testing.T) {
+	fs := fsys.NewMockFS()
+	fs.AddFile("/testdir/error_trigger.txt")
+	fs.AddFile("/testdir/normal.txt")
 
-	subDir := filepath.Join(tempDir, "sub")
-	require.NoError(t, os.Mkdir(subDir, 0755))
+	errFs := &errorFS{*fs}
 
-	symDir := filepath.Join(tempDir, "sym_dir")
-	require.NoError(t, os.Symlink(subDir, symDir))
+	_, err := ExpandFiles([]string{"/testdir"}, true, nil, nil, errFs)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "permission")
+}
 
-	t.Run("Recursive Skips Explicit File Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symFile}, true, nil, nil)
-		require.NoError(t, err)
-		assert.Empty(t, files) // should skip completely
-	})
+func TestExpandFiles_FailClosedInvalidInjection(t *testing.T) {
+	_, err := ExpandFiles([]string{"foo.txt"}, false, nil, nil, struct{}{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported filesystem injected")
 
-	t.Run("Recursive Skips Explicit Dir Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symDir}, true, nil, nil)
-		require.NoError(t, err)
-		assert.Empty(t, files) // should skip completely
-	})
+	var nilMock *fsys.MockFS = nil
+	_, err = ExpandFiles([]string{"foo.txt"}, false, nil, nil, nilMock)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported filesystem injected")
+}
 
-	t.Run("NonRecursive Preserves File Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symFile}, false, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, []string{symFile}, files)
-	})
+func TestRenameFilesWithDiscovery_Memory(t *testing.T) {
+	ar := txtar.Parse([]byte("-- fs/testdir/file1.txt --\n-- fs/testdir/file2.jpg --\n-- fs/testdir/sub/file3.txt --\n-- fs/testdir/sub/file4.jpg --\n-- fs/testdir/sub/.git/config --"))
+	fs := fstestutil.ArchiveToMockFS(ar)
 
-	t.Run("NonRecursive Preserves Dir Symlink", func(t *testing.T) {
-		files, err := ExpandFiles([]string{symDir}, false, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, []string{symDir}, files)
-	})
+	// We want to verify end to end against mockfs
+	renameFunc := func(s string) (string, error) {
+		return s + "_renamed", nil
+	}
+
+	err := RenameFilesWithDiscovery([]string{"/testdir"}, true, nil, nil, renameFunc, false, false, false, fs)
+	require.NoError(t, err)
+
+	expectedFiles := []string{
+		"/testdir/file1_renamed.txt",
+		"/testdir/file2_renamed.jpg",
+		"/testdir/sub/.git/config_renamed", // actually config has no extension so config_renamed
+		"/testdir/sub/file3_renamed.txt",
+		"/testdir/sub/file4_renamed.jpg",
+	}
+
+	for _, f := range expectedFiles {
+		_, err := fs.Stat(f)
+		assert.NoError(t, err, "Expected file %s to exist in MockFS after rename", f)
+	}
+}
+
+func TestRenameFilesWithDiscovery_Memory_Collision(t *testing.T) {
+	fs := fsys.NewMockFS()
+	fs.AddFile("/testdir/file1.txt")
+	fs.AddFile("/testdir/file2.txt")
+
+	renameFunc := func(s string) (string, error) {
+		return "renamed", nil
+	}
+
+	err := RenameFilesWithDiscovery([]string{"/testdir"}, true, nil, nil, renameFunc, false, false, false, fs)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "collision")
+
+	// Ensure old files are preserved
+	_, err1 := fs.Stat("/testdir/file1.txt")
+	assert.NoError(t, err1)
+	_, err2 := fs.Stat("/testdir/file2.txt")
+	assert.NoError(t, err2)
+}
+
+func TestArchiveToMockFS_MetadataOnly(t *testing.T) {
+	ar := txtar.Parse([]byte("-- options.json --\n{\"key\":\"value\"}\n-- expected.json --\n[\"foo\"]"))
+	fs := fstestutil.ArchiveToMockFS(ar)
+
+	// Since there is no fs/ files, MockFS should have no files other than the root / (which it might create lazily or stay empty)
+	if len(fs.Files) > 0 {
+		t.Fatalf("Expected empty mockFS, got %d files", len(fs.Files))
+	}
 }

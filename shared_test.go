@@ -1,6 +1,8 @@
 package rntocase
 
 import (
+	"github.com/arran4/rntocase/internal/fsys"
+
 	"encoding/json"
 	"fmt"
 	"io"
@@ -346,20 +348,17 @@ func TestRenameFiles(t *testing.T) {
 	})
 
 	t.Run("dry run collision detection", func(t *testing.T) {
-		tempDir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(tempDir, "File1.txt"), []byte("content"), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, "File2.txt"), []byte("content"), 0644); err != nil {
-			t.Fatal(err)
-		}
+		fs := fsys.NewMockFS()
+		tempDir := "/testdir"
+		fs.AddFile(filepath.Join(tempDir, "File1.txt"))
+		fs.AddFile(filepath.Join(tempDir, "File2.txt"))
 
 		renameToSame := func(s string) (string, error) {
 			return "same", nil
 		}
 
 		paths := []string{filepath.Join(tempDir, "File1.txt"), filepath.Join(tempDir, "File2.txt")}
-		err := RenameFiles(paths, renameToSame, true, false, false)
+		err := RenameFiles(paths, renameToSame, true, false, false, fs)
 		if err == nil {
 			t.Fatal("Expected dry-run to still detect planning collisions")
 		}
@@ -443,14 +442,12 @@ func TestRenameFiles(t *testing.T) {
 	})
 
 	t.Run("unchanged path skips rename", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		if err := os.WriteFile(filepath.Join(tempDir, "alreadylower.txt"), []byte("content"), 0644); err != nil {
-			t.Fatal(err)
-		}
+		fs := fsys.NewMockFS()
+		tempDir := "/testdir"
+		fs.AddFile(filepath.Join(tempDir, "alreadylower.txt"))
 
 		paths := []string{filepath.Join(tempDir, "alreadylower.txt")}
-		err := RenameFiles(paths, renameFunc, false, false, false)
+		err := RenameFiles(paths, renameFunc, false, false, false, fs)
 		if err != nil {
 			t.Fatalf("Expected nil error for unchanged, got: %v", err)
 		}
@@ -488,7 +485,7 @@ func TestConfirm(t *testing.T) {
 }
 
 func TestRenameFilesJSON(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := "/testdir"
 
 	// Helper to capture stdout
 	captureStdout := func(f func()) string {
@@ -533,13 +530,12 @@ func TestRenameFilesJSON(t *testing.T) {
 	}
 
 	t.Run("successful dry run JSON", func(t *testing.T) {
+		fs := fsys.NewMockFS()
 		fPath := filepath.Join(tempDir, "dry_run.txt")
-		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
-			t.Fatalf("failed to write test file: %v", err)
-		}
+		fs.AddFile(fPath)
 
 		output := captureStdout(func() {
-			err := RenameFiles([]string{fPath}, renameFunc, true, false, true)
+			err := RenameFiles([]string{fPath}, renameFunc, true, false, true, fs)
 			if err != nil {
 				t.Errorf("Expected no error, got %v", err)
 			}
@@ -565,13 +561,12 @@ func TestRenameFilesJSON(t *testing.T) {
 	})
 
 	t.Run("successful execution JSON", func(t *testing.T) {
+		fs := fsys.NewMockFS()
 		fPath := filepath.Join(tempDir, "exec.txt")
-		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
-			t.Fatalf("failed to write test file: %v", err)
-		}
+		fs.AddFile(fPath)
 
 		output := captureStdout(func() {
-			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
+			err := RenameFiles([]string{fPath}, renameFunc, false, false, true, fs)
 			if err != nil {
 				t.Errorf("Expected no error, got %v", err)
 			}
@@ -597,13 +592,12 @@ func TestRenameFilesJSON(t *testing.T) {
 	})
 
 	t.Run("unchanged operation", func(t *testing.T) {
+		fs := fsys.NewMockFS()
 		fPath := filepath.Join(tempDir, "UNCHANGED.txt")
-		if err := os.WriteFile(fPath, []byte("test"), 0644); err != nil {
-			t.Fatalf("failed to write test file: %v", err)
-		}
+		fs.AddFile(fPath)
 
 		output := captureStdout(func() {
-			err := RenameFiles([]string{fPath}, renameFunc, false, false, true)
+			err := RenameFiles([]string{fPath}, renameFunc, false, false, true, fs)
 			if err != nil {
 				t.Errorf("Expected no error, got %v", err)
 			}
@@ -623,23 +617,16 @@ func TestRenameFilesJSON(t *testing.T) {
 	})
 
 	t.Run("collision exhaustive batch", func(t *testing.T) {
+		fs := fsys.NewMockFS()
 		fPath1 := filepath.Join(tempDir, "col1.txt")
 		fPath2 := filepath.Join(tempDir, "col2.txt")
 		fPath3 := filepath.Join(tempDir, "col3.txt") // Will be a collision with col1.txt
 		fPath4 := filepath.Join(tempDir, "COL4.txt") // Already uppercase (unchanged)
 
-		if err := os.WriteFile(fPath1, []byte("test"), 0644); err != nil {
-			t.Fatalf("failed to write test file 1: %v", err)
-		}
-		if err := os.WriteFile(fPath2, []byte("test"), 0644); err != nil {
-			t.Fatalf("failed to write test file 2: %v", err)
-		}
-		if err := os.WriteFile(fPath3, []byte("test"), 0644); err != nil {
-			t.Fatalf("failed to write test file 3: %v", err)
-		}
-		if err := os.WriteFile(fPath4, []byte("test"), 0644); err != nil {
-			t.Fatalf("failed to write test file 4: %v", err)
-		}
+		fs.AddFile(fPath1)
+		fs.AddFile(fPath2)
+		fs.AddFile(fPath3)
+		fs.AddFile(fPath4)
 
 		// Map col3.txt to col1.txt destination (COL1.TXT)
 		badRenameFunc := func(s string) (string, error) {
@@ -650,7 +637,7 @@ func TestRenameFilesJSON(t *testing.T) {
 		}
 
 		output := captureStdout(func() {
-			err := RenameFiles([]string{fPath1, fPath2, fPath3, fPath4}, badRenameFunc, false, false, true)
+			err := RenameFiles([]string{fPath1, fPath2, fPath3, fPath4}, badRenameFunc, false, false, true, fs)
 			if err == nil {
 				t.Error("Expected error due to collision, got nil")
 			}
@@ -699,28 +686,29 @@ func TestRenameFilesJSON(t *testing.T) {
 		}
 
 		// Verify NO FILES were modified on disk
-		if _, err := os.Stat(filepath.Join(tempDir, "col1.txt")); err != nil {
+		if _, err := fs.Stat(filepath.Join(tempDir, "col1.txt")); err != nil {
 			t.Error("col1.txt should still exist unchanged")
 		}
-		if _, err := os.Stat(filepath.Join(tempDir, "col2.txt")); err != nil {
+		if _, err := fs.Stat(filepath.Join(tempDir, "col2.txt")); err != nil {
 			t.Error("col2.txt should still exist unchanged")
 		}
-		if _, err := os.Stat(filepath.Join(tempDir, "col3.txt")); err != nil {
+		if _, err := fs.Stat(filepath.Join(tempDir, "col3.txt")); err != nil {
 			t.Error("col3.txt should still exist unchanged")
 		}
-		if _, err := os.Stat(filepath.Join(tempDir, "COL4.txt")); err != nil {
+		if _, err := fs.Stat(filepath.Join(tempDir, "COL4.txt")); err != nil {
 			t.Error("COL4.txt should still exist unchanged")
 		}
 
-		if _, err := os.Stat(filepath.Join(tempDir, "COL1.txt")); !os.IsNotExist(err) {
+		if _, err := fs.Stat(filepath.Join(tempDir, "COL1.txt")); !os.IsNotExist(err) {
 			t.Error("COL1.txt was created incorrectly")
 		}
-		if _, err := os.Stat(filepath.Join(tempDir, "COL2.txt")); !os.IsNotExist(err) {
+		if _, err := fs.Stat(filepath.Join(tempDir, "COL2.txt")); !os.IsNotExist(err) {
 			t.Error("COL2.txt was created incorrectly")
 		}
 	})
 
 	t.Run("failed rename", func(t *testing.T) {
+		fs := fsys.NewMockFS()
 		fPath := filepath.Join(tempDir, "fail_test.txt")
 
 		output := captureStdout(func() {
@@ -730,7 +718,7 @@ func TestRenameFilesJSON(t *testing.T) {
 			badRenameFunc := func(s string) (string, error) {
 				return "", fmt.Errorf("forced error")
 			}
-			err := RenameFiles([]string{fPath}, badRenameFunc, false, false, true)
+			err := RenameFiles([]string{fPath}, badRenameFunc, false, false, true, fs)
 			if err == nil {
 				t.Error("Expected error due to failed generation, got nil")
 			}
@@ -751,4 +739,28 @@ func TestRenameFilesJSON(t *testing.T) {
 			t.Errorf("Expected operation status %s, got %s", StatusFailed, result.Operations[0].Status)
 		}
 	})
+}
+
+type dummyFS struct{}
+
+func TestRenameFiles_FailClosedInvalidInjection(t *testing.T) {
+	paths := []string{"foo.txt"}
+	renameFunc := func(s string) (string, error) { return s, nil }
+
+	err := RenameFiles(paths, renameFunc, false, false, false, dummyFS{})
+	if err == nil {
+		t.Fatal("Expected error when injecting unsupported FS, got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported or read-only filesystem injected") {
+		t.Fatalf("Expected unsupported FS error, got: %v", err)
+	}
+
+	var nilMock *fsys.MockFS = nil
+	err = RenameFiles(paths, renameFunc, false, false, false, nilMock)
+	if err == nil {
+		t.Fatal("Expected error when injecting typed nil FS, got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported or read-only filesystem injected") {
+		t.Fatalf("Expected unsupported FS error, got: %v", err)
+	}
 }

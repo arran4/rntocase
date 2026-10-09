@@ -1,17 +1,45 @@
 package rntocase
 
 import (
+	"reflect"
+
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/arran4/rntocase/internal/fsys"
 	"github.com/bmatcuk/doublestar/v4"
 )
 
 // ExpandFiles discovers and filters files based on recursion and include/exclude patterns.
-func ExpandFiles(files []string, recursive bool, includes []string, excludes []string) ([]string, error) {
+func ExpandFiles(files []string, recursive bool, includes []string, excludes []string, ops ...any) ([]string, error) {
+	var fs fsys.FS = fsys.OSFS{}
+	for _, opt := range ops {
+		switch o := opt.(type) {
+		case fsys.WritableFS:
+			if o == nil {
+				return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
+			}
+			v := reflect.ValueOf(o)
+			if v.Kind() == reflect.Pointer && v.IsNil() {
+				return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
+			}
+			fs = o
+		case fsys.FS:
+			if o == nil {
+				return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
+			}
+			v := reflect.ValueOf(o)
+			if v.Kind() == reflect.Pointer && v.IsNil() {
+				return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
+			}
+			fs = o
+		default:
+			return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
+		}
+	}
 	if !recursive {
 		return files, nil
 	}
@@ -31,7 +59,7 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 	discoveredMap := make(map[string]bool)
 	var discovered []string
 	for _, root := range files {
-		rootStat, err := os.Lstat(root)
+		rootStat, err := fs.Lstat(root)
 		if err != nil {
 			if recursive {
 				return nil, fmt.Errorf("recursive root not accessible: %w", err)
@@ -118,7 +146,7 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 		}
 
 		// Handle directory walking if recursive
-		err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		err = fsys.WalkDir(fs, root, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -175,15 +203,15 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 			}
 
 			if excluded {
-				if info.IsDir() {
+				if d.IsDir() {
 					return filepath.SkipDir
 				}
 				return nil
 			}
 
-			if info.IsDir() {
+			if d.IsDir() {
 				// If it's a symlink directory, don't follow it
-				if (info.Mode() & os.ModeSymlink) != 0 {
+				if (d.Type() & os.ModeSymlink) != 0 {
 					return filepath.SkipDir
 				}
 				return nil // Don't rename dirs by default
@@ -216,7 +244,7 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 
 			if included {
 				// Don't follow symlinked files when discovered recursively
-				if (info.Mode() & os.ModeSymlink) != 0 {
+				if (d.Type() & os.ModeSymlink) != 0 {
 					return nil
 				}
 
@@ -241,8 +269,8 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 
 // RenameFilesWithDiscovery wraps RenameFiles by first expanding the files list
 // recursively with include/exclude filters.
-func RenameFilesWithDiscovery(files []string, recursive bool, includes []string, excludes []string, renameFunc func(string) (string, error), dryRun bool, interactive bool, outputJSON bool) error {
-	expandedFiles, err := ExpandFiles(files, recursive, includes, excludes)
+func RenameFilesWithDiscovery(files []string, recursive bool, includes []string, excludes []string, renameFunc func(string) (string, error), dryRun bool, interactive bool, outputJSON bool, ops ...any) error {
+	expandedFiles, err := ExpandFiles(files, recursive, includes, excludes, ops...)
 	if err != nil {
 		if outputJSON {
 			// Best effort to emit JSON even on flag validation errors
@@ -252,5 +280,5 @@ func RenameFilesWithDiscovery(files []string, recursive bool, includes []string,
 		return err
 	}
 
-	return RenameFiles(expandedFiles, renameFunc, dryRun, interactive, outputJSON)
+	return RenameFiles(expandedFiles, renameFunc, dryRun, interactive, outputJSON, ops...)
 }

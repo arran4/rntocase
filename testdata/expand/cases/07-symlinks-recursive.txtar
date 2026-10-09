@@ -1,0 +1,15 @@
+-- options.json --
+{
+  "roots": ["/testdir/sym_file", "/testdir/sym_dir"],
+  "recursive": true
+}
+-- expected.json --
+[]
+-- fs/testdir/file1.txt --
+test
+-- fs/testdir/sub/file3.txt --
+test
+-- fs/testdir/sym_dir/ --
+SYMLINK: /testdir/sub
+-- fs/testdir/sym_file --
+SYMLINK: /testdir/file1.txt

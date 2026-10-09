@@ -1,9 +1,12 @@
 package rntocase
 
 import (
+	"reflect"
+
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/arran4/rntocase/internal/fsys"
 	"github.com/jedib0t/go-pretty/table"
 	"os"
 	"path/filepath"
@@ -153,7 +156,24 @@ func ConfirmWithReader(prompt string, reader *bufio.Reader) bool {
 
 // RenameFiles applies a renaming function to a list of files.
 // Supports dry-run and interactive modes.
-func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun bool, interactive bool, outputJSON bool) error {
+func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun bool, interactive bool, outputJSON bool, ops ...any) error {
+	var fs fsys.WritableFS = fsys.OSFS{}
+	for _, opt := range ops {
+		switch o := opt.(type) {
+		case fsys.WritableFS:
+			if o == nil {
+				return fmt.Errorf("unsupported or read-only filesystem injected: %T", opt)
+			}
+			v := reflect.ValueOf(o)
+			if v.Kind() == reflect.Pointer && v.IsNil() {
+				return fmt.Errorf("unsupported or read-only filesystem injected: %T", opt)
+			}
+			fs = o
+		default:
+			return fmt.Errorf("unsupported or read-only filesystem injected: %T", opt)
+		}
+	}
+
 	if interactive && outputJSON {
 		return fmt.Errorf("cannot use interactive mode with JSON output")
 	}
@@ -189,7 +209,7 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 		absDir, err := filepath.Abs(dir)
 		var evalDir string
 		if err == nil {
-			evalDir, _ = filepath.EvalSymlinks(absDir)
+			evalDir, _ = fs.EvalSymlinks(absDir)
 			if evalDir == "" {
 				evalDir = absDir
 			}
@@ -223,7 +243,7 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 					peerAbsDir, err := filepath.Abs(peerDir)
 					var peerEvalDir string
 					if err == nil {
-						peerEvalDir, _ = filepath.EvalSymlinks(peerAbsDir)
+						peerEvalDir, _ = fs.EvalSymlinks(peerAbsDir)
 						if peerEvalDir == "" {
 							peerEvalDir = peerAbsDir
 						}
@@ -239,11 +259,11 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 					}
 				}
 			} else {
-				destStat, destErr := os.Lstat(newPath)
+				destStat, destErr := fs.Lstat(newPath)
 				if destErr == nil {
-					srcStat, srcErr := os.Lstat(file)
+					srcStat, srcErr := fs.Lstat(file)
 
-					if srcErr != nil || !os.SameFile(srcStat, destStat) {
+					if srcErr != nil || !fs.SameFile(srcStat, destStat) {
 						plan.Error = fmt.Errorf("collision: destination '%s' already exists", newPath)
 						plan.Status = StatusCollision
 					}
@@ -362,7 +382,7 @@ func RenameFiles(files []string, renameFunc func(string) (string, error), dryRun
 			fmt.Printf("Rename: '%s' -> '%s'\n", plan.OriginalPath, plan.NewPath)
 		}
 
-		if err := os.Rename(plan.OriginalPath, plan.NewPath); err != nil {
+		if err := fs.Rename(plan.OriginalPath, plan.NewPath); err != nil {
 			if !outputJSON {
 				fmt.Fprintf(os.Stderr, "Error renaming '%s': %v\n", plan.OriginalPath, err)
 			}
