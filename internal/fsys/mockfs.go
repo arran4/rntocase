@@ -123,8 +123,7 @@ func (m *MockFS) evalSymlinks(path string, depth int) (string, error) {
 		return path, nil
 	}
 	dir := filepath.Dir(path)
-	evalDir, err := m.evalSymlinks(dir, 0)
-	// we don't pass depth here because directory nesting shouldn't exhaust depth
+	evalDir, err := m.evalSymlinks(dir, depth)
 	if err != nil {
 		return "", err
 	}
