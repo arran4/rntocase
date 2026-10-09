@@ -71,7 +71,11 @@ func (m *MockFS) stat(name string, depth int) (os.FileInfo, error) {
 	}
 	// naive evaluate symlinks
 	if fi.ModeVal&os.ModeSymlink != 0 {
-		return m.stat(filepath.Join(filepath.Dir(name), fi.SymlinkTarget), depth+1)
+		target := fi.SymlinkTarget
+		if !filepath.IsAbs(target) {
+			target = filepath.Join(filepath.Dir(name), target)
+		}
+		return m.stat(target, depth+1)
 	}
 	return fi, nil
 }
@@ -98,7 +102,7 @@ func (m *MockFS) evalSymlinks(path string, depth int) (string, error) {
 		return path, nil
 	}
 	dir := filepath.Dir(path)
-	evalDir, err := m.evalSymlinks(dir, depth+1)
+	evalDir, err := m.evalSymlinks(dir, depth)
 	if err != nil {
 		return "", err
 	}
@@ -110,7 +114,11 @@ func (m *MockFS) evalSymlinks(path string, depth int) (string, error) {
 	}
 
 	if fi.ModeVal&os.ModeSymlink != 0 {
-		target := filepath.Join(evalDir, fi.SymlinkTarget)
+		target := fi.SymlinkTarget
+		if !filepath.IsAbs(target) {
+			target = filepath.Join(evalDir, target)
+		}
+		// don't increase depth here, we only increase depth when following a link
 		return m.evalSymlinks(target, depth+1)
 	}
 	return path, nil
@@ -121,10 +129,6 @@ func (m *MockFS) EvalSymlinks(path string) (string, error) {
 }
 
 func (m *MockFS) Rename(oldpath, newpath string) error {
-	if oldpath == newpath {
-		return nil
-	}
-
 	if oldpath == newpath {
 		return nil
 	}
@@ -141,6 +145,17 @@ func (m *MockFS) Rename(oldpath, newpath string) error {
 		return os.ErrExist
 	}
 
+	destDir := filepath.Dir(newpath)
+	if destDir != "." && destDir != "/" {
+		destDirFi, destDirErr := m.stat(destDir, 0)
+		if destDirErr != nil {
+			return destDirErr
+		}
+		if !destDirFi.IsDir() {
+			return os.ErrInvalid
+		}
+	}
+
 	delete(m.Files, oldpath)
 	fi.NameStr = filepath.Base(newpath)
 	m.Files[newpath] = fi
@@ -155,7 +170,7 @@ func (m *MockFS) SameFile(fi1, fi2 os.FileInfo) bool {
 
 func (m *MockFS) ReadDir(name string) ([]os.DirEntry, error) {
 	name = filepath.Clean(name)
-	fi, err := m.Lstat(name)
+	fi, err := m.Stat(name)
 	if err != nil {
 		return nil, err
 	}

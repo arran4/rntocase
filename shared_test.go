@@ -754,4 +754,13 @@ func TestRenameFiles_FailClosedInvalidInjection(t *testing.T) {
 	if !strings.Contains(err.Error(), "unsupported or read-only filesystem injected") {
 		t.Fatalf("Expected unsupported FS error, got: %v", err)
 	}
+
+	var nilMock *fsys.MockFS = nil
+	err = RenameFiles(paths, renameFunc, false, false, false, nilMock)
+	if err == nil {
+		t.Fatal("Expected error when injecting typed nil FS, got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported or read-only filesystem injected") {
+		t.Fatalf("Expected unsupported FS error, got: %v", err)
+	}
 }

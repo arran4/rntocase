@@ -29,6 +29,7 @@ type txtarOptions struct {
 func TestExpandFiles_Txtar(t *testing.T) {
 	entries, err := fs.Glob(expandTxtar, "testdata/expand/cases/*.txtar")
 	require.NoError(t, err)
+	require.NotEmpty(t, entries, "require at least one embedded scenario")
 
 	for _, fixture := range entries {
 		fixture := fixture
@@ -54,7 +55,17 @@ func TestExpandFiles_Txtar(t *testing.T) {
 			}
 
 			if expected == nil {
-				expected = []string{}
+				t.Fatalf("missing expected.json in %s", fixture)
+			}
+			// require options.json to have been parsed, but we don't have a direct check except maybe we can verify it was in the archive
+			var hasOptions bool
+			for _, f := range ar.Files {
+				if f.Name == "options.json" {
+					hasOptions = true
+				}
+			}
+			if !hasOptions {
+				t.Fatalf("missing options.json in %s", fixture)
 			}
 
 			files, err := ExpandFiles(opts.Roots, opts.Recursive, opts.Includes, opts.Excludes, mockFs)
@@ -94,6 +105,11 @@ func TestExpandFiles_InfoError(t *testing.T) {
 
 func TestExpandFiles_FailClosedInvalidInjection(t *testing.T) {
 	_, err := ExpandFiles([]string{"foo.txt"}, false, nil, nil, struct{}{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported filesystem injected")
+
+	var nilMock *fsys.MockFS = nil
+	_, err = ExpandFiles([]string{"foo.txt"}, false, nil, nil, nilMock)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported filesystem injected")
 }

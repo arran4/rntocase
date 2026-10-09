@@ -1,6 +1,8 @@
 package rntocase
 
 import (
+	"reflect"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,8 +19,14 @@ func ExpandFiles(files []string, recursive bool, includes []string, excludes []s
 	for _, opt := range ops {
 		switch o := opt.(type) {
 		case fsys.WritableFS:
+			if o == nil || (reflect.ValueOf(o).Kind() == reflect.Ptr && reflect.ValueOf(o).IsNil()) {
+				return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
+			}
 			fs = o
 		case fsys.FS:
+			if o == nil || (reflect.ValueOf(o).Kind() == reflect.Ptr && reflect.ValueOf(o).IsNil()) {
+				return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
+			}
 			fs = o
 		default:
 			return nil, fmt.Errorf("unsupported filesystem injected: %T", opt)
