@@ -33,7 +33,7 @@ permissions:
 jobs:
   route:
     name: Route Event
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       run_code_checks: ${{ steps.route.outputs.run_code_checks }}
       run_build: ${{ steps.route.outputs.run_build }}
@@ -127,7 +127,7 @@ jobs:
     name: Validation & Tests
     needs: [route]
     if: ${{ needs.route.outputs.run_code_checks == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -159,7 +159,7 @@ jobs:
     name: Monthly Maintenance
     needs: [route]
     if: ${{ needs.route.outputs.run_maintenance == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -177,7 +177,7 @@ jobs:
     name: Autofix Formatting
     needs: [route]
     if: ${{ needs.route.outputs.run_autofix == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
@@ -206,7 +206,7 @@ jobs:
     name: Build Artifacts
     needs: [route, validation, validation-windows]
     if: ${{ always() && needs.route.outputs.run_build == 'true' && needs.validation.result == 'success' && needs.validation-windows.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -223,7 +223,7 @@ jobs:
     name: Release Quality Gates Passed
     needs: [route, validation, build]
     if: ${{ (needs.route.outputs.run_release == 'true' || needs.route.outputs.run_publisher == 'true') && needs.validation.result == 'success' && needs.build.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: echo "All release quality gates passed."
 
@@ -231,7 +231,7 @@ jobs:
     name: Prepare Release Tag
     needs: [route, release-ready]
     if: ${{ needs.route.outputs.run_release == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     concurrency:
       group: ${{ github.workflow }}-release-preparation
       cancel-in-progress: false
@@ -342,7 +342,7 @@ jobs:
     name: Release Publisher
     needs: [route, release-ready]
     if: ${{ needs.route.outputs.run_publisher == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     concurrency:
       group: ${{ github.workflow }}-publish-${{ github.ref }}
       cancel-in-progress: false

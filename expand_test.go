@@ -43,10 +43,11 @@ func TestExpandFiles_Txtar(t *testing.T) {
 			var expected []string
 
 			for _, f := range ar.Files {
-				if f.Name == "options.json" {
+				switch f.Name {
+				case "options.json":
 					err = json.Unmarshal(f.Data, &opts)
 					require.NoError(t, err)
-				} else if f.Name == "expected.json" {
+				case "expected.json":
 					err = json.Unmarshal(f.Data, &expected)
 					require.NoError(t, err)
 				}
