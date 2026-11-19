@@ -24,4 +24,4 @@ Flags:
     --exclude []string                   (type: []string) Exclude files matching pattern
 
 Positional Arguments:
-    [files...] (min: 1) The files to rename
+    [files...] The files to rename
