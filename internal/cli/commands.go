@@ -15,6 +15,15 @@ import (
 //go:embed man/*.1
 var manPages embed.FS
 
+// requireRenameFileOperands checks the action-level input contract rather than
+// relying on generated positional minimum annotations.
+func requireRenameFileOperands(command string, files []string) error {
+	if len(files) == 0 {
+		return fmt.Errorf("rntocase %s: provide at least one file or directory to rename", command)
+	}
+	return nil
+}
+
 // RunAcronym is a subcommand `rntocase acronym` -- Rename files by acronym
 // Examples:
 //
@@ -29,8 +38,11 @@ var manPages embed.FS
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunAcronym(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("acronym", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		words, err := strings2.Parse(s)
 		if err != nil {
@@ -62,8 +74,11 @@ func RunAcronym(outputJSON bool, dryRun bool, interactive bool, recursive bool, 
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunCamel(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("camel", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToCamel(s, strings2.ParserEmitEmpty(true))
 	}
@@ -84,8 +99,11 @@ func RunCamel(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunConstant(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("constant", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		val, err := strings2.ToSnake(s, strings2.ParserEmitEmpty(true))
 		if err != nil {
@@ -110,8 +128,11 @@ func RunConstant(outputJSON bool, dryRun bool, interactive bool, recursive bool,
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunDarwin(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("darwin", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToDarwin(s)
 	}
@@ -134,8 +155,11 @@ func RunDarwin(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunDelimited(delimiter string, ignore string, outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("delimited", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToFormattedString(s, strings2.OptionDelimiter(delimiter), strings2.OptionIgnore(ignore), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
 	}
@@ -161,8 +185,11 @@ func RunDelimited(delimiter string, ignore string, outputJSON bool, dryRun bool,
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunDot(delimiter string, outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("dot", files); err != nil {
+		return err
+	}
 	if delimiter == "" {
 		delimiter = "."
 	}
@@ -187,8 +214,11 @@ func RunDot(delimiter string, outputJSON bool, dryRun bool, interactive bool, re
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunKebab(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("kebab", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToKebab(s, strings2.OptionLoose(), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
 	}
@@ -209,8 +239,11 @@ func RunKebab(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunLower(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("lower", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings.ToLower(s), nil
 	}
@@ -231,8 +264,11 @@ func RunLower(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunLowerLeading(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("lower-leading", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.LowerCaseFirstWithErr(s)
 	}
@@ -253,8 +289,11 @@ func RunLowerLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunPascal(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("pascal", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToPascal(s)
 	}
@@ -276,8 +315,11 @@ func RunPascal(outputJSON bool, dryRun bool, interactive bool, recursive bool, i
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunReverse(wordMode bool, outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("reverse", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		runes := []rune(s)
 		for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
@@ -319,8 +361,11 @@ func RunReverse(wordMode bool, outputJSON bool, dryRun bool, interactive bool, r
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunSnake(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("snake", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToSnake(s, strings2.OptionLoose(), strings2.OptionCaseMode(strings2.CMWhispering), strings2.ParserEmitEmpty(true))
 	}
@@ -341,8 +386,11 @@ func RunSnake(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunTitle(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("title", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.ToTitle(s)
 	}
@@ -363,8 +411,11 @@ func RunTitle(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunUpper(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("upper", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings.ToUpper(s), nil
 	}
@@ -385,8 +436,11 @@ func RunUpper(outputJSON bool, dryRun bool, interactive bool, recursive bool, in
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunUpperLeading(outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("upper-leading", files); err != nil {
+		return err
+	}
 	converter := func(s string) (string, error) {
 		return strings2.UpperCaseFirstWithErr(s)
 	}
@@ -408,8 +462,11 @@ func RunUpperLeading(outputJSON bool, dryRun bool, interactive bool, recursive b
 //	recursive: -R --recursive Recursively traverse directories
 //	include: --include (type: []string) Include files matching pattern
 //	exclude: --exclude (type: []string) Exclude files matching pattern
-//	files: @1... (min: 1) The files to rename
+//	files: @1... The files to rename
 func RunTrim(trimChars string, outputJSON bool, dryRun bool, interactive bool, recursive bool, include []string, exclude []string, files ...string) error {
+	if err := requireRenameFileOperands("trim", files); err != nil {
+		return err
+	}
 
 	converter := func(s string) (string, error) {
 		if trimChars == "" {
